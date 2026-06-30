@@ -35,7 +35,7 @@ export default function GamesOverlay({ onClose }) {
       <div className="grid-bg" />
       <div className="orb" style={{ top: '-10%', left: '-5%', width: 480, height: 480, background: 'var(--accent)' }} />
       <div className="orb" style={{ bottom: '0%', right: '-8%', width: 520, height: 520, background: 'var(--accent2)' }} />
-      <div className="relative max-w-4xl mx-auto px-5 py-10">
+      <div className="relative max-w-4xl mx-auto px-5 pb-10" style={{ paddingTop: 'calc(16px + 56px + 24px)' }}>
         <button onClick={active ? () => setActive(null) : onClose} className="btn-pill px-5 py-2 text-sm font-semibold mb-8 inline-flex items-center gap-1" style={{ color: 'var(--ink)' }}>
           <Icon name="arrow_back" size={18} /> Return
         </button>
