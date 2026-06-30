@@ -23,6 +23,7 @@ export default function Topbar({ theme, toggleTheme, player, setPlayer, onGames,
 
   const go = (e, id) => {
     e.preventDefault();
+    e.currentTarget.blur();
     if (gamesOpen) {
       closeGames?.();
       // Wait a tick for the overlay to unmount / body scroll to unlock
@@ -35,6 +36,11 @@ export default function Topbar({ theme, toggleTheme, player, setPlayer, onGames,
     }
   };
 
+  const handleGamesClick = (e) => {
+    e.currentTarget.blur();
+    onGames?.();
+  };
+
   return (
     <header className="topbar-container">
       <nav className="topbar-pill">
@@ -45,7 +51,7 @@ export default function Topbar({ theme, toggleTheme, player, setPlayer, onGames,
               <Icon name={n.icon} size={20} fill={active === n.id} />
             </a>
           ))}
-          <button onClick={onGames} title="Playground" className="tb-icon-btn">
+          <button type="button" onClick={handleGamesClick} title="Playground" className="tb-icon-btn">
             <Icon name="sports_esports" size={20} />
           </button>
         </div>
