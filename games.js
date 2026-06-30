@@ -88,88 +88,216 @@
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
   /* ============================================================
-     1. SNAKE
+     1. SNAKE  (fixed: prevents 180° reversal via rapid keys)
      ============================================================ */
   function snake(host) {
     const COLS = 22, ROWS = 22, CELL = 24;
     const W = COLS * CELL, H = ROWS * CELL;
     const c = canvasHost(W, H); const ctx = c.getContext('2d');
-    let snake, dir, nextDir, food, score, alive, tick, acc = 0;
+    let snake, dir, nextDir, food, score, alive, tick, acc = 0, dirLocked = false;
+
     function reset() {
       snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}];
-      dir = {x:1,y:0}; nextDir = dir; score = 0; alive = true; tick = 110;
+      dir = {x:1,y:0}; nextDir = {x:1,y:0}; score = 0; alive = true; tick = 120; acc = 0; dirLocked = false;
       placeFood(); setScore('Score: 0');
     }
-    function placeFood() { let p; do { p = {x:Math.floor(rand(0,COLS)),y:Math.floor(rand(0,ROWS))}; } while (snake.some(s=>s.x===p.x&&s.y===p.y)); food = p; }
+    function placeFood() {
+      let p;
+      do { p = {x:Math.floor(rand(0,COLS)), y:Math.floor(rand(0,ROWS))}; }
+      while (snake.some(s => s.x===p.x && s.y===p.y));
+      food = p;
+    }
     function step() {
-      dir = nextDir;
-      const head = {x: snake[0].x+dir.x, y: snake[0].y+dir.y};
-      if (head.x<0||head.y<0||head.x>=COLS||head.y>=ROWS||snake.some(s=>s.x===head.x&&s.y===head.y)) { alive=false; return; }
+      dir = nextDir; dirLocked = false;
+      const head = { x: snake[0].x+dir.x, y: snake[0].y+dir.y };
+      if (head.x<0 || head.y<0 || head.x>=COLS || head.y>=ROWS || snake.some(s => s.x===head.x && s.y===head.y)) {
+        alive = false; return;
+      }
       snake.unshift(head);
-      if (head.x===food.x && head.y===food.y) { score++; setScore('Score: '+score); placeFood(); if (tick>60) tick-=3; }
-      else snake.pop();
+      if (head.x===food.x && head.y===food.y) {
+        score++; setScore('Score: '+score); placeFood();
+        if (tick > 65) tick -= 4;
+      } else { snake.pop(); }
     }
     function draw() {
       ctx.fillStyle = '#0a0a0e'; ctx.fillRect(0,0,W,H);
-      ctx.fillStyle = '#34d399'; ctx.beginPath(); ctx.arc(food.x*CELL+CELL/2, food.y*CELL+CELL/2, CELL/2.6, 0, 7); ctx.fill();
-      snake.forEach((s,i)=>{ ctx.fillStyle = i===0 ? '#fff' : 'rgba(255,255,255,'+(0.95-i*0.03)+')'; ctx.fillRect(s.x*CELL+1.5, s.y*CELL+1.5, CELL-3, CELL-3); });
-      if (!alive) { ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(0,0,W,H); ctx.fillStyle='#fff'; ctx.font='28px Inter'; ctx.textAlign='center'; ctx.fillText('Game Over', W/2, H/2-10); ctx.font='14px JetBrains Mono'; ctx.fillText('Final: '+score, W/2, H/2+18); }
+      ctx.fillStyle = '#34d399';
+      ctx.beginPath(); ctx.arc(food.x*CELL+CELL/2, food.y*CELL+CELL/2, CELL/2.6, 0, 7); ctx.fill();
+      snake.forEach((s,i) => {
+        ctx.fillStyle = i===0 ? '#fff' : 'rgba(255,255,255,'+Math.max(0.3, 0.9-i*0.04)+')';
+        ctx.fillRect(s.x*CELL+2, s.y*CELL+2, CELL-4, CELL-4);
+      });
+      if (!alive) {
+        ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(0,0,W,H);
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+        ctx.font = 'bold 30px Inter, sans-serif'; ctx.fillText('Game Over', W/2, H/2-10);
+        ctx.font = '15px JetBrains Mono, monospace'; ctx.fillText('Score: '+score+' — press Restart', W/2, H/2+22);
+      }
     }
     reset(); draw();
     host.appendChild(button('Restart', reset));
+
     const kd = (e) => {
-      const k = e.key;
-      if ((k==='ArrowUp'||k==='w')&&dir.y===0) nextDir={x:0,y:-1};
-      else if ((k==='ArrowDown'||k==='s')&&dir.y===0) nextDir={x:0,y:1};
-      else if ((k==='ArrowLeft'||k==='a')&&dir.x===0) nextDir={x:-1,y:0};
-      else if ((k==='ArrowRight'||k==='d')&&dir.x===0) nextDir={x:1,y:0};
-      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(k)) e.preventDefault();
+      if (dirLocked || !alive) return;
+      const k = e.key.toLowerCase();
+      let nx = null, ny = null;
+      if (k==='arrowup' || k==='w') { nx=0; ny=-1; }
+      else if (k==='arrowdown' || k==='s') { nx=0; ny=1; }
+      else if (k==='arrowleft' || k==='a') { nx=-1; ny=0; }
+      else if (k==='arrowright' || k==='d') { nx=1; ny=0; }
+      else return;
+      // Reject 180° reversal.
+      if (nx === -dir.x && ny === -dir.y) { e.preventDefault(); return; }
+      nextDir = { x: nx, y: ny }; dirLocked = true;
+      e.preventDefault();
     };
     window.addEventListener('keydown', kd);
-    loop((dt)=>{ acc+=dt; if(alive&&acc>=tick){acc=0;step();} draw(); });
-    const obs = new MutationObserver(()=>{ if(!host.contains(c)){ window.removeEventListener('keydown',kd); obs.disconnect(); stopLoop(); } });
-    obs.observe(host,{childList:true});
+    loop((dt) => { acc += dt; if (alive && acc >= tick) { acc = 0; step(); } draw(); });
+
+    const obs = new MutationObserver(() => {
+      if (!host.contains(c)) { window.removeEventListener('keydown', kd); obs.disconnect(); stopLoop(); }
+    });
+    obs.observe(host, { childList: true });
   }
 
   /* ============================================================
-     2. PING PONG
+     2. PING PONG  (fixed: no tunneling, serve delay, fair AI)
      ============================================================ */
   function pong(host) {
-    const W=600,H=400; const c=canvasHost(W,H); const ctx=c.getContext('2d');
-    const P={y:H/2-40,h:80,w:10,score:0}; const AI={y:H/2-40,h:80,w:10,score:0};
-    let ball={x:W/2,y:H/2,vx:5,vy:rand(-3,3)};
-    let running=false;
-    function reset(){ball={x:W/2,y:H/2,vx:Math.random()<.5?5:-5,vy:rand(-3,3)};}
-    function serve(){ running=true; reset(); }
-    function step(){
-      if(!running) return;
-      ball.x+=ball.vx; ball.y+=ball.vy;
-      if(ball.y<6||ball.y>H-6) ball.vy*=-1;
-      // ai follows
-      AI.y = clamp(AI.y + clamp((ball.y-30)-AI.y, -4.5, 4.5), 0, H-AI.h);
-      // player collision
-      if(ball.x<P.x+P.w+6 && ball.y>P.y && ball.y<P.y+P.h && ball.vx<0){ ball.vx*=-1.06; ball.vy+= (ball.y-(P.y+P.h/2))*0.08; }
-      if(ball.x>W-AI.w-6 && ball.y>AI.y && ball.y<AI.y+AI.h && ball.vx>0){ ball.vx*=-1.06; ball.vy+= (ball.y-(AI.y+AI.h/2))*0.08; }
-      ball.vx=clamp(ball.vx,-9,9);
-      // score
-      if(ball.x<0){AI.score++; if(AI.score>=5){running=false;} else serve();}
-      if(ball.x>W){P.score++; if(P.score>=5){running=false;} else serve();}
-      setScore('You '+P.score+' — '+AI.score+' AI');
+    const W = 600, H = 400;
+    const c = canvasHost(W, H); const ctx = c.getContext('2d');
+    const PH = 80, PW = 12;
+    const P = { y: H/2 - PH/2, score: 0 };
+    const AI = { y: H/2 - PH/2, score: 0 };
+    let ball = { x: W/2, y: H/2, vx: 0, vy: 0 };
+    let state = 'idle'; // idle | serving | playing | over
+    let serveTimer = 0;
+    let serveDir = 1; // 1 = toward AI(right), -1 = toward player(left)
+
+    function resetBall(dir) {
+      ball.x = W/2; ball.y = H/2;
+      const speed = 5.5;
+      ball.vx = dir * speed;
+      ball.vy = rand(-2.5, 2.5);
+      if (Math.abs(ball.vy) < 1) ball.vy = ball.vy < 0 ? -1.5 : 1.5;
     }
-    function draw(){
-      ctx.fillStyle='#0a0a0e'; ctx.fillRect(0,0,W,H);
-      ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.setLineDash([6,8]); ctx.beginPath(); ctx.moveTo(W/2,0); ctx.lineTo(W/2,H); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle='#fff'; ctx.fillRect(0,P.y,P.w,P.h); ctx.fillRect(W-AI.w,AI.y,AI.w,AI.h);
-      ctx.beginPath(); ctx.arc(ball.x,ball.y,6,0,7); ctx.fill();
-      if(!running){ ctx.fillStyle='rgba(0,0,0,0.65)'; ctx.fillRect(0,0,W,H); ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.font='26px Inter';
-        const msg = (P.score>=5)?'You win! 🎉':(AI.score>=5)?'AI wins 🤖':'Tap Start'; ctx.fillText(msg,W/2,H/2-6); ctx.font='13px JetBrains Mono'; ctx.fillText('First to 5 · move mouse',W/2,H/2+20); }
+    function serve() {
+      P.score = 0; AI.score = 0;
+      state = 'serving'; serveTimer = 60; serveDir = Math.random() < 0.5 ? 1 : -1;
+      setScore('You 0 — 0 AI');
     }
-    const move=(e)=>{ const r=c.getBoundingClientRect(); const scale=H/r.height; P.y=clamp((e.clientY-r.top)*scale-P.h/2,0,H-P.h); };
-    const tm=(e)=>{ const r=c.getBoundingClientRect(); const scale=H/r.height; P.y=clamp((e.touches[0].clientY-r.top)*scale-P.h/2,0,H-P.h); };
-    c.addEventListener('mousemove',move); c.addEventListener('touchmove',tm,{passive:true});
+    function nextServe(dir) {
+      state = 'serving'; serveTimer = 50; serveDir = dir;
+    }
+
+    function step() {
+      if (state === 'serving') {
+        serveTimer--;
+        if (serveTimer <= 0) { resetBall(serveDir); state = 'playing'; }
+        return;
+      }
+      if (state !== 'playing') return;
+
+      ball.x += ball.vx; ball.y += ball.vy;
+
+      // Top/bottom wall bounce.
+      if (ball.y < 8) { ball.y = 8; ball.vy = Math.abs(ball.vy); }
+      if (ball.y > H - 8) { ball.y = H - 8; ball.vy = -Math.abs(ball.vy); }
+
+      // AI paddle follows (imperfect for fairness).
+      const aiTarget = ball.y - PH/2;
+      const aiDiff = aiTarget - AI.y;
+      const aiSpeed = 3.8;
+      AI.y += clamp(aiDiff, -aiSpeed, aiSpeed);
+      AI.y = clamp(AI.y, 0, H - PH);
+
+      // Player paddle collision (left side).
+      if (ball.vx < 0 && ball.x < PW + 10 && ball.x > 0) {
+        if (ball.y > P.y && ball.y < P.y + PH) {
+          ball.x = PW + 10;
+          ball.vx = Math.abs(ball.vx) * 1.06;
+          ball.vy += (ball.y - (P.y + PH/2)) * 0.10;
+          // Prevent near-horizontal balls.
+          if (Math.abs(ball.vy) < 1.5) ball.vy = ball.vy < 0 ? -1.5 : 1.5;
+        }
+      }
+      // AI paddle collision (right side).
+      if (ball.vx > 0 && ball.x > W - PW - 10 && ball.x < W) {
+        if (ball.y > AI.y && ball.y < AI.y + PH) {
+          ball.x = W - PW - 10;
+          ball.vx = -Math.abs(ball.vx) * 1.06;
+          ball.vy += (ball.y - (AI.y + PH/2)) * 0.10;
+          if (Math.abs(ball.vy) < 1.5) ball.vy = ball.vy < 0 ? -1.5 : 1.5;
+        }
+      }
+      ball.vx = clamp(ball.vx, -10, 10);
+      ball.vy = clamp(ball.vy, -8, 8);
+
+      // Scoring.
+      if (ball.x < -10) {
+        AI.score++;
+        setScore('You ' + P.score + ' — ' + AI.score + ' AI');
+        if (AI.score >= 5) { state = 'over'; }
+        else { nextServe(1); } // serve toward AI
+      }
+      if (ball.x > W + 10) {
+        P.score++;
+        setScore('You ' + P.score + ' — ' + AI.score + ' AI');
+        if (P.score >= 5) { state = 'over'; }
+        else { nextServe(-1); } // serve toward player
+      }
+    }
+
+    function draw() {
+      ctx.fillStyle = '#0a0a0e'; ctx.fillRect(0, 0, W, H);
+      // Center dashed line.
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.setLineDash([6, 8]);
+      ctx.beginPath(); ctx.moveTo(W/2, 0); ctx.lineTo(W/2, H); ctx.stroke(); ctx.setLineDash([]);
+      // Paddles.
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, P.y, PW, PH);
+      ctx.fillRect(W - PW, AI.y, PW, PH);
+      // Ball.
+      if (state === 'playing' || state === 'serving') {
+        ctx.beginPath(); ctx.arc(ball.x, ball.y, 7, 0, 7); ctx.fill();
+      }
+      // Overlays.
+      if (state === 'idle') {
+        drawOverlay('Ping Pong', 'Move mouse to control · First to 5');
+      } else if (state === 'serving') {
+        const dots = '.'.repeat(Math.floor(serveTimer / 18) + 1);
+        ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.textAlign = 'center';
+        ctx.font = '20px JetBrains Mono, monospace';
+        ctx.fillText('Get ready' + dots, W/2, H/2);
+      } else if (state === 'over') {
+        const msg = P.score >= 5 ? 'You win! 🎉' : 'AI wins 🤖';
+        drawOverlay(msg, 'Score: ' + P.score + ' — ' + AI.score + ' · press Start');
+      }
+    }
+    function drawOverlay(title, sub) {
+      ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+      ctx.font = 'bold 28px Inter, sans-serif'; ctx.fillText(title, W/2, H/2 - 8);
+      ctx.font = '14px JetBrains Mono, monospace'; ctx.fillText(sub, W/2, H/2 + 22);
+    }
+
+    const move = (clientY) => {
+      const r = c.getBoundingClientRect();
+      const scale = H / r.height;
+      P.y = clamp((clientY - r.top) * scale - PH/2, 0, H - PH);
+    };
+    const mm = (e) => move(e.clientY);
+    const tm = (e) => { move(e.touches[0].clientY); e.preventDefault(); };
+    c.addEventListener('mousemove', mm);
+    c.addEventListener('touchmove', tm, { passive: false });
+
     host.appendChild(button('Start', serve));
-    draw(); loop(()=>{step();draw();});
-    const obs=new MutationObserver(()=>{if(!host.contains(c)){c.removeEventListener('mousemove',move);c.removeEventListener('touchmove',tm);obs.disconnect();stopLoop();}}); obs.observe(host,{childList:true});
+    draw(); loop(() => { step(); draw(); });
+
+    const obs = new MutationObserver(() => {
+      if (!host.contains(c)) { c.removeEventListener('mousemove', mm); c.removeEventListener('touchmove', tm); obs.disconnect(); stopLoop(); }
+    });
+    obs.observe(host, { childList: true });
   }
 
   /* ============================================================
@@ -296,34 +424,94 @@
   }
 
   /* ============================================================
-     7. DODGE
+     7. DODGE  (fixed: smooth pointer tracking, clear start state)
      ============================================================ */
   function dodge(host){
-    const W=480,H=560; const c=canvasHost(W,H); const ctx=c.getContext('2d');
-    let player, blocks, score, running, started, spawnAcc, spawnEvery;
-    const reset=()=>{player={x:W/2,y:H-50,r:11};blocks=[];score=0;running=true;started=false;spawnAcc=0;spawnEvery=900;setScore('');};
-    function spawn(){ const s=rand(10,26); blocks.push({x:rand(0,W-s),y:-s,s,vy:rand(2.5,5)}); }
-    function step(dt){
-      if(!running||!started)return;
-      spawnAcc+=dt; if(spawnAcc>=spawnEvery){spawnAcc=0;spawn();if(spawnEvery>420)spawnEvery-=6;}
-      blocks.forEach(b=>b.y+=b.vy); blocks=blocks.filter(b=>b.y<H+40);
-      score++; if(score%60===0) setScore('Survived: '+Math.round(score/60)+'s');
-      if(blocks.some(b=> player.x+player.r>b.x&&player.x-player.r<b.x+b.s&&player.y+player.r>b.y&&player.y-player.r<b.y+b.s)){running=false;setScore('Survived: '+Math.round(score/60)+'s');}
+    const W=480, H=560;
+    const c = canvasHost(W, H); const ctx = c.getContext('2d');
+    let player, blocks, score, running, started, spawnAcc, spawnEvery, frameCount;
+
+    function reset() {
+      player = { x: W/2, y: H-60, r: 11 };
+      blocks = []; score = 0; running = true; started = false;
+      spawnAcc = 0; spawnEvery = 850; frameCount = 0;
+      setScore('');
     }
-    function draw(){
-      ctx.fillStyle='#0a0a0e'; ctx.fillRect(0,0,W,H);
-      ctx.fillStyle='#ff6b6b'; blocks.forEach(b=>ctx.fillRect(b.x,b.y,b.s,b.s));
-      ctx.fillStyle='#34d399'; ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,7); ctx.fill();
-      if(!started){ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='18px Inter';ctx.fillText('Move mouse / drag — avoid red',W/2,H/2);}
-      if(!running){ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(0,0,W,H);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='22px Inter';ctx.fillText('Squished.',W/2,H/2);}
+    function spawn() {
+      const s = rand(14, 30);
+      blocks.push({ x: rand(0, W-s), y: -s, s: s, vy: rand(2.5, 4.5) });
     }
-    const move=(e)=>{const r=c.getBoundingClientRect();const sx=W/r.width;player.x=clamp((e.clientX-r.left)*sx,player.r,W-player.r);};
-    const tm=(e)=>{const r=c.getBoundingClientRect();const sx=W/r.width;player.x=clamp((e.touches[0].clientX-r.left)*sx,player.r,W-player.r);e.preventDefault();};
-    c.addEventListener('mousemove',move); c.addEventListener('touchmove',tm,{passive:false});
-    c.addEventListener('click',()=>{started=true;}); c.addEventListener('touchstart',()=>{started=true;},{passive:true});
-    reset();draw(); host.appendChild(button('Restart',reset));
-    loop((dt)=>{step(dt);draw();});
-    const obs=new MutationObserver(()=>{if(!host.contains(c)){c.removeEventListener('mousemove',move);c.removeEventListener('touchmove',tm);obs.disconnect();stopLoop();}}); obs.observe(host,{childList:true});
+    function step(dt) {
+      frameCount++;
+      if (!running || !started) return;
+      spawnAcc += dt;
+      if (spawnAcc >= spawnEvery) { spawnAcc = 0; spawn(); if (spawnEvery > 380) spawnEvery -= 7; }
+      blocks.forEach(b => { b.y += b.vy; });
+      blocks = blocks.filter(b => b.y < H + 40);
+      score++;
+      if (score % 60 === 0) setScore('Survived: ' + Math.round(score/60) + 's');
+      // Collision: circle vs rect.
+      for (const b of blocks) {
+        const cx = clamp(player.x, b.x, b.x + b.s);
+        const cy = clamp(player.y, b.y, b.y + b.s);
+        const dx = player.x - cx, dy = player.y - cy;
+        if (dx*dx + dy*dy < player.r * player.r) {
+          running = false;
+          setScore('Survived: ' + Math.round(score/60) + 's');
+          break;
+        }
+      }
+    }
+    function draw() {
+      ctx.fillStyle = '#0a0a0e'; ctx.fillRect(0, 0, W, H);
+      // Blocks.
+      ctx.fillStyle = '#ff6b6b';
+      blocks.forEach(b => ctx.fillRect(b.x, b.y, b.s, b.s));
+      // Player.
+      ctx.fillStyle = '#34d399';
+      ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, 7); ctx.fill();
+      // States.
+      if (!started) {
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+        ctx.font = '18px Inter, sans-serif';
+        ctx.fillText('Move mouse / drag to control', W/2, H/2 - 10);
+        ctx.font = '14px JetBrains Mono, monospace';
+        ctx.fillText('Click or tap to start · avoid the red', W/2, H/2 + 18);
+      }
+      if (!running && started) {
+        ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+        ctx.font = 'bold 24px Inter, sans-serif'; ctx.fillText('Squished.', W/2, H/2);
+        ctx.font = '14px JetBrains Mono, monospace';
+        ctx.fillText('Survived: ' + Math.round(score/60) + 's — press Restart', W/2, H/2 + 28);
+      }
+    }
+
+    const moveTo = (clientX) => {
+      const r = c.getBoundingClientRect();
+      const sx = W / r.width;
+      player.x = clamp((clientX - r.left) * sx, player.r, W - player.r);
+    };
+    const mm = (e) => { moveTo(e.clientX); };
+    const tm = (e) => { moveTo(e.touches[0].clientX); e.preventDefault(); };
+
+    c.addEventListener('mousemove', mm);
+    c.addEventListener('touchmove', tm, { passive: false });
+    c.addEventListener('click', () => { if (!started && running) started = true; });
+    c.addEventListener('touchstart', (e) => { if (!started && running) started = true; e.preventDefault(); }, { passive: false });
+
+    reset(); draw();
+    host.appendChild(button('Restart', reset));
+    loop((dt) => { step(dt); draw(); });
+
+    const obs = new MutationObserver(() => {
+      if (!host.contains(c)) {
+        c.removeEventListener('mousemove', mm);
+        c.removeEventListener('touchmove', tm);
+        obs.disconnect(); stopLoop();
+      }
+    });
+    obs.observe(host, { childList: true });
   }
 
   const RUNNERS = { snake, pong, roast, flappy, mines, reaction, dodge };

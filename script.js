@@ -40,6 +40,8 @@
     function dismiss() {
       if (dismissed || !done) return; dismissed = true;
       overlay.classList.add('hidden'); setTimeout(() => { overlay.style.display = 'none'; }, 600);
+      // Autoplay music on user-initiated entry into the site.
+      try { doPlay(); } catch (e) {}
     }
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(tick).catch(tick); else tick();
     tick();
@@ -114,7 +116,10 @@
           onStateChange: function (e) {
             if (e.data === 1) { setVisuals(true); progressLoop(); }          // playing
             else if (e.data === 2) { setVisuals(false); }                     // paused
-            else if (e.data === 0) { setVisuals(false); wantPlay = false; }   // ended — reset
+            else if (e.data === 0) {                                          // ended — loop back to start
+              if (wantPlay) { try { ytPlayer.seekTo(0); ytPlayer.playVideo(); } catch (er) {} }
+              else setVisuals(false);
+            }
           },
           onError: function (e) {
             ytError = true; setVisuals(false);
@@ -134,7 +139,8 @@
 
   function doPlay() {
     if (ytError) return;
-    if (!ytReady) { wantPlay = true; setVisuals(true); return; }  // queue intent
+    wantPlay = true;
+    if (!ytReady) { setVisuals(true); return; }  // queue intent
     try { ytPlayer.playVideo(); } catch (e) {}
   }
   function doPause() {
