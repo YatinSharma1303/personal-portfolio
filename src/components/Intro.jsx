@@ -81,8 +81,14 @@ export default function Intro({ onEnter }) {
           to { opacity: 1; transform: translateY(0); filter: blur(0); }
         }
         @keyframes introChevron {
-          0%,100% { opacity: .22; transform: translateY(0); }
+          0%,100% { opacity: .35; transform: translateY(0); }
           50% { opacity: 1; transform: translateY(-7px); }
+        }
+        .intro-swipe-icon {
+          display: block;
+          color: rgba(74,217,255,0.9);
+          filter: drop-shadow(0 0 8px rgba(74,217,255,0.5));
+          animation: introChevron 1.5s ease-in-out infinite;
         }
         .intro-grid {
           position: absolute;
@@ -111,18 +117,6 @@ export default function Intro({ onEnter }) {
           box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset;
           animation: introPulse 4.5s ease-in-out infinite;
         }
-        .intro-chevron i {
-          display: block;
-          width: 14px;
-          height: 14px;
-          border-left: 2px solid rgba(74,217,255,0.9);
-          border-top: 2px solid rgba(74,217,255,0.9);
-          transform: rotate(45deg);
-          margin: -4px auto 0;
-          animation: introChevron 1.4s ease-in-out infinite;
-        }
-        .intro-chevron i:nth-child(2) { animation-delay: .16s; }
-        .intro-chevron i:nth-child(3) { animation-delay: .32s; }
       `}</style>
 
       <div className="intro-noise" />
@@ -276,7 +270,7 @@ export default function Intro({ onEnter }) {
           </div>
         ) : (
           <div style={{ marginTop: 42, textAlign: 'center', animation: 'introSubIn .65s ease' }}>
-            <div className="intro-chevron"><i /><i /><i /></div>
+            <Icon name="swipe_up" size={22} className="intro-swipe-icon" />
             <div
               style={{
                 marginTop: 12,
