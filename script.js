@@ -11,12 +11,12 @@
     githubUser: 'YatinSharma1303',
     lastfmUser: 'YATINSHARMA',
     anilistUser: 'YatinSharma1303',
-    lastfmKey: 'ff50164039e4af6c3662d01fcb66877d', // ⚠️ Replace with YOUR Last.fm key (last.fm/api/account/create)
+    lastfmKey: 'ff50164039e4af6c3662d01fcb66877d  ', // ⚠️ Replace with YOUR Last.fm key (last.fm/api/account/create)
     ytVideoId: 'y5PW7rqXUhk', // Tsuisou — Michiru Oshima (YouTube embed)
     amaLimit: 20,
     firebase: {
-      apiKey: 'YOUR_FIREBASE_WEB_API_KEY',
-      projectId: 'YOUR_FIREBASE_PROJECT_ID'
+      apiKey: 'AIzaSyBA2du9aSIi7xoDttbICzmEd-nq0W39zrU',
+      projectId: 'portfolio-yatin'
     },
     amaCollection: 'amaQuestions',
     timezone: 'Asia/Kolkata'
