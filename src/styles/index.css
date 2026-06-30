@@ -93,7 +93,9 @@ input, textarea { user-select: text; }
 }
 .tb-icon-btn:focus { outline: none; }
 .tb-icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.tb-icon-btn:hover { color: var(--ink); background: var(--glow, rgba(255,255,255,0.08)); transform: translateY(-1px); }
+@media (hover: hover) and (pointer: fine) {
+  .tb-icon-btn:hover { color: var(--ink); background: var(--glow, rgba(255,255,255,0.08)); transform: translateY(-1px); }
+}
 .tb-icon-btn:active { transform: translateY(0) scale(0.92); }
 .tb-icon-btn.active { background: var(--ink); color: var(--bg); }
 .topbar-divider { width: 1px; height: 22px; background: var(--line); margin: 0 6px; flex-shrink: 0; }
@@ -119,8 +121,10 @@ input, textarea { user-select: text; }
 .tb-eq-bars .bar2 { height: 11px; animation-delay: 0.2s; }
 .tb-eq-bars .bar3 { height: 7px; animation-delay: 0.4s; }
 @keyframes eqBounce { to { height: 12px; } }
-.tb-theme-btn { width: 30px; height: 30px; border-radius: 50%; border: none; background: transparent; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.tb-theme-btn:hover { color: var(--ink); background: var(--glow, rgba(255,255,255,0.08)); }
+.tb-theme-btn { width: 30px; height: 30px; border-radius: 50%; border: none; background: transparent; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; -webkit-tap-highlight-color: transparent; outline: none; }
+@media (hover: hover) and (pointer: fine) {
+  .tb-theme-btn:hover { color: var(--ink); background: var(--glow, rgba(255,255,255,0.08)); }
+}
 
 @media (max-width: 480px) {
   .topbar-pill { padding: 4px 6px; }
