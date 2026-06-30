@@ -580,12 +580,14 @@
         body: JSON.stringify({ structuredQuery: {
           from: [{ collectionId: COL }],
           where: { fieldFilter: { field: { fieldPath: 'answered' }, op: 'EQUAL', value: { booleanValue: true } } },
-          orderBy: [{ field: { fieldPath: 'answeredAt' }, direction: 'DESCENDING' }], limit: 50
+          limit: 50
         } })
       }).then(r => r.json()).then(data => {
+        // Sort client-side (avoids needing a Firestore composite index).
         answeredDocs = (data || []).filter(d => d.document).map(d => fromDoc(d.document));
+        answeredDocs.sort((a, b) => new Date(b.answeredAt || 0) - new Date(a.answeredAt || 0));
         render();
-      }).catch(() => {});
+      }).catch((err) => { console.warn('AMA load failed:', err); });
     }
 
     function submit() {
