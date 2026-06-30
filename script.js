@@ -11,7 +11,7 @@
     githubUser: 'YatinSharma1303',
     lastfmUser: 'YATINSHARMA',
     anilistUser: 'YatinSharma1303',
-    lastfmKey: 'd5e4d0f7d8d1cd1f2e40c4e573d23dd6', // ⚠️ Replace with YOUR Last.fm key (last.fm/api/account/create)
+    lastfmKey: 'ff50164039e4af6c3662d01fcb66877d', // ⚠️ Replace with YOUR Last.fm key (last.fm/api/account/create)
     ytVideoId: 'y5PW7rqXUhk', // Tsuisou — Michiru Oshima (YouTube embed)
     amaLimit: 20,
     firebase: {
