@@ -2,37 +2,42 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Ask Me Anything questions
-    match /amaQuestions/{id} {
-
-      // Anyone may read ONLY questions that have been answered.
-      allow read: if resource.data.answered == true
-                  // ...and the admin can read everything (to manage the inbox).
-                  || (request.auth != null
-                      && request.auth.token.email_verified == true
-                      && request.auth.token.email == "yatinsharma1303@gmail.com");
-
-      // Anyone may CREATE a question, with strict shape + size limits,
-      // and it must start as un-answered with an empty answer.
-      allow create: if request.resource.data.keys().hasOnly(
-                        ['name', 'question', 'answer', 'answered', 'createdAt'])
-                    && request.resource.data.name is string
-                    && request.resource.data.name.size() > 0
-                    && request.resource.data.name.size() <= 60
-                    && request.resource.data.question is string
-                    && request.resource.data.question.size() > 0
-                    && request.resource.data.question.size() <= 280
-                    && request.resource.data.answer == ""
-                    && request.resource.data.answered == false;
-
-      // Only the verified admin may answer (update) or delete.
-      allow update, delete: if request.auth != null
-                            && request.auth.token.email_verified == true
-                            && request.auth.token.email == "yatinsharma1303@gmail.com";
+    // Yatin's admin email. Only this account (or the server-side service
+    // account, which bypasses rules entirely) can edit/delete questions.
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == "yatinsharma1303@gmail.com";
     }
 
-    // Lock everything else down by default.
-    match /{document=**} {
+    match /amaQuestions/{questionId} {
+      // Visitors can READ only answered questions; admin can read all.
+      allow read: if isAdmin() || resource.data.answered == true;
+
+      // Visitors can CREATE a question, but only with exact, safe fields.
+      allow create: if request.resource.data.keys().hasOnly([
+          "name", "question", "answer", "answered", "createdAt", "answeredAt", "votes"
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 60
+        && request.resource.data.question is string
+        && request.resource.data.question.size() > 0
+        && request.resource.data.question.size() <= 280
+        && request.resource.data.answer == ""
+        && request.resource.data.answered == false
+        && request.resource.data.answeredAt == null
+        && request.resource.data.votes is int
+        && request.resource.data.votes == 0;
+
+      // Only admin can update or delete. (The Telegram webhook uses a
+      // service account, which bypasses these rules entirely. Voting
+      // is handled server-side by /api/ama-vote.js, also via service
+      // account, so visitors cannot tamper with votes directly.)
+      allow update, delete: if isAdmin();
+    }
+
+    // Telegram edit-session docs (only written/read by the webhook = service account).
+    match /telegramEditSessions/{id} {
       allow read, write: if false;
     }
   }
