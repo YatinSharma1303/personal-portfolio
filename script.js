@@ -1,7 +1,7 @@
 /* ============================================================
    YATIN SHARMA — PORTFOLIO · script.js
-   Vanilla JS · YouTube music (muted autoplay) · GitHub · Last.fm ·
-   AniList · AMA (Firestore+Telegram+voting) · time · parallax · counters
+   Vanilla JS · YouTube music · GitHub · Last.fm · AniList ·
+   AMA (Firestore+Telegram+voting) · time · parallax · counters
    ============================================================ */
 (function () {
   'use strict';
@@ -40,8 +40,8 @@
     function dismiss() {
       if (dismissed || !done) return; dismissed = true;
       overlay.classList.add('hidden'); setTimeout(() => { overlay.style.display = 'none'; }, 600);
-      // Start music muted on entry (browser autoplay policy requires muted).
-      try { startMusic(); } catch (e) {}
+      // Autoplay music on user-initiated entry into the site.
+      try { doPlay(); } catch (e) {}
     }
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(tick).catch(tick); else tick();
     tick();
@@ -85,12 +85,10 @@
   })();
 
   /* ============================================================
-     4. MUSIC PLAYER (YouTube IFrame API)
-     Autoplays MUTED on entry (required by browsers), then unmutes
-     when the user taps the music widget.
+     4. MUSIC PLAYER (YouTube IFrame API — bulletproof edition)
+     Handles: delayed API load, play-intent queuing, errors, state sync, loop.
      ============================================================ */
   let ytPlayer = null, ytReady = false, ytError = false, wantPlay = false, isPlaying = false;
-  let muted = true, currentVolume = 70;
   const playerPanel = $('slide-music-player');
   const musicWidget = $('topbar-music-icon');
 
@@ -101,7 +99,6 @@
     const eq = $('tb-eq-bars'); if (eq) eq.classList.toggle('playing', playing);
     const vinyl = $('sp-vinyl'); if (vinyl) vinyl.classList.toggle('playing', playing);
   }
-  function setMutedVisual() { if (musicWidget) musicWidget.classList.toggle('muted', muted); }
 
   window.onYouTubeIframeAPIReady = function () {
     if (typeof YT === 'undefined' || !YT.Player) { ytError = true; return; }
@@ -112,40 +109,48 @@
         events: {
           onReady: function () {
             ytReady = true;
-            // MUST mute before play so the browser allows autoplay.
-            try { ytPlayer.mute(); ytPlayer.setVolume(currentVolume); } catch (e) {}
+            try { ytPlayer.setVolume(70); } catch (e) {}
             if (wantPlay) { try { ytPlayer.playVideo(); } catch (e) {} }
           },
           onStateChange: function (e) {
-            if (e.data === 1) { setVisuals(true); progressLoop(); }           // playing
-            else if (e.data === 2) { setVisuals(false); }                      // paused
-            else if (e.data === 0) {                                           // ended — loop
+            if (e.data === 1) { setVisuals(true); progressLoop(); }          // playing
+            else if (e.data === 2) { setVisuals(false); }                     // paused
+            else if (e.data === 0) {                                          // ended — loop back to start
               if (wantPlay) { try { ytPlayer.seekTo(0); ytPlayer.playVideo(); } catch (er) {} }
               else setVisuals(false);
             }
           },
-          onError: function (e) { ytError = true; setVisuals(false); console.warn('YouTube error:', e.data); }
+          onError: function (e) {
+            ytError = true; setVisuals(false);
+            console.warn('YouTube player error:', e.data);
+          }
         }
       });
-    } catch (err) { ytError = true; console.warn('YT init failed:', err); }
+    } catch (err) { ytError = true; console.warn('YT.Player init failed:', err); }
   };
-  const tag = document.createElement('script'); tag.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(tag);
+
+  // Load the IFrame API.
+  const tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+  // Safety net: if the API never calls back in 8s, flag error so UI doesn't hang.
   setTimeout(function () { if (!ytReady && !ytError) { ytError = true; } }, 8000);
 
-  function startMusic() {
-    wantPlay = true; setVisuals(true); setMutedVisual();
-    if (ytReady) { try { ytPlayer.playVideo(); } catch (e) {} }
-  }
-  function unmute() {
-    muted = false; setMutedVisual();
-    if (ytReady) { try { ytPlayer.unMute(); ytPlayer.setVolume(currentVolume); } catch (e) {} }
+  function doPlay() {
+    if (ytError) return;
     wantPlay = true;
-    if (!isPlaying && ytReady) { try { ytPlayer.playVideo(); } catch (e) {} }
+    if (!ytReady) { setVisuals(true); return; }  // queue intent
+    try { ytPlayer.playVideo(); } catch (e) {}
   }
-  function doPlay() { if (ytError) return; wantPlay = true; if (ytReady) { try { ytPlayer.playVideo(); } catch (e) {} } }
-  function doPause() { wantPlay = false; if (ytReady) { try { ytPlayer.pauseVideo(); } catch (e) {} } setVisuals(false); }
+  function doPause() {
+    wantPlay = false;
+    if (!ytReady) { setVisuals(false); return; }
+    try { ytPlayer.pauseVideo(); } catch (e) {}
+  }
   function togglePlay() { if (isPlaying) doPause(); else doPlay(); }
-  function setVolume(v) { currentVolume = v; if (ytReady) { try { ytPlayer.setVolume(v); } catch (e) {} } }
+
+  function setVolume(v) { if (ytReady) { try { ytPlayer.setVolume(v); } catch (e) {} } }
+
   function fmt(t) { t = Math.max(0, Math.floor(t || 0)); const m = Math.floor(t / 60); const s = t % 60; return m + ':' + (s < 10 ? '0' : '') + s; }
   let loopId = null;
   function progressLoop() {
@@ -161,20 +166,24 @@
     })();
   }
 
-  // Widget click: if muted → unmute; otherwise toggle the slide panel.
+  // Topbar music widget click → open panel + start playing.
   if (musicWidget) musicWidget.addEventListener('click', function () {
-    if (muted) { unmute(); return; }
-    playerPanel.classList.toggle('open');
-    if (playerPanel.classList.contains('open') && !isPlaying) doPlay();
+    if (playerPanel) playerPanel.classList.toggle('open');
+    if (playerPanel && playerPanel.classList.contains('open') && !isPlaying) doPlay();
   });
+
+  // Panel play/pause button.
   const playBtn = $('sp-play-btn');
   if (playBtn) playBtn.addEventListener('click', togglePlay);
+
+  // Volume slider.
   const volSlider = $('sp-vol-slider');
   if (volSlider) volSlider.addEventListener('input', function (e) {
-    const v = +e.target.value; setVolume(v);
+    const v = e.target.value; setVolume(v);
     const lbl = $('sp-vol-val'); if (lbl) lbl.textContent = v + '%';
-    if (muted) { muted = false; setMutedVisual(); if (ytReady) { try { ytPlayer.unMute(); } catch (er) {} } }
   });
+
+  // Seek bar.
   const pBar = $('sp-progress-bar');
   if (pBar) pBar.addEventListener('click', function (e) {
     if (!ytReady) return;
@@ -383,7 +392,7 @@
   })();
 
   /* ============================================================
-     11. PRESENCE LINKS
+     11. PRESENCE LINKS (Material Symbols icons; YatiniGPT removed)
      ============================================================ */
   (function presence() {
     const grid = $('presence-grid'); if (!grid) return;
