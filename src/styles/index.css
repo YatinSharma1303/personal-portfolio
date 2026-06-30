@@ -74,8 +74,12 @@ input, textarea { user-select: text; }
   box-shadow: 0 12px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
   transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
   max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
-.topbar-nav-icons { display: flex; align-items: center; gap: 6px; }
+.topbar-pill::-webkit-scrollbar { display: none; }
+.topbar-nav-icons { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .tb-icon-btn {
   width: 36px; height: 36px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
@@ -91,6 +95,7 @@ input, textarea { user-select: text; }
   display: flex; align-items: center; gap: 8px;
   background: var(--surface2); border: 1px solid var(--line);
   border-radius: 999px; padding: 4px 6px 4px 4px;
+  flex-shrink: 0;
 }
 .tb-music-icon { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; flex-shrink: 0;
   background: linear-gradient(135deg,var(--accent),var(--accent2)); display:flex; align-items:center; justify-content:center; color:#fff; }
@@ -99,9 +104,9 @@ input, textarea { user-select: text; }
 .tb-music-text { cursor: pointer; min-width: 0; max-width: 110px; }
 .tb-track-title { font-size: 12px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
 .tb-track-artist { font-size: 10px; font-weight: 500; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
-.tb-three-dots { display: flex; gap: 3px; cursor: pointer; padding: 0 4px; }
+.tb-three-dots { display: flex; gap: 3px; cursor: pointer; padding: 0 4px; flex-shrink: 0; }
 .tb-three-dots span { width: 3.5px; height: 3.5px; border-radius: 50%; background: var(--muted); }
-.tb-eq-bars { display: flex; align-items: flex-end; gap: 2px; height: 12px; padding: 0 4px; cursor: pointer; }
+.tb-eq-bars { display: flex; align-items: flex-end; gap: 2px; height: 12px; padding: 0 4px; cursor: pointer; flex-shrink: 0; }
 .tb-eq-bars .bar { width: 2.5px; background: var(--accent2); border-radius: 1px; animation: eqBounce 0.7s ease-in-out infinite alternate; }
 .tb-eq-bars .bar1 { height: 5px; animation-delay: 0s; }
 .tb-eq-bars .bar2 { height: 11px; animation-delay: 0.2s; }
@@ -109,6 +114,15 @@ input, textarea { user-select: text; }
 @keyframes eqBounce { to { height: 12px; } }
 .tb-theme-btn { width: 30px; height: 30px; border-radius: 50%; border: none; background: transparent; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .tb-theme-btn:hover { color: var(--ink); background: var(--glow, rgba(255,255,255,0.08)); }
+
+@media (max-width: 480px) {
+  .topbar-pill { padding: 4px 6px; }
+  .topbar-nav-icons { gap: 2px; }
+  .tb-icon-btn { width: 32px; height: 32px; }
+  .topbar-divider { margin: 0 4px; }
+  .topbar-music-widget { gap: 4px; padding: 3px 4px 3px 3px; }
+  .tb-music-text { display: none; }
+}
 
 .slide-player-panel {
   position: fixed; top: 76px; left: 20px;
