@@ -1,7 +1,7 @@
 /* ============================================================
    YATIN SHARMA — PORTFOLIO · script.js
-   Vanilla JS · YouTube music · GitHub · Last.fm · AniList ·
-   AMA (Firestore+Telegram+voting) · time · parallax · counters
+   Vanilla JS · YouTube music (muted autoplay) · GitHub · Last.fm ·
+   AniList · AMA (Firestore+Telegram+voting) · time · parallax · counters
    ============================================================ */
 (function () {
   'use strict';
@@ -40,8 +40,8 @@
     function dismiss() {
       if (dismissed || !done) return; dismissed = true;
       overlay.classList.add('hidden'); setTimeout(() => { overlay.style.display = 'none'; }, 600);
-      // Autoplay music on user-initiated entry into the site.
-      try { doPlay(); } catch (e) {}
+      // Start music muted on entry (browser autoplay policy requires muted).
+      try { startMusic(); } catch (e) {}
     }
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(tick).catch(tick); else tick();
     tick();
@@ -85,10 +85,12 @@
   })();
 
   /* ============================================================
-     4. MUSIC PLAYER (YouTube IFrame API — bulletproof edition)
-     Handles: delayed API load, play-intent queuing, errors, state sync.
+     4. MUSIC PLAYER (YouTube IFrame API)
+     Autoplays MUTED on entry (required by browsers), then unmutes
+     when the user taps the music widget.
      ============================================================ */
   let ytPlayer = null, ytReady = false, ytError = false, wantPlay = false, isPlaying = false;
+  let muted = true, currentVolume = 70;
   const playerPanel = $('slide-music-player');
   const musicWidget = $('topbar-music-icon');
 
@@ -99,6 +101,7 @@
     const eq = $('tb-eq-bars'); if (eq) eq.classList.toggle('playing', playing);
     const vinyl = $('sp-vinyl'); if (vinyl) vinyl.classList.toggle('playing', playing);
   }
+  function setMutedVisual() { if (musicWidget) musicWidget.classList.toggle('muted', muted); }
 
   window.onYouTubeIframeAPIReady = function () {
     if (typeof YT === 'undefined' || !YT.Player) { ytError = true; return; }
@@ -109,49 +112,40 @@
         events: {
           onReady: function () {
             ytReady = true;
-            try { ytPlayer.setVolume(70); } catch (e) {}
-            // If user already clicked play before API was ready, do it now.
+            // MUST mute before play so the browser allows autoplay.
+            try { ytPlayer.mute(); ytPlayer.setVolume(currentVolume); } catch (e) {}
             if (wantPlay) { try { ytPlayer.playVideo(); } catch (e) {} }
           },
           onStateChange: function (e) {
-            if (e.data === 1) { setVisuals(true); progressLoop(); }          // playing
-            else if (e.data === 2) { setVisuals(false); }                     // paused
-            else if (e.data === 0) {                                          // ended — loop back to start
+            if (e.data === 1) { setVisuals(true); progressLoop(); }           // playing
+            else if (e.data === 2) { setVisuals(false); }                      // paused
+            else if (e.data === 0) {                                           // ended — loop
               if (wantPlay) { try { ytPlayer.seekTo(0); ytPlayer.playVideo(); } catch (er) {} }
               else setVisuals(false);
             }
           },
-          onError: function (e) {
-            ytError = true; setVisuals(false);
-            console.warn('YouTube player error:', e.data);
-          }
+          onError: function (e) { ytError = true; setVisuals(false); console.warn('YouTube error:', e.data); }
         }
       });
-    } catch (err) { ytError = true; console.warn('YT.Player init failed:', err); }
+    } catch (err) { ytError = true; console.warn('YT init failed:', err); }
   };
-
-  // Load the IFrame API.
-  const tag = document.createElement('script');
-  tag.src = 'https://www.youtube.com/iframe_api';
-  document.head.appendChild(tag);
-  // Safety net: if the API never calls back in 8s, flag error so UI doesn't hang.
+  const tag = document.createElement('script'); tag.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(tag);
   setTimeout(function () { if (!ytReady && !ytError) { ytError = true; } }, 8000);
 
-  function doPlay() {
-    if (ytError) return;
+  function startMusic() {
+    wantPlay = true; setVisuals(true); setMutedVisual();
+    if (ytReady) { try { ytPlayer.playVideo(); } catch (e) {} }
+  }
+  function unmute() {
+    muted = false; setMutedVisual();
+    if (ytReady) { try { ytPlayer.unMute(); ytPlayer.setVolume(currentVolume); } catch (e) {} }
     wantPlay = true;
-    if (!ytReady) { setVisuals(true); return; }  // queue intent
-    try { ytPlayer.playVideo(); } catch (e) {}
+    if (!isPlaying && ytReady) { try { ytPlayer.playVideo(); } catch (e) {} }
   }
-  function doPause() {
-    wantPlay = false;
-    if (!ytReady) { setVisuals(false); return; }
-    try { ytPlayer.pauseVideo(); } catch (e) {}
-  }
+  function doPlay() { if (ytError) return; wantPlay = true; if (ytReady) { try { ytPlayer.playVideo(); } catch (e) {} } }
+  function doPause() { wantPlay = false; if (ytReady) { try { ytPlayer.pauseVideo(); } catch (e) {} } setVisuals(false); }
   function togglePlay() { if (isPlaying) doPause(); else doPlay(); }
-
-  function setVolume(v) { if (ytReady) { try { ytPlayer.setVolume(v); } catch (e) {} } }
-
+  function setVolume(v) { currentVolume = v; if (ytReady) { try { ytPlayer.setVolume(v); } catch (e) {} } }
   function fmt(t) { t = Math.max(0, Math.floor(t || 0)); const m = Math.floor(t / 60); const s = t % 60; return m + ':' + (s < 10 ? '0' : '') + s; }
   let loopId = null;
   function progressLoop() {
@@ -167,21 +161,20 @@
     })();
   }
 
-  // Topbar music widget click → open panel + start playing.
+  // Widget click: if muted → unmute; otherwise toggle the slide panel.
   if (musicWidget) musicWidget.addEventListener('click', function () {
-    if (playerPanel) playerPanel.classList.toggle('open');
-    if (playerPanel && playerPanel.classList.contains('open') && !isPlaying) doPlay();
+    if (muted) { unmute(); return; }
+    playerPanel.classList.toggle('open');
+    if (playerPanel.classList.contains('open') && !isPlaying) doPlay();
   });
-
-  // Panel play/pause button.
   const playBtn = $('sp-play-btn');
   if (playBtn) playBtn.addEventListener('click', togglePlay);
-
-  // Volume slider.
   const volSlider = $('sp-vol-slider');
-  if (volSlider) volSlider.addEventListener('input', function (e) { const v = e.target.value; setVolume(v); const lbl = $('sp-vol-val'); if (lbl) lbl.textContent = v + '%'; });
-
-  // Seek bar.
+  if (volSlider) volSlider.addEventListener('input', function (e) {
+    const v = +e.target.value; setVolume(v);
+    const lbl = $('sp-vol-val'); if (lbl) lbl.textContent = v + '%';
+    if (muted) { muted = false; setMutedVisual(); if (ytReady) { try { ytPlayer.unMute(); } catch (er) {} } }
+  });
   const pBar = $('sp-progress-bar');
   if (pBar) pBar.addEventListener('click', function (e) {
     if (!ytReady) return;
@@ -331,10 +324,8 @@
       .then(r => r.json()).then(d => {
         const lists = (d.data && d.data.user && d.data.user.lists) || [];
         lists.forEach(l => (l.entries || []).forEach(e => { e._status = l.status; allEntries.push(e); }));
-        renderSummary();
-        render();
+        renderSummary(); render();
       }).catch(() => { list.innerHTML = '<div class="al-empty">Could not load anime list.</div>'; });
-
     function renderSummary() {
       ensureChrome();
       const total = allEntries.length;
@@ -397,13 +388,12 @@
   (function presence() {
     const grid = $('presence-grid'); if (!grid) return;
     const LINKS = [
-      { icon: '🐙', name: 'GitHub', url: 'https://github.com/YatinSharma1303' },
-      { icon: '✉️', name: 'Email', url: 'mailto:yatinsharma1303@gmail.com' },
-      { icon: '🎵', name: 'Last.fm', url: 'https://www.last.fm/user/YATINSHARMA' },
-      { icon: '🌸', name: 'AniList', url: 'https://anilist.co/user/YatinSharma1303/' },
-      { icon: '🤖', name: 'YatiniGPT', url: 'https://yatini-gpt.vercel.app/' }
+      { icon: 'code', name: 'GitHub', url: 'https://github.com/YatinSharma1303' },
+      { icon: 'mail', name: 'Email', url: 'mailto:yatinsharma1303@gmail.com' },
+      { icon: 'library_music', name: 'Last.fm', url: 'https://www.last.fm/user/YATINSHARMA' },
+      { icon: 'live_tv', name: 'AniList', url: 'https://anilist.co/user/YatinSharma1303/' }
     ];
-    grid.innerHTML = LINKS.map(l => `<a class="presence-link" href="${l.url}" target="_blank" rel="noopener"><span class="presence-icon">${l.icon}</span><span class="presence-name">${l.name}</span></a>`).join('');
+    grid.innerHTML = LINKS.map(l => `<a class="presence-link" href="${l.url}" target="_blank" rel="noopener"><span class="presence-icon material-symbols-outlined">${l.icon}</span><span class="presence-name">${l.name}</span></a>`).join('');
   })();
 
   /* ============================================================
@@ -438,9 +428,7 @@
       if (hero) hero.style.transform = `translateY(${y * 0.25}px)`;
       ticking = false;
     }
-    window.addEventListener('scroll', () => {
-      if (!ticking) { requestAnimationFrame(update); ticking = true; }
-    }, { passive: true });
+    window.addEventListener('scroll', () => { if (!ticking) { requestAnimationFrame(update); ticking = true; } }, { passive: true });
   })();
 
   /* ============================================================
@@ -473,7 +461,7 @@
     const pill = $('changelog-pill'), modal = $('changelog-modal'), close = $('changelog-close'), body = $('changelog-body');
     if (!pill || !modal) return;
     const LOGS = [
-      { date: '2026-07-01 · v1.0', items: ['Full portfolio launched — hero, about, skills, projects, music, anime.', 'Ask Me Anything with Firestore + Telegram reply-to-answer.', 'Added Playground: 7 playable mini-games (Snake, Pong, Flappy, Minesweeper, Reaction, Dodge, Roast Quiz).', 'Added voting + sort + pagination on answered questions.', 'Added time widget, parallax, animated counters.'] }
+      { date: '2026-07-01 · v1.0', items: ['Full portfolio launched — hero, about, skills, projects, music, anime.', 'Ask Me Anything with Firestore + Telegram reply-to-answer.', 'Added Playground: 7 playable mini-games.', 'Added voting + sort + pagination on answered questions.', 'Added time widget, parallax, animated counters.'] }
     ];
     body.innerHTML = LOGS.map(l => `<div class="changelog-entry"><div class="changelog-date">${l.date}</div><ul>${l.items.map(i => `<li>${i}</li>`).join('')}</ul></div>`).join('');
     pill.addEventListener('click', () => modal.classList.toggle('open'));
@@ -495,20 +483,16 @@
       fb.apiKey !== 'YOUR_FIREBASE_WEB_API_KEY' && fb.projectId !== 'YOUR_FIREBASE_PROJECT_ID';
     const COL = CONFIG.amaCollection;
     const base = () => `https://firestore.googleapis.com/v1/projects/${fb.projectId}/databases/(default)/documents`;
-    // Firestore REST needs the API key as ?key= for unauthenticated (rules-based) access.
-    const colUrl = () => `${base()}/${COL}?key=${encodeURIComponent(fb.apiKey)}`;
     const queryUrl = () => `${base()}:runQuery?key=${encodeURIComponent(fb.apiKey)}`;
     const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : ('q_' + Date.now() + '_' + Math.random().toString(16).slice(2)));
     const PER_PAGE = 4;
 
-    /* daily limit */
     const LIMIT_KEY = 'yatin_ama_submits';
     const today = new Date().toDateString();
     let todayCount = 0;
     try { const stored = JSON.parse(localStorage.getItem(LIMIT_KEY) || '{}'); todayCount = stored.date === today ? stored.count : 0; } catch (e) {}
     countEl.textContent = todayCount;
 
-    /* vote state (which questions this browser upvoted) */
     let votedSet = new Set();
     try { votedSet = new Set(JSON.parse(localStorage.getItem('yatin_ama_votes') || '[]')); } catch (e) {}
 
@@ -525,7 +509,6 @@
         votes: Number(f.votes?.integerValue || f.votes?.doubleValue || 0)
       };
     }
-
     function sorted() {
       const arr = answeredDocs.slice();
       if (activeSort === 'top') arr.sort((a, b) => (b.votes - a.votes) || (new Date(b.answeredAt||0) - new Date(a.answeredAt||0)));
@@ -533,7 +516,6 @@
       else arr.sort((a, b) => new Date(a.answeredAt||0) - new Date(b.answeredAt||0));
       return arr;
     }
-
     function render() {
       if (!answeredDocs.length) { if (listWrap) listWrap.hidden = true; return; }
       if (listWrap) listWrap.hidden = false;
@@ -557,7 +539,6 @@
       renderPager(pages);
       list.querySelectorAll('.ama-vote-btn').forEach(b => b.addEventListener('click', () => vote(b.dataset.id, +b.dataset.dir)));
     }
-
     function renderPager(pages) {
       if (pages <= 1) { pager.innerHTML = ''; return; }
       let html = '';
@@ -565,20 +546,16 @@
       pager.innerHTML = html;
       pager.querySelectorAll('.ama-page').forEach(b => b.addEventListener('click', () => { page = +b.dataset.page; render(); }));
     }
-
     function vote(id, dir) {
       const up = votedSet.has(id);
       let delta;
       if (dir === 1) { if (up) return; delta = 1; votedSet.add(id); }
       else { if (!up) return; delta = -1; votedSet.delete(id); }
       localStorage.setItem('yatin_ama_votes', JSON.stringify([...votedSet]));
-      // optimistic
       const doc = answeredDocs.find(q => q.id === id); if (doc) doc.votes = Math.max(0, doc.votes + delta);
       render();
-      // persist via serverless (fire-and-forget)
       fetch('/api/ama-vote', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, delta }) }).catch(() => {});
     }
-
     function loadAnswered() {
       if (!FIREBASE_READY) return;
       fetch(queryUrl(), {
@@ -589,13 +566,11 @@
           limit: 50
         } })
       }).then(r => r.json()).then(data => {
-        // Sort client-side (avoids needing a Firestore composite index).
         answeredDocs = (data || []).filter(d => d.document).map(d => fromDoc(d.document));
         answeredDocs.sort((a, b) => new Date(b.answeredAt || 0) - new Date(a.answeredAt || 0));
         render();
       }).catch((err) => { console.warn('AMA load failed:', err); });
     }
-
     function submit() {
       const text = input.value.trim();
       if (!text) { status.textContent = 'Please type a question first.'; status.className = 'ama-status err'; return; }
@@ -618,14 +593,11 @@
         setTimeout(() => { status.textContent = ''; status.className = 'ama-status'; }, 4500);
       };
       if (FIREBASE_READY) {
-        // Use the UUID as the actual Firestore document ID (not auto-generated),
-        // so the Telegram webhook can PATCH the SAME document by its id field.
         const createUrl = `${base()}/${COL}?documentId=${encodeURIComponent(id)}&key=${encodeURIComponent(fb.apiKey)}`;
         fetch(createUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: question }) })
           .then(r => r.ok).then(ok => { notify(); afterSubmit(ok); }).catch(() => afterSubmit(false));
       } else { notify().then(() => afterSubmit(true)).catch(() => afterSubmit(false)); }
     }
-
     if (send) send.addEventListener('click', submit);
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submit(); });
     if (sortWrap) sortWrap.addEventListener('click', (e) => {

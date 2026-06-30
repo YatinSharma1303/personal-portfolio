@@ -196,6 +196,11 @@ html.light .topbar-pill {
               conic-gradient(from 0deg, #00c8ff, #7850ff, #00f0b4, #00c8ff);
   border: 2px solid #1a1a1a; position: relative;
 }
+/* Muted autoplay indicator — invites a tap to unmute */
+.topbar-music-widget.muted { background: rgba(0,200,255,0.10); }
+.topbar-music-widget.muted .tb-music-disc::after {
+  content: '🔇'; position: absolute; top: -3px; right: -3px; font-size: 11px; line-height: 1;
+}
 .tb-music-disc.playing { animation: spin 4s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -502,7 +507,7 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
   background: rgba(12,12,12,0.5); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
 }
 html.light .interest-card { background: rgba(255,255,255,0.5); }
-.interest-icon { font-size: 34px; margin-bottom: 16px; }
+.interest-icon { font-family: 'Material Symbols Outlined'; font-size: 38px; margin-bottom: 16px; color: var(--accent); font-variation-settings: 'FILL' 1; }
 .interest-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
 .interest-card p { font-size: 13px; color: var(--gray); line-height: 1.6; }
 
@@ -539,7 +544,7 @@ html.light .interest-card { background: rgba(255,255,255,0.5); }
   border-radius: 18px; border: 1px solid var(--border); transition: all 0.22s ease;
 }
 .presence-link:hover { border-color: var(--border-hover); transform: translateY(-4px); background: rgba(255,255,255,0.05); }
-.presence-icon { font-size: 26px; }
+.presence-icon { font-family: 'Material Symbols Outlined'; font-size: 30px; color: var(--accent); font-variation-settings: 'FILL' 1; }
 .presence-name { font-size: 12px; font-weight: 600; color: var(--gray); }
 .footer-note { text-align: center; margin-top: 60px; font-family: var(--mono); font-size: 12px; color: var(--gray-dim); }
 .footer-note b { color: var(--white); }
@@ -658,6 +663,22 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
 .pg-react.green { background: #16a34a; color: #fff; }
 .pg-react.done { background: rgba(52,211,153,0.2); color: #34d399; border-color: #34d399; }
 .pg-react-best { font-family: var(--mono); font-size: 11px; font-weight: 400; color: var(--gray-dim); margin-top: 10px; }
+
+/* ============ SNAKE D-PAD ============ */
+.pg-dpad {
+  display: grid; grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(3, 52px);
+  gap: 6px; justify-content: center; margin-top: 6px;
+}
+.pg-dpad-btn {
+  border-radius: 12px; border: 1px solid var(--border); color: var(--white);
+  font-size: 20px; display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.05); transition: all 0.12s ease; user-select: none;
+}
+.pg-dpad-btn:active { background: var(--accent); color: #000; transform: scale(0.94); }
+.pg-dpad-btn.up { grid-column: 2; grid-row: 1; }
+.pg-dpad-btn.left { grid-column: 1; grid-row: 2; }
+.pg-dpad-btn.right { grid-column: 3; grid-row: 2; }
+.pg-dpad-btn.down { grid-column: 2; grid-row: 3; }
 
 /* ============ PROJECT BUTTONS ============ */
 .project-actions { display: flex; gap: 10px; flex-wrap: wrap; }
