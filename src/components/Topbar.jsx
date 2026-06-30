@@ -9,7 +9,7 @@ const navItems = [
   { id: 'contact', label: 'Contact', icon: 'forum' },
 ];
 
-export default function Topbar({ theme, toggleTheme, player, setPlayer, onGames, onOpenPanel }) {
+export default function Topbar({ theme, toggleTheme, player, setPlayer, onGames, gamesOpen, closeGames, onOpenPanel }) {
   const [active, setActive] = useState('hero');
 
   useEffect(() => {
@@ -21,7 +21,19 @@ export default function Topbar({ theme, toggleTheme, player, setPlayer, onGames,
     return () => io.disconnect();
   }, []);
 
-  const go = (e, id) => { e.preventDefault(); document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }); };
+  const go = (e, id) => {
+    e.preventDefault();
+    if (gamesOpen) {
+      closeGames?.();
+      // Wait a tick for the overlay to unmount / body scroll to unlock
+      // before scrolling to the target section.
+      requestAnimationFrame(() => {
+        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+      });
+    } else {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   return (
     <header className="topbar-container">
