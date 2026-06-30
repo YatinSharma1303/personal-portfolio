@@ -88,7 +88,7 @@
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
   /* ============================================================
-     1. SNAKE  (fixed: prevents 180° reversal via rapid keys)
+     1. SNAKE  (keyboard + swipe + on-screen D-pad; no 180 reversal)
      ============================================================ */
   function snake(host) {
     const COLS = 22, ROWS = 22, CELL = 24;
@@ -106,6 +106,12 @@
       do { p = {x:Math.floor(rand(0,COLS)), y:Math.floor(rand(0,ROWS))}; }
       while (snake.some(s => s.x===p.x && s.y===p.y));
       food = p;
+    }
+    // Single direction handler used by keyboard, swipe AND d-pad.
+    function setDir(nx, ny) {
+      if (dirLocked || !alive) return;
+      if (nx === -dir.x && ny === -dir.y) return; // reject 180 reversal
+      nextDir = { x: nx, y: ny }; dirLocked = true;
     }
     function step() {
       dir = nextDir; dirLocked = false;
@@ -131,37 +137,71 @@
         ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(0,0,W,H);
         ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
         ctx.font = 'bold 30px Inter, sans-serif'; ctx.fillText('Game Over', W/2, H/2-10);
-        ctx.font = '15px JetBrains Mono, monospace'; ctx.fillText('Score: '+score+' — press Restart', W/2, H/2+22);
+        ctx.font = '15px JetBrains Mono, monospace'; ctx.fillText('Score: '+score+' - press Restart', W/2, H/2+22);
       }
     }
     reset(); draw();
     host.appendChild(button('Restart', reset));
 
+    // Hint text.
+    const hint = document.createElement('div');
+    hint.style.cssText = 'font-family:JetBrains Mono,monospace;font-size:12px;color:#71717a;text-align:center;margin-top:4px;';
+    hint.textContent = 'Arrow keys - swipe - or use the pad';
+    host.appendChild(hint);
+
+    // On-screen D-pad (works on touch and mouse).
+    const pad = document.createElement('div');
+    pad.className = 'pg-dpad';
+    const mkBtn = (label, cls, dx, dy) => {
+      const b = document.createElement('button');
+      b.className = 'pg-dpad-btn ' + cls; b.textContent = label;
+      b.addEventListener('click', (e) => { e.preventDefault(); setDir(dx, dy); });
+      return b;
+    };
+    pad.appendChild(mkBtn('\u25B2', 'up', 0, -1));
+    pad.appendChild(mkBtn('\u25C0', 'left', -1, 0));
+    pad.appendChild(mkBtn('\u25B6', 'right', 1, 0));
+    pad.appendChild(mkBtn('\u25BC', 'down', 0, 1));
+    host.appendChild(pad);
+
+    // Keyboard.
     const kd = (e) => {
-      if (dirLocked || !alive) return;
+      if (!alive) return;
       const k = e.key.toLowerCase();
-      let nx = null, ny = null;
-      if (k==='arrowup' || k==='w') { nx=0; ny=-1; }
-      else if (k==='arrowdown' || k==='s') { nx=0; ny=1; }
-      else if (k==='arrowleft' || k==='a') { nx=-1; ny=0; }
-      else if (k==='arrowright' || k==='d') { nx=1; ny=0; }
-      else return;
-      // Reject 180° reversal.
-      if (nx === -dir.x && ny === -dir.y) { e.preventDefault(); return; }
-      nextDir = { x: nx, y: ny }; dirLocked = true;
-      e.preventDefault();
+      if (k==='arrowup' || k==='w') { setDir(0,-1); e.preventDefault(); }
+      else if (k==='arrowdown' || k==='s') { setDir(0,1); e.preventDefault(); }
+      else if (k==='arrowleft' || k==='a') { setDir(-1,0); e.preventDefault(); }
+      else if (k==='arrowright' || k==='d') { setDir(1,0); e.preventDefault(); }
     };
     window.addEventListener('keydown', kd);
-    loop((dt) => { acc += dt; if (alive && acc >= tick) { acc = 0; step(); } draw(); });
 
+    // Swipe on the canvas.
+    let tsx = 0, tsy = 0;
+    const ts = (e) => { tsx = e.touches[0].clientX; tsy = e.touches[0].clientY; };
+    const te = (e) => {
+      const dx = e.changedTouches[0].clientX - tsx;
+      const dy = e.changedTouches[0].clientY - tsy;
+      if (Math.abs(dx) < 18 && Math.abs(dy) < 18) return;
+      if (Math.abs(dx) > Math.abs(dy)) setDir(dx > 0 ? 1 : -1, 0);
+      else setDir(0, dy > 0 ? 1 : -1);
+    };
+    c.addEventListener('touchstart', ts, { passive: true });
+    c.addEventListener('touchend', te, { passive: true });
+
+    loop((dt) => { acc += dt; if (alive && acc >= tick) { acc = 0; step(); } draw(); });
     const obs = new MutationObserver(() => {
-      if (!host.contains(c)) { window.removeEventListener('keydown', kd); obs.disconnect(); stopLoop(); }
+      if (!host.contains(c)) {
+        window.removeEventListener('keydown', kd);
+        c.removeEventListener('touchstart', ts);
+        c.removeEventListener('touchend', te);
+        obs.disconnect(); stopLoop();
+      }
     });
     obs.observe(host, { childList: true });
   }
 
   /* ============================================================
-     2. PING PONG  (fixed: no tunneling, serve delay, fair AI)
+     2. PING PONG  (no tunneling, serve delay, fair AI)
      ============================================================ */
   function pong(host) {
     const W = 600, H = 400;
@@ -170,9 +210,9 @@
     const P = { y: H/2 - PH/2, score: 0 };
     const AI = { y: H/2 - PH/2, score: 0 };
     let ball = { x: W/2, y: H/2, vx: 0, vy: 0 };
-    let state = 'idle'; // idle | serving | playing | over
+    let state = 'idle';
     let serveTimer = 0;
-    let serveDir = 1; // 1 = toward AI(right), -1 = toward player(left)
+    let serveDir = 1;
 
     function resetBall(dir) {
       ball.x = W/2; ball.y = H/2;
@@ -184,11 +224,9 @@
     function serve() {
       P.score = 0; AI.score = 0;
       state = 'serving'; serveTimer = 60; serveDir = Math.random() < 0.5 ? 1 : -1;
-      setScore('You 0 — 0 AI');
+      setScore('You 0 - 0 AI');
     }
-    function nextServe(dir) {
-      state = 'serving'; serveTimer = 50; serveDir = dir;
-    }
+    function nextServe(dir) { state = 'serving'; serveTimer = 50; serveDir = dir; }
 
     function step() {
       if (state === 'serving') {
@@ -197,31 +235,21 @@
         return;
       }
       if (state !== 'playing') return;
-
       ball.x += ball.vx; ball.y += ball.vy;
-
-      // Top/bottom wall bounce.
       if (ball.y < 8) { ball.y = 8; ball.vy = Math.abs(ball.vy); }
       if (ball.y > H - 8) { ball.y = H - 8; ball.vy = -Math.abs(ball.vy); }
-
-      // AI paddle follows (imperfect for fairness).
       const aiTarget = ball.y - PH/2;
       const aiDiff = aiTarget - AI.y;
-      const aiSpeed = 3.8;
-      AI.y += clamp(aiDiff, -aiSpeed, aiSpeed);
+      AI.y += clamp(aiDiff, -3.8, 3.8);
       AI.y = clamp(AI.y, 0, H - PH);
-
-      // Player paddle collision (left side).
       if (ball.vx < 0 && ball.x < PW + 10 && ball.x > 0) {
         if (ball.y > P.y && ball.y < P.y + PH) {
           ball.x = PW + 10;
           ball.vx = Math.abs(ball.vx) * 1.06;
           ball.vy += (ball.y - (P.y + PH/2)) * 0.10;
-          // Prevent near-horizontal balls.
           if (Math.abs(ball.vy) < 1.5) ball.vy = ball.vy < 0 ? -1.5 : 1.5;
         }
       }
-      // AI paddle collision (right side).
       if (ball.vx > 0 && ball.x > W - PW - 10 && ball.x < W) {
         if (ball.y > AI.y && ball.y < AI.y + PH) {
           ball.x = W - PW - 10;
@@ -232,46 +260,15 @@
       }
       ball.vx = clamp(ball.vx, -10, 10);
       ball.vy = clamp(ball.vy, -8, 8);
-
-      // Scoring.
       if (ball.x < -10) {
         AI.score++;
-        setScore('You ' + P.score + ' — ' + AI.score + ' AI');
-        if (AI.score >= 5) { state = 'over'; }
-        else { nextServe(1); } // serve toward AI
+        setScore('You ' + P.score + ' - ' + AI.score + ' AI');
+        if (AI.score >= 5) { state = 'over'; } else { nextServe(1); }
       }
       if (ball.x > W + 10) {
         P.score++;
-        setScore('You ' + P.score + ' — ' + AI.score + ' AI');
-        if (P.score >= 5) { state = 'over'; }
-        else { nextServe(-1); } // serve toward player
-      }
-    }
-
-    function draw() {
-      ctx.fillStyle = '#0a0a0e'; ctx.fillRect(0, 0, W, H);
-      // Center dashed line.
-      ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.setLineDash([6, 8]);
-      ctx.beginPath(); ctx.moveTo(W/2, 0); ctx.lineTo(W/2, H); ctx.stroke(); ctx.setLineDash([]);
-      // Paddles.
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(0, P.y, PW, PH);
-      ctx.fillRect(W - PW, AI.y, PW, PH);
-      // Ball.
-      if (state === 'playing' || state === 'serving') {
-        ctx.beginPath(); ctx.arc(ball.x, ball.y, 7, 0, 7); ctx.fill();
-      }
-      // Overlays.
-      if (state === 'idle') {
-        drawOverlay('Ping Pong', 'Move mouse to control · First to 5');
-      } else if (state === 'serving') {
-        const dots = '.'.repeat(Math.floor(serveTimer / 18) + 1);
-        ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.textAlign = 'center';
-        ctx.font = '20px JetBrains Mono, monospace';
-        ctx.fillText('Get ready' + dots, W/2, H/2);
-      } else if (state === 'over') {
-        const msg = P.score >= 5 ? 'You win! 🎉' : 'AI wins 🤖';
-        drawOverlay(msg, 'Score: ' + P.score + ' — ' + AI.score + ' · press Start');
+        setScore('You ' + P.score + ' - ' + AI.score + ' AI');
+        if (P.score >= 5) { state = 'over'; } else { nextServe(-1); }
       }
     }
     function drawOverlay(title, sub) {
@@ -280,7 +277,26 @@
       ctx.font = 'bold 28px Inter, sans-serif'; ctx.fillText(title, W/2, H/2 - 8);
       ctx.font = '14px JetBrains Mono, monospace'; ctx.fillText(sub, W/2, H/2 + 22);
     }
-
+    function draw() {
+      ctx.fillStyle = '#0a0a0e'; ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.setLineDash([6, 8]);
+      ctx.beginPath(); ctx.moveTo(W/2, 0); ctx.lineTo(W/2, H); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, P.y, PW, PH);
+      ctx.fillRect(W - PW, AI.y, PW, PH);
+      if (state === 'playing' || state === 'serving') {
+        ctx.beginPath(); ctx.arc(ball.x, ball.y, 7, 0, 7); ctx.fill();
+      }
+      if (state === 'idle') { drawOverlay('Ping Pong', 'Move mouse to control - First to 5'); }
+      else if (state === 'serving') {
+        const dots = '.'.repeat(Math.floor(serveTimer / 18) + 1);
+        ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.textAlign = 'center';
+        ctx.font = '20px JetBrains Mono, monospace'; ctx.fillText('Get ready' + dots, W/2, H/2);
+      } else if (state === 'over') {
+        const msg = P.score >= 5 ? 'You win!' : 'AI wins';
+        drawOverlay(msg, 'Score: ' + P.score + ' - ' + AI.score + ' - press Start');
+      }
+    }
     const move = (clientY) => {
       const r = c.getBoundingClientRect();
       const scale = H / r.height;
@@ -290,10 +306,8 @@
     const tm = (e) => { move(e.touches[0].clientY); e.preventDefault(); };
     c.addEventListener('mousemove', mm);
     c.addEventListener('touchmove', tm, { passive: false });
-
     host.appendChild(button('Start', serve));
     draw(); loop(() => { step(); draw(); });
-
     const obs = new MutationObserver(() => {
       if (!host.contains(c)) { c.removeEventListener('mousemove', mm); c.removeEventListener('touchmove', tm); obs.disconnect(); stopLoop(); }
     });
@@ -305,19 +319,19 @@
      ============================================================ */
   function roast(host) {
     const QS = [
-      { q:'Pick a vibe', a:['3am chaos','sunshine robot','feral gremlin','overthinker supreme'], r:['Bold of you to admit you function on zero sleep AND zero direction.','You confuse "optimism" with "never having read the docs".','Iconic. Truly. Truly unhinged.','You overthink push buttons. Sit down.'] },
+      { q:'Pick a vibe', a:['3am chaos','sunshine robot','feral gremlin','overthinker supreme'], r:['Bold of you to admit you function on zero sleep AND zero direction.','You confuse optimism with never having read the docs.','Iconic. Truly. Truly unhinged.','You overthink push buttons. Sit down.'] },
       { q:'Your debugging style?', a:['console.log everything','actually read errors','pray','Stack Overflow devotee'], r:['Ah yes, archaeology via log spam.','A functioning developer? In MY roast quiz? Unlikely.','Prayer: the leading version control system, statistically.','You and 4 million others copy the same accepted answer.'] },
-      { q:'Code won\'t compile. You…', a:['blame the linter','add a semicolon','restart everything','cry, productively'], r:['The linter is the only thing protecting your coworkers.','A semicolon. Revolutionary. You fixed nothing, but proudly.','Have you tried turning your whole career off and on again?','Productive tears. The best kind. The only kind.'] },
-      { q:'Last commit message?', a:['"fix"','detailed novel','"pls work"','forgotten'], r:['"fix" — illuminating. The historians will study this.','Nobody reads 12-paragraph commits. Nobody.','Manifesting via commit message. Respect the hustle.','You don\'t remember. The code doesn\'t either.'] }
+      { q:'Code won\'t compile. You...', a:['blame the linter','add a semicolon','restart everything','cry, productively'], r:['The linter is the only thing protecting your coworkers.','A semicolon. Revolutionary. You fixed nothing, but proudly.','Have you tried turning your whole career off and on again?','Productive tears. The best kind. The only kind.'] },
+      { q:'Last commit message?', a:['"fix"','detailed novel','"pls work"','forgotten'], r:['"fix" - illuminating. The historians will study this.','Nobody reads 12-paragraph commits. Nobody.','Manifesting via commit message. Respect the hustle.','You don\'t remember. The code doesn\'t either.'] }
     ];
     let idx=0, score=0; const wrap=document.createElement('div'); wrap.className='pg-quiz'; host.appendChild(wrap);
     function render(){
-      if(idx>=QS.length){ wrap.innerHTML=`<div class="pg-quiz-result"><div class="pg-emoji">🔥</div><div class="pg-roast">You finished the quiz. Your reward? Knowing yourself a little too well. Score: ${score}/${QS.length}. The AI is judging you, quietly.</div></div>`; wrap.appendChild(button('Again',()=>{idx=0;score=0;render();})); return; }
+      if(idx>=QS.length){ wrap.innerHTML='<div class="pg-quiz-result"><div class="pg-emoji">🔥</div><div class="pg-roast">You finished the quiz. Your reward? Knowing yourself a little too well. Score: '+score+'/'+QS.length+'. The AI is judging you, quietly.</div></div>'; wrap.appendChild(button('Again',()=>{idx=0;score=0;render();})); return; }
       const item=QS[idx];
-      wrap.innerHTML=`<div class="pg-q">${item.q}</div><div class="pg-opts">${item.a.map((o,i)=>`<button class="pg-opt" data-i="${i}">${o}</button>`).join('')}</div>`;
+      wrap.innerHTML='<div class="pg-q">'+item.q+'</div><div class="pg-opts">'+item.a.map((o,i)=>'<button class="pg-opt" data-i="'+i+'">'+o+'</button>').join('')+'</div>';
       wrap.querySelectorAll('.pg-opt').forEach(b=>b.addEventListener('click',()=>{
         const i=+b.dataset.i; const roast=item.r[i];
-        wrap.innerHTML=`<div class="pg-roast-pop">"${roast}"</div>`;
+        wrap.innerHTML='<div class="pg-roast-pop">"'+roast+'"</div>';
         score++; idx++;
         setTimeout(render, 1400);
       }));
@@ -367,7 +381,7 @@
     const COLS=10,ROWS=10,MINES=15; const cell=34; const grid=[];
     let revealed=0, over=false, started=false;
     const wrap=document.createElement('div'); wrap.className='pg-mines';
-    wrap.style.gridTemplateColumns=`repeat(${COLS},${cell}px)`;
+    wrap.style.gridTemplateColumns='repeat('+COLS+','+cell+'px)';
     host.appendChild(wrap);
     function build(){
       grid.length=0; for(let y=0;y<ROWS;y++){grid.push([]);for(let x=0;x<COLS;x++)grid[y].push({mine:false,n:0,rev:false,flag:false});}
@@ -389,8 +403,8 @@
         c.addEventListener('contextmenu',(e)=>{e.preventDefault();if(!g.rev&&!over){g.flag=!g.flag;render();}});
         wrap.appendChild(c);
       }
-      if(over){ setScore(revealed===ROWS*COLS-MINES?'Cleared! 🎉':'Boom!'); }
-      else setScore(`Flagged: ${grid.flat().filter(g=>g.flag).length} / ${MINES}`);
+      if(over){ setScore(revealed===ROWS*COLS-MINES?'Cleared!':'Boom!'); }
+      else setScore('Flagged: '+grid.flat().filter(g=>g.flag).length+' / '+MINES);
     }
     function revealCell(x,y){
       if(over) return; const g=grid[y][x]; if(g.rev||g.flag) return;
@@ -414,23 +428,22 @@
     const box=document.createElement('div'); box.className='pg-react'; host.appendChild(box);
     let phase='idle', t0=0, timer=null, best=parseFloat(localStorage.getItem('pg_reaction_best'))||null;
     function set(text,cls){ box.className='pg-react '+(cls||''); box.textContent=text; if(best!=null){ const sc=document.createElement('div'); sc.className='pg-react-best'; sc.textContent='Best: '+best+'ms'; box.appendChild(sc);} }
-    function goWait(){ phase='wait'; set('Wait for green…','red'); const wait=rand(1200,3500); timer=setTimeout(()=>{ phase='go'; t0=performance.now(); set('CLICK!','green'); },wait); }
+    function goWait(){ phase='wait'; set('Wait for green...','red'); const wait=rand(1200,3500); timer=setTimeout(()=>{ phase='go'; t0=performance.now(); set('CLICK!','green'); },wait); }
     box.addEventListener('click',()=>{
       if(phase==='idle'||phase==='result'){ goWait(); }
       else if(phase==='wait'){ clearTimeout(timer); phase='result'; set('Too soon! Wait for green. Click to retry.','red'); }
-      else if(phase==='go'){ const ms=Math.round(performance.now()-t0); if(best==null||ms<best){best=ms;localStorage.setItem('pg_reaction_best',best);} phase='result'; set(ms+' ms — click to retry','done'); }
+      else if(phase==='go'){ const ms=Math.round(performance.now()-t0); if(best==null||ms<best){best=ms;localStorage.setItem('pg_reaction_best',best);} phase='result'; set(ms+' ms - click to retry','done'); }
     });
     set('Click to start','idle');
   }
 
   /* ============================================================
-     7. DODGE  (fixed: smooth pointer tracking, clear start state)
+     7. DODGE  (smooth pointer tracking, clear start state)
      ============================================================ */
   function dodge(host){
     const W=480, H=560;
     const c = canvasHost(W, H); const ctx = c.getContext('2d');
     let player, blocks, score, running, started, spawnAcc, spawnEvery, frameCount;
-
     function reset() {
       player = { x: W/2, y: H-60, r: 11 };
       blocks = []; score = 0; running = true; started = false;
@@ -450,7 +463,6 @@
       blocks = blocks.filter(b => b.y < H + 40);
       score++;
       if (score % 60 === 0) setScore('Survived: ' + Math.round(score/60) + 's');
-      // Collision: circle vs rect.
       for (const b of blocks) {
         const cx = clamp(player.x, b.x, b.x + b.s);
         const cy = clamp(player.y, b.y, b.y + b.s);
@@ -464,29 +476,25 @@
     }
     function draw() {
       ctx.fillStyle = '#0a0a0e'; ctx.fillRect(0, 0, W, H);
-      // Blocks.
       ctx.fillStyle = '#ff6b6b';
       blocks.forEach(b => ctx.fillRect(b.x, b.y, b.s, b.s));
-      // Player.
       ctx.fillStyle = '#34d399';
       ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, 7); ctx.fill();
-      // States.
       if (!started) {
         ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
         ctx.font = '18px Inter, sans-serif';
         ctx.fillText('Move mouse / drag to control', W/2, H/2 - 10);
         ctx.font = '14px JetBrains Mono, monospace';
-        ctx.fillText('Click or tap to start · avoid the red', W/2, H/2 + 18);
+        ctx.fillText('Click or tap to start - avoid the red', W/2, H/2 + 18);
       }
       if (!running && started) {
         ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, W, H);
         ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
         ctx.font = 'bold 24px Inter, sans-serif'; ctx.fillText('Squished.', W/2, H/2);
         ctx.font = '14px JetBrains Mono, monospace';
-        ctx.fillText('Survived: ' + Math.round(score/60) + 's — press Restart', W/2, H/2 + 28);
+        ctx.fillText('Survived: ' + Math.round(score/60) + 's - press Restart', W/2, H/2 + 28);
       }
     }
-
     const moveTo = (clientX) => {
       const r = c.getBoundingClientRect();
       const sx = W / r.width;
@@ -494,22 +502,15 @@
     };
     const mm = (e) => { moveTo(e.clientX); };
     const tm = (e) => { moveTo(e.touches[0].clientX); e.preventDefault(); };
-
     c.addEventListener('mousemove', mm);
     c.addEventListener('touchmove', tm, { passive: false });
     c.addEventListener('click', () => { if (!started && running) started = true; });
     c.addEventListener('touchstart', (e) => { if (!started && running) started = true; e.preventDefault(); }, { passive: false });
-
     reset(); draw();
     host.appendChild(button('Restart', reset));
     loop((dt) => { step(dt); draw(); });
-
     const obs = new MutationObserver(() => {
-      if (!host.contains(c)) {
-        c.removeEventListener('mousemove', mm);
-        c.removeEventListener('touchmove', tm);
-        obs.disconnect(); stopLoop();
-      }
+      if (!host.contains(c)) { c.removeEventListener('mousemove', mm); c.removeEventListener('touchmove', tm); obs.disconnect(); stopLoop(); }
     });
     obs.observe(host, { childList: true });
   }
