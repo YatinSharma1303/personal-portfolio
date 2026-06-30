@@ -11,7 +11,7 @@
     githubUser: 'YatinSharma1303',
     lastfmUser: 'YATINSHARMA',
     anilistUser: 'YatinSharma1303',
-    lastfmKey: 'ff50164039e4af6c3662d01fcb66877d  ', // ⚠️ Replace with YOUR Last.fm key (last.fm/api/account/create)
+    lastfmKey: 'ff50164039e4af6c3662d01fcb66877d', // ⚠️ Replace with YOUR Last.fm key (last.fm/api/account/create)
     ytVideoId: 'y5PW7rqXUhk', // Tsuisou — Michiru Oshima (YouTube embed)
     amaLimit: 20,
     firebase: {
@@ -489,7 +489,9 @@
       fb.apiKey !== 'YOUR_FIREBASE_WEB_API_KEY' && fb.projectId !== 'YOUR_FIREBASE_PROJECT_ID';
     const COL = CONFIG.amaCollection;
     const base = () => `https://firestore.googleapis.com/v1/projects/${fb.projectId}/databases/(default)/documents`;
-    const queryUrl = () => `${base()}:runQuery`;
+    // Firestore REST needs the API key as ?key= for unauthenticated (rules-based) access.
+    const colUrl = () => `${base()}/${COL}?key=${encodeURIComponent(fb.apiKey)}`;
+    const queryUrl = () => `${base()}:runQuery?key=${encodeURIComponent(fb.apiKey)}`;
     const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : ('q_' + Date.now() + '_' + Math.random().toString(16).slice(2)));
     const PER_PAGE = 4;
 
@@ -608,7 +610,7 @@
         setTimeout(() => { status.textContent = ''; status.className = 'ama-status'; }, 4500);
       };
       if (FIREBASE_READY) {
-        fetch(`${base()}/${COL}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: question }) })
+        fetch(colUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: question }) })
           .then(r => r.ok).then(ok => { notify(); afterSubmit(ok); }).catch(() => afterSubmit(false));
       } else { notify().then(() => afterSubmit(true)).catch(() => afterSubmit(false)); }
     }
