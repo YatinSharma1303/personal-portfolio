@@ -47,12 +47,13 @@ export default function Topbar({ theme, toggleTheme, player, setPlayer, onGames,
         <div className="topbar-nav-icons">
           {navItems.map((n) => (
             <a key={n.id} href={`#${n.id}`} onClick={(e) => go(e, n.id)} title={n.label}
-               className={`tb-icon-btn ${active === n.id ? 'active' : ''}`}>
-              <Icon name={n.icon} size={20} fill={active === n.id} />
+               className={`tb-icon-btn ${!gamesOpen && active === n.id ? 'active' : ''}`}>
+              <Icon name={n.icon} size={20} fill={!gamesOpen && active === n.id} />
             </a>
           ))}
-          <button type="button" onClick={handleGamesClick} title="Playground" className="tb-icon-btn">
-            <Icon name="sports_esports" size={20} />
+          <button type="button" onClick={handleGamesClick} title="Playground"
+                  className={`tb-icon-btn ${gamesOpen ? 'active' : ''}`}>
+            <Icon name="sports_esports" size={20} fill={gamesOpen} />
           </button>
         </div>
 
