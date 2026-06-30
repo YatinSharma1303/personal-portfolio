@@ -612,7 +612,10 @@
         setTimeout(() => { status.textContent = ''; status.className = 'ama-status'; }, 4500);
       };
       if (FIREBASE_READY) {
-        fetch(colUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: question }) })
+        // Use the UUID as the actual Firestore document ID (not auto-generated),
+        // so the Telegram webhook can PATCH the SAME document by its id field.
+        const createUrl = `${base()}/${COL}?documentId=${encodeURIComponent(id)}&key=${encodeURIComponent(fb.apiKey)}`;
+        fetch(createUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: question }) })
           .then(r => r.ok).then(ok => { notify(); afterSubmit(ok); }).catch(() => afterSubmit(false));
       } else { notify().then(() => afterSubmit(true)).catch(() => afterSubmit(false)); }
     }
