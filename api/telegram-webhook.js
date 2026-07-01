@@ -232,7 +232,7 @@ const HELP_TEXT = [
   `• <b>💬 Answer</b> — Reply to any question message`,
   `• <b>🙈 Dismiss</b> — Hide a question (keeps data)`,
   `• <b>🗑 Delete</b> — Permanently remove`,
-  `• <b>✏️ Edit</b> — Change the question text`,
+  `• <b>✏️ Edit</b> — Change your answer to a question`,
   ``,
   `<i>Every new question from your site appears here automatically.</i>`
 ].join('\n');
@@ -302,8 +302,8 @@ module.exports = async function handler(req, res) {
       else if (action === 'edit') {
         try {
           await saveEditSession(cbChatId, questionId);
-          await answerCallback(callback.id, '✏️ Send the new question text now');
-          await sendTelegram(cbChatId, `✏️ <b>Edit mode</b>\nSend the new question text for:\n<code>${esc(questionId)}</code>\n\n<i>Type the new text as your next message.</i>`);
+          await answerCallback(callback.id, '✏️ Send the new answer now');
+          await sendTelegram(cbChatId, `✏️ <b>Edit Answer</b>\nSend the new answer text for this question:\n<code>${esc(questionId)}</code>\n\n<i>Type the new answer as your next message.</i>`);
         } catch (e) { await answerCallback(callback.id, '⚠️ Could not start edit'); }
       }
       else {
@@ -375,13 +375,13 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
-    /* If /edit was started, next normal message becomes the new question text */
+    /* If /edit was started, next normal message becomes the new ANSWER */
     const pending = await getEditSession(chatId);
     const pendingQuestionId = pending?.fields?.questionId?.stringValue;
     if (pendingQuestionId && !text.startsWith('/')) {
-      await editQuestionText(pendingQuestionId, text);
+      await answerQuestion(pendingQuestionId, text);
       await clearEditSession(chatId);
-      await sendTelegram(chatId, `✅ <b>Question updated.</b>\n🆔 <code>${esc(pendingQuestionId)}</code>\n\n<i>Refresh your website to see the change.</i>`, message.message_id);
+      await sendTelegram(chatId, `✅ <b>Answer updated.</b>\n🆔 <code>${esc(pendingQuestionId)}</code>\n\n<i>Refresh your website to see the change.</i>`, message.message_id);
       return res.status(200).json({ ok: true, edited: pendingQuestionId });
     }
 

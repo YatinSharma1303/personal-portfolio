@@ -70,7 +70,7 @@ module.exports = async function handler(req, res) {
         { text: '🙈 Dismiss', callback_data: `dismiss:${questionId}` }
       ], [
         { text: '🗑 Delete', callback_data: `delete:${questionId}` },
-        { text: '✏️ Edit', callback_data: `edit:${questionId}` }
+        { text: '✏️ Edit Answer', callback_data: `edit:${questionId}` }
       ]]
     };
 
