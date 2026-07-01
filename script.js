@@ -26,6 +26,17 @@
   const $ = (id) => document.getElementById(id);
   const esc = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+  // === Last.fm helpers (defined early so the intro can safely call fetchLastfm) ===
+  const lfmAPI = 'https://ws.audioscrobbler.com/2.0/';
+  function lfmImg(images) {
+    if (!images || !images.length) return '';
+    const sizes = ['extralarge', 'large', 'medium', 'small', 'mega'];
+    const map = {};
+    images.forEach(function (im) { const url = (im && (im['#text'] || im['text'])) || ''; if (url) map[im.size] = url; });
+    for (let i = 0; i < sizes.length; i++) { if (map[sizes[i]]) return map[sizes[i]]; }
+    return '';
+  }
+
   /* ============================================================
      1. INTRO / PRELOADER
      ============================================================ */
@@ -44,9 +55,9 @@
       try { doPlay(); } catch (e) {}
     }
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(tick).catch(tick); else tick();
-    tick();
-    fetchGitHub().then(tick).catch(tick);
-    fetchLastfm().then(tick).catch(tick);
+    tick(); // yt api
+    try { fetchGitHub().then(tick).catch(tick); } catch (e) { tick(); }
+    try { fetchLastfm().then(tick).catch(tick); } catch (e) { tick(); }
     setTimeout(() => { if (!dismissed) { ready(); dismiss(); } }, HARD + 3000);
     overlay.addEventListener('click', () => { ready(); dismiss(); });
     overlay.addEventListener('pointerup', () => { ready(); dismiss(); });
@@ -293,16 +304,6 @@
   /* ============================================================
      8. LAST.FM
      ============================================================ */
-  // === Last.fm helpers (shared by initial fetch + live polling) ===
-  const lfmAPI = 'https://ws.audioscrobbler.com/2.0/';
-  function lfmImg(images) {
-    if (!images || !images.length) return '';
-    const sizes = ['extralarge', 'large', 'medium', 'small', 'mega'];
-    const map = {};
-    images.forEach(function (im) { const url = (im && (im['#text'] || im['text'])) || ''; if (url) map[im.size] = url; });
-    for (const s of sizes) { if (map[s]) return map[s]; }
-    return '';
-  }
 
   function fetchLastfm() {
     const u = CONFIG.lastfmUser, k = CONFIG.lastfmKey;
