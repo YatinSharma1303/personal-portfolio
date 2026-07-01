@@ -33,6 +33,14 @@
   <div class="click-splash" id="click-splash"></div>
   <div class="click-splash-inner" id="click-splash-inner"></div>
 
+  <!-- ============ SCROLL PROGRESS BAR ============ -->
+  <div class="scroll-progress" id="scroll-progress"></div>
+
+  <!-- ============ BACK TO TOP ============ -->
+  <button class="back-to-top" id="back-to-top" aria-label="Back to top">
+    <svg viewBox="0 0 24 24"><path d="M12 5l-7 7 1.4 1.4L11 8.8V19h2V8.8l4.6 4.6L19 12z"/></svg>
+  </button>
+
   <!-- ============ CHANGELOGS PILL ============ -->
   <button class="changelog-pill" id="changelog-pill" aria-label="Changelogs">
     <span class="changelog-dot"></span> changelogs
@@ -76,6 +84,7 @@
           <span class="tb-track-title" id="topbar-track-title">FMA Brotherhood OST</span>
           <span class="tb-track-artist" id="topbar-track-artist">Anime OST</span>
         </span>
+        <span class="tb-music-tooltip" id="tb-music-tooltip">Tap to play</span>
       </button>
 
       <span class="topbar-divider"></span>
@@ -134,7 +143,7 @@
   <header class="hero" id="hero">
     <div class="hero-inner">
       <div class="hero-label">deployed_code · designed by yatin</div>
-      <p class="hero-eyebrow">Full-Stack Web Developer</p>
+      <p class="hero-eyebrow"><span id="hero-typed"></span><span class="hero-caret">▌</span></p>
       <h1 class="hero-h1">Building software <span class="hero-h1-grad">end to end.</span></h1>
       <p class="hero-sub">Shipping full-stack web experiences — from clean front-ends to the models and APIs behind them.</p>
       <div class="hero-tags">
@@ -175,7 +184,7 @@
         <div class="glass-card bio-card fade-in">
           <div class="bio-row"><span>Location</span><b>🇮🇳 Agra, India</b></div>
           <div class="bio-row"><span>Focus</span><b>Frontend + AI</b></div>
-          <div class="bio-row"><span>Email</span><b>yatinsharma1303@gmail.com</b></div>
+          <div class="bio-row"><span>Email</span><div class="email-wrap"><b>yatinsharma1303@gmail.com</b><button class="copy-btn material-symbols-outlined" id="copy-email" title="Copy email">content_copy</button></div></div>
           <div class="bio-row"><span>Status</span><b class="now-badge">now · building · shipping</b></div>
         </div>
 

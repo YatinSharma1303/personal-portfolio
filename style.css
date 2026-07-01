@@ -560,6 +560,63 @@ html.light .interest-card { background: rgba(255,255,255,0.5); }
 .fade-in { opacity: 0; transform: translateY(24px); transition: opacity 0.7s ease, transform 0.7s ease; }
 .fade-in.visible { opacity: 1; transform: translateY(0); }
 
+/* ============ SCROLL PROGRESS BAR ============ */
+.scroll-progress {
+  position: fixed; top: 0; left: 0; height: 2px; width: 0%; z-index: 5000;
+  background: linear-gradient(90deg, #00c8ff, #7850ff, #00f0b4);
+  box-shadow: 0 0 8px rgba(0,200,255,0.5); transition: width 0.08s linear;
+}
+
+/* ============ BACK TO TOP ============ */
+.back-to-top {
+  position: fixed; bottom: 20px; left: 20px; z-index: 800;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: rgba(18,18,24,0.55); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border); color: var(--gray);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transform: translateY(10px);
+  transition: all 0.3s cubic-bezier(0.22,1,0.36,1);
+}
+html.light .back-to-top { background: rgba(255,255,255,0.6); }
+.back-to-top.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+.back-to-top:hover { color: var(--white); border-color: var(--border-hover); transform: translateY(-2px); }
+.back-to-top svg { width: 20px; height: 20px; fill: currentColor; }
+
+/* ============ ACTIVE NAV HIGHLIGHT ============ */
+.tb-icon-btn.active { color: var(--accent); }
+.tb-icon-btn.active svg { filter: drop-shadow(0 0 6px rgba(0,200,255,0.6)); }
+
+/* ============ SECTION SCROLL OFFSET ============ */
+.section, .hero { scroll-margin-top: 90px; }
+
+/* ============ MUSIC TOOLTIP ============ */
+.tb-music-tooltip {
+  position: absolute; top: calc(100% + 10px); left: 50%; transform: translateX(-50%) translateY(4px);
+  background: rgba(12,12,16,0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 8px 14px; font-family: var(--mono); font-size: 11px; color: var(--gray); white-space: nowrap;
+  opacity: 0; pointer-events: none; transition: all 0.2s ease; z-index: 1100;
+}
+.tb-music-tooltip::before {
+  content: ''; position: absolute; top: -5px; left: 50%; transform: translateX(-50%) rotate(45deg);
+  width: 8px; height: 8px; background: rgba(12,12,16,0.95);
+  border-left: 1px solid var(--border); border-top: 1px solid var(--border);
+}
+.topbar-music-widget:hover .tb-music-tooltip { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ============ COPY EMAIL BUTTON ============ */
+.email-wrap { display: flex; align-items: center; gap: 6px; }
+.copy-btn { font-size: 14px; color: var(--gray-dim); padding: 2px; border-radius: 6px; transition: all 0.15s ease; font-family: 'Material Symbols Outlined'; }
+.copy-btn:hover { color: var(--accent); background: rgba(0,200,255,0.1); }
+.copy-btn.copied { color: #34d399; }
+
+/* ============ HERO TYPEWRITER ============ */
+.hero-caret { color: var(--accent); animation: caretBlink 1s step-end infinite; font-weight: 300; }
+@keyframes caretBlink { 0%,50% { opacity: 1; } 50.01%,100% { opacity: 0; } }
+
+/* ============ PROJECT THUMBNAIL IMAGE ============ */
+.project-thumb-img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; border-bottom: 1px solid var(--border); }
+
 /* ============ TIME WIDGET ============ */
 .time-card { padding: 22px; }
 .time-label { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); margin-bottom: 14px; letter-spacing: 0.05em; }

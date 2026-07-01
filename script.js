@@ -1,7 +1,8 @@
 /* ============================================================
    YATIN SHARMA — PORTFOLIO · script.js
    Vanilla JS · YouTube music · GitHub · Last.fm · AniList ·
-   AMA (Firestore+Telegram+voting) · time · parallax · counters
+   AMA (Firestore+Telegram+voting) · time · parallax · counters ·
+   typewriter · scroll progress · active nav · back-to-top · copy email
    ============================================================ */
 (function () {
   'use strict';
@@ -40,7 +41,6 @@
     function dismiss() {
       if (dismissed || !done) return; dismissed = true;
       overlay.classList.add('hidden'); setTimeout(() => { overlay.style.display = 'none'; }, 600);
-      // Autoplay music on user-initiated entry into the site.
       try { doPlay(); } catch (e) {}
     }
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(tick).catch(tick); else tick();
@@ -86,7 +86,6 @@
 
   /* ============================================================
      4. MUSIC PLAYER (YouTube IFrame API — bulletproof edition)
-     Handles: delayed API load, play-intent queuing, errors, state sync, loop.
      ============================================================ */
   let ytPlayer = null, ytReady = false, ytError = false, wantPlay = false, isPlaying = false;
   const playerPanel = $('slide-music-player');
@@ -98,6 +97,7 @@
     const disc = $('tb-music-disc'); if (disc) disc.classList.toggle('playing', playing);
     const eq = $('tb-eq-bars'); if (eq) eq.classList.toggle('playing', playing);
     const vinyl = $('sp-vinyl'); if (vinyl) vinyl.classList.toggle('playing', playing);
+    const tip = $('tb-music-tooltip'); if (tip) tip.textContent = playing ? 'Now playing' : 'Tap to play';
   }
 
   window.onYouTubeIframeAPIReady = function () {
@@ -113,33 +113,25 @@
             if (wantPlay) { try { ytPlayer.playVideo(); } catch (e) {} }
           },
           onStateChange: function (e) {
-            if (e.data === 1) { setVisuals(true); progressLoop(); }          // playing
-            else if (e.data === 2) { setVisuals(false); }                     // paused
-            else if (e.data === 0) {                                          // ended — loop back to start
+            if (e.data === 1) { setVisuals(true); progressLoop(); }
+            else if (e.data === 2) { setVisuals(false); }
+            else if (e.data === 0) {
               if (wantPlay) { try { ytPlayer.seekTo(0); ytPlayer.playVideo(); } catch (er) {} }
               else setVisuals(false);
             }
           },
-          onError: function (e) {
-            ytError = true; setVisuals(false);
-            console.warn('YouTube player error:', e.data);
-          }
+          onError: function (e) { ytError = true; setVisuals(false); console.warn('YouTube player error:', e.data); }
         }
       });
     } catch (err) { ytError = true; console.warn('YT.Player init failed:', err); }
   };
-
-  // Load the IFrame API.
-  const tag = document.createElement('script');
-  tag.src = 'https://www.youtube.com/iframe_api';
-  document.head.appendChild(tag);
-  // Safety net: if the API never calls back in 8s, flag error so UI doesn't hang.
+  const tag = document.createElement('script'); tag.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(tag);
   setTimeout(function () { if (!ytReady && !ytError) { ytError = true; } }, 8000);
 
   function doPlay() {
     if (ytError) return;
     wantPlay = true;
-    if (!ytReady) { setVisuals(true); return; }  // queue intent
+    if (!ytReady) { setVisuals(true); return; }
     try { ytPlayer.playVideo(); } catch (e) {}
   }
   function doPause() {
@@ -148,9 +140,7 @@
     try { ytPlayer.pauseVideo(); } catch (e) {}
   }
   function togglePlay() { if (isPlaying) doPause(); else doPlay(); }
-
   function setVolume(v) { if (ytReady) { try { ytPlayer.setVolume(v); } catch (e) {} } }
-
   function fmt(t) { t = Math.max(0, Math.floor(t || 0)); const m = Math.floor(t / 60); const s = t % 60; return m + ':' + (s < 10 ? '0' : '') + s; }
   let loopId = null;
   function progressLoop() {
@@ -166,24 +156,17 @@
     })();
   }
 
-  // Topbar music widget click → open panel + start playing.
   if (musicWidget) musicWidget.addEventListener('click', function () {
     if (playerPanel) playerPanel.classList.toggle('open');
     if (playerPanel && playerPanel.classList.contains('open') && !isPlaying) doPlay();
   });
-
-  // Panel play/pause button.
   const playBtn = $('sp-play-btn');
   if (playBtn) playBtn.addEventListener('click', togglePlay);
-
-  // Volume slider.
   const volSlider = $('sp-vol-slider');
   if (volSlider) volSlider.addEventListener('input', function (e) {
     const v = e.target.value; setVolume(v);
     const lbl = $('sp-vol-val'); if (lbl) lbl.textContent = v + '%';
   });
-
-  // Seek bar.
   const pBar = $('sp-progress-bar');
   if (pBar) pBar.addEventListener('click', function (e) {
     if (!ytReady) return;
@@ -228,7 +211,7 @@
   })();
 
   /* ============================================================
-     6. PROJECTS (styled Source / Live buttons)
+     6. PROJECTS (with generated thumbnails)
      ============================================================ */
   const PROJECTS = [
     {
@@ -238,7 +221,7 @@
       tags: ['Python', 'ML', 'Streamlit', 'RAG', 'FAISS'],
       repo: 'https://github.com/YatinSharma1303/SmartHealthCare-For-Early-Diagnosis-Using-Artificial-Intelligence',
       live: null,
-      gradient: 'linear-gradient(135deg, #0ea5e9, #6366f1, #8b5cf6)'
+      img: 'assets/smarthealthcare.jpg'
     },
     {
       cat: 'AI Chat App · JavaScript · Live on Vercel',
@@ -247,26 +230,25 @@
       tags: ['JavaScript', 'AI', 'Vercel'],
       repo: 'https://github.com/YatinSharma1303/YatiniGPT',
       live: 'https://yatini-gpt.vercel.app/',
-      gradient: 'linear-gradient(135deg, #10b981, #06b6d4, #3b82f6)'
+      img: 'assets/yatinigpt.jpg'
     }
   ];
   (function projects() {
     const grid = $('projects-grid'); if (!grid) return;
     grid.innerHTML = PROJECTS.map(p => {
-      const initials = p.name.split(' ').map(w => w[0]).join('');
-      return `<article class="project-card">
-        <div class="project-thumb" style="background:${p.gradient};display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,0.85);font-size:22px;font-weight:700;">${initials}</div>
-        <div class="project-body">
-          <div class="project-cat">${p.cat}</div>
-          <div class="project-name">${p.name}</div>
-          <div class="project-desc">${p.desc}</div>
-          <div class="project-tags">${p.tags.map(t => `<span>${t}</span>`).join('')}</div>
-          <div class="project-actions">
-            <a class="project-dl-btn" href="${p.repo}" target="_blank" rel="noopener">↓ Source</a>
-            ${p.live ? `<a class="project-live-btn" href="${p.live}" target="_blank" rel="noopener">↗ Live Demo</a>` : ''}
-          </div>
-        </div>
-      </article>`;
+      const thumb = p.img
+        ? '<img class="project-thumb-img" src="' + p.img + '" alt="' + esc(p.name) + '" loading="lazy">'
+        : '<div class="project-thumb"></div>';
+      return '<article class="project-card">' + thumb +
+        '<div class="project-body">' +
+        '<div class="project-cat">' + p.cat + '</div>' +
+        '<div class="project-name">' + p.name + '</div>' +
+        '<div class="project-desc">' + p.desc + '</div>' +
+        '<div class="project-tags">' + p.tags.map(t => '<span>' + t + '</span>').join('') + '</div>' +
+        '<div class="project-actions">' +
+        '<a class="project-dl-btn" href="' + p.repo + '" target="_blank" rel="noopener">Source</a>' +
+        (p.live ? '<a class="project-live-btn" href="' + p.live + '" target="_blank" rel="noopener">Live Demo</a>' : '') +
+        '</div></div></article>';
     }).join('');
   })();
 
@@ -424,24 +406,29 @@
   })();
 
   /* ============================================================
-     13. PARALLAX (subtle scroll on background orb + sections)
+     13. SCROLL: parallax + progress bar + back-to-top
      ============================================================ */
-  (function parallax() {
+  (function scrollFX() {
     const orb = document.querySelector('.hero-gradient-orb');
     const hero = $('hero');
-    if (!orb && !hero) return;
+    const prog = $('scroll-progress');
+    const btt = $('back-to-top');
     let ticking = false;
     function update() {
       const y = window.scrollY;
+      const docH = document.documentElement.scrollHeight - window.innerHeight;
       if (orb) orb.style.transform = `translate(0, ${y * 0.15}px)`;
       if (hero) hero.style.transform = `translateY(${y * 0.25}px)`;
+      if (prog) prog.style.width = (docH > 0 ? (y / docH * 100) : 0) + '%';
+      if (btt) btt.classList.toggle('visible', y > 600);
       ticking = false;
     }
     window.addEventListener('scroll', () => { if (!ticking) { requestAnimationFrame(update); ticking = true; } }, { passive: true });
+    if (btt) btt.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
   })();
 
   /* ============================================================
-     14. ANIMATED COUNTERS (count up when scrolled into view)
+     14. ANIMATED COUNTERS
      ============================================================ */
   function animateCounter(id, target) {
     const el = $(id); if (!el) return;
@@ -470,7 +457,7 @@
     const pill = $('changelog-pill'), modal = $('changelog-modal'), close = $('changelog-close'), body = $('changelog-body');
     if (!pill || !modal) return;
     const LOGS = [
-      { date: '2026-07-01 · v1.0', items: ['Full portfolio launched — hero, about, skills, projects, music, anime.', 'Ask Me Anything with Firestore + Telegram reply-to-answer.', 'Added Playground: 7 playable mini-games.', 'Added voting + sort + pagination on answered questions.', 'Added time widget, parallax, animated counters.'] }
+      { date: '2026-07-01 · v1.0', items: ['Full portfolio launched — hero, about, skills, projects, music, anime.', 'Ask Me Anything with Firestore + Telegram reply-to-answer.', 'Added Playground: 7 playable mini-games.', 'Added voting + sort + pagination on answered questions.', 'Added time widget, parallax, animated counters.', 'Scroll progress bar, back-to-top, typewriter, active nav, copy email, project thumbnails.'] }
     ];
     body.innerHTML = LOGS.map(l => `<div class="changelog-entry"><div class="changelog-date">${l.date}</div><ul>${l.items.map(i => `<li>${i}</li>`).join('')}</ul></div>`).join('');
     pill.addEventListener('click', () => modal.classList.toggle('open'));
@@ -479,7 +466,66 @@
   })();
 
   /* ============================================================
-     16. AMA — Firestore + Telegram + voting + sort + pagination
+     16. HERO TYPEWRITER (rotating roles)
+     ============================================================ */
+  (function typewriter() {
+    const el = $('hero-typed'); if (!el) return;
+    const ROLES = ['Full-Stack Developer', 'AI / ML Engineer', 'Problem Solver', 'Open-Source Tinkerer'];
+    let r = 0, c = 0, deleting = false;
+    function tick() {
+      const word = ROLES[r];
+      if (!deleting) { c++; if (c > word.length) { deleting = true; setTimeout(tick, 1600); return; } }
+      else { c--; if (c === 0) { deleting = false; r = (r + 1) % ROLES.length; } }
+      el.textContent = word.slice(0, c);
+      setTimeout(tick, deleting ? 45 : 85);
+    }
+    setTimeout(tick, 600);
+  })();
+
+  /* ============================================================
+     17. ACTIVE NAV HIGHLIGHT (sync with scroll position)
+     ============================================================ */
+  (function activeNav() {
+    const navLinks = document.querySelectorAll('.topbar-nav-icons .tb-icon-btn');
+    if (!navLinks.length) return;
+    const sections = [];
+    navLinks.forEach(a => { const id = a.getAttribute('href').slice(1); const sec = document.getElementById(id); if (sec) sections.push({ sec, a }); });
+    if (!sections.length) return;
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          navLinks.forEach(a => a.classList.remove('active'));
+          const match = sections.find(s => s.sec === e.target);
+          if (match) match.a.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-45% 0px -50% 0px' });
+    sections.forEach(s => obs.observe(s.sec));
+  })();
+
+  /* ============================================================
+     18. COPY EMAIL BUTTON
+     ============================================================ */
+  (function copyEmail() {
+    const btn = $('copy-email'); if (!btn) return;
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText('yatinsharma1303@gmail.com');
+        btn.classList.add('copied');
+        const orig = btn.textContent;
+        btn.textContent = 'check';
+        setTimeout(() => { btn.classList.remove('copied'); btn.textContent = orig; }, 1800);
+      } catch (e) {
+        // Fallback
+        const t = document.createElement('textarea'); t.value = 'yatinsharma1303@gmail.com';
+        document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (er) {} document.body.removeChild(t);
+        btn.classList.add('copied'); setTimeout(() => btn.classList.remove('copied'), 1800);
+      }
+    });
+  })();
+
+  /* ============================================================
+     19. AMA — Firestore + Telegram + voting + sort + pagination
      ============================================================ */
   (function ama() {
     const input = $('ama-input'), send = $('ama-send'), status = $('ama-status'),
@@ -618,7 +664,7 @@
   })();
 
   /* ============================================================
-     17. FADE-IN OBSERVER + YEAR
+     20. FADE-IN OBSERVER + YEAR
      ============================================================ */
   (function reveal() {
     const obs = new IntersectionObserver((entries) => {
