@@ -296,23 +296,26 @@
   function fetchLastfm() {
     const u = CONFIG.lastfmUser, k = CONFIG.lastfmKey;
     const info = fetch(`https://ws.audioscrobbler.com/2.0/?method=user.getinfo&user=${u}&api_key=${k}&format=json`).then(r => r.json()).then(d => {
+      if (d.error) { console.warn('Last.fm error:', d.message); return; }
       const i = d && d.user; if (!i) return;
       animateCounter('lfm-scrobbles', i.playcount ?? 0);
       animateCounter('lfm-artists', i.artist_count ?? 0);
       animateCounter('lfm-tracks', i.track_count ?? 0);
       animateCounter('lfm-albums', i.album_count ?? 0);
-      // Fetch profile avatar
       const av = $('lfm-avatar');
-      if (av && i.image) {
-        const img = (i.image.find(x => x.size === 'large') || i.image[i.image.length - 1] || {}).__text;
-        if (img) av.src = img;
+      if (av && i.image && i.image.length) {
+        const imgObj = i.image.find(x => x.size === 'large' || x.size === 'extralarge') || i.image[i.image.length - 1];
+        const imgUrl = imgObj && (imgObj['#text'] || imgObj['text']);
+        if (imgUrl) av.src = imgUrl; else av.style.visibility = 'hidden';
       }
     });
     const tracks = fetch(`https://ws.audioscrobbler.com/2.0/?method=user.gettoptracks&user=${u}&period=1month&limit=6&api_key=${k}&format=json`).then(r => r.json()).then(d => {
+      if (d.error) return;
       const wrap = $('lfm-tracks'); if (!wrap || !d.toptracks) return;
       const t = d.toptracks.track || [];
       wrap.innerHTML = t.map((tr, idx) => {
-        const img = (tr.image && (tr.image.find(i => i.size === 'medium') || {}).__text) || '';
+        const imgObj = tr.image && (tr.image.find(i => i.size === 'medium') || tr.image[tr.image.length - 1]);
+        const img = (imgObj && (imgObj['#text'] || imgObj['text'])) || '';
         return `<div class="lfm-track"><span class="lfm-track-rank">${idx + 1}</span>${img ? `<img class="lfm-track-img" alt="" src="${img}">` : ''}<div class="lfm-track-info"><div class="lfm-track-name">${esc(tr.name)}</div><div class="lfm-track-artist">${tr.artist ? esc(tr.artist.name) : ''}</div></div></div>`;
       }).join('');
     });
