@@ -328,7 +328,7 @@
   (function anilist() {
     const list = $('al-list'), tabs = $('al-tabs'); if (!list) return;
     let allEntries = [], activeStatus = 'ALL', page = 1;
-    const PER_PAGE = 18;
+    const PER_PAGE = 6;
     const card = list.parentElement;
     let summaryEl = null, pagerEl = null;
     function ensureChrome() {
