@@ -12,7 +12,7 @@
     lastfmUser: 'YATINSHARMA',
     anilistUser: 'YatinSharma1303',
     lastfmKey: 'ff50164039e4af6c3662d01fcb66877d', // ⚠️ Replace with YOUR Last.fm key (last.fm/api/account/create)
-    ytVideoId: 'y5PW7rqXUhk', // Tsuisou — Michiru Oshima (YouTube embed)
+    ytVideoId: 'XtwqzajH_8A', // Fullmetal Alchemist Brotherhood OST (YouTube embed)
     amaLimit: 20,
     firebase: {
       apiKey: 'AIzaSyBA2du9aSIi7xoDttbICzmEd-nq0W39zrU',

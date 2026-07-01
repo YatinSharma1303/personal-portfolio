@@ -15,8 +15,9 @@ service cloud.firestore {
 
       // Visitors can CREATE a question, but only with exact, safe fields.
       allow create: if request.resource.data.keys().hasOnly([
-          "name", "question", "answer", "answered", "createdAt", "answeredAt", "votes"
+          "id", "name", "question", "answer", "answered", "createdAt", "answeredAt", "votes"
         ])
+        && request.resource.data.id is string
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 60

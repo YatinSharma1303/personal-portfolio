@@ -537,3 +537,4 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderCards);
   else renderCards();
 })();
+  

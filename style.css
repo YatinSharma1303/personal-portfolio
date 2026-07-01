@@ -192,14 +192,12 @@ html.light .topbar-pill {
 .topbar-music-widget:hover { background: rgba(255,255,255,0.06); }
 .tb-music-disc {
   width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
-  background: radial-gradient(circle at 50% 50%, #2a2a2a 0 28%, transparent 28%),
-              conic-gradient(from 0deg, #00c8ff, #7850ff, #00f0b4, #00c8ff);
+  background: url('assets/cover.jpg') center/cover, radial-gradient(circle at 50% 50%, #1a1a2e 0 28%, transparent 28%);
   border: 2px solid #1a1a1a; position: relative;
 }
-/* Muted autoplay indicator — invites a tap to unmute */
-.topbar-music-widget.muted { background: rgba(0,200,255,0.10); }
-.topbar-music-widget.muted .tb-music-disc::after {
-  content: '🔇'; position: absolute; top: -3px; right: -3px; font-size: 11px; line-height: 1;
+.tb-music-disc::after {
+  content: ''; position: absolute; top: 50%; left: 50%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px;
+  border-radius: 50%; background: #0a0a0e;
 }
 .tb-music-disc.playing { animation: spin 4s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -255,15 +253,24 @@ html.light .slide-player-panel { background: rgba(240,240,248,0.92); }
 .sp-vinyl {
   width: 200px; height: 200px; border-radius: 50%;
   background:
-    radial-gradient(circle at 50% 50%, #1a1a2e 0 14%, transparent 14%),
-    repeating-radial-gradient(circle at 50% 50%, #1a1a1a 0 2px, #0e0e0e 2px 4px);
+    radial-gradient(circle at 50% 50%, #000 0 5%, transparent 5%),
+    repeating-radial-gradient(circle at 50% 50%, #1c1c1c 0 1px, #0a0a0a 1px 3px);
   border: 3px solid #000; position: relative;
   box-shadow: 0 12px 40px rgba(0,0,0,0.6);
 }
 .sp-vinyl.playing { animation: spin 5s linear infinite; }
+/* CD label — cover art fills the disc with a center spindle hole */
 .sp-vinyl-label {
-  position: absolute; inset: 30%; border-radius: 50%;
-  background: conic-gradient(from 0deg, #00c8ff, #7850ff, #00f0b4, #00c8ff);
+  position: absolute; inset: 8%; border-radius: 50%;
+  background-image: url('assets/cover.jpg');
+  background-size: cover; background-position: center;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+.sp-vinyl-label::after {
+  content: ''; position: absolute; top: 50%; left: 50%;
+  width: 22px; height: 22px; margin: -11px 0 0 -11px;
+  border-radius: 50%; background: #0a0a0e;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.12);
 }
 .sp-track-info { text-align: center; }
 .sp-title { font-size: 20px; font-weight: 700; }
