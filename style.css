@@ -513,7 +513,7 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 /* ============ LAST.FM ============ */
 .lastfm-card { padding: 28px; }
 .lfm-head { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
-.lfm-icon { font-size: 26px; color: #d51007; }
+.lfm-avatar { width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--border); object-fit: cover; }
 .lfm-title { font-weight: 800; font-size: 18px; }
 .lfm-sub { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); }
 .lfm-link { font-size: 12px; color: var(--accent); margin-left: auto; }

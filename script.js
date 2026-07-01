@@ -301,6 +301,12 @@
       animateCounter('lfm-artists', i.artist_count ?? 0);
       animateCounter('lfm-tracks', i.track_count ?? 0);
       animateCounter('lfm-albums', i.album_count ?? 0);
+      // Fetch profile avatar
+      const av = $('lfm-avatar');
+      if (av && i.image) {
+        const img = (i.image.find(x => x.size === 'large') || i.image[i.image.length - 1] || {}).__text;
+        if (img) av.src = img;
+      }
     });
     const tracks = fetch(`https://ws.audioscrobbler.com/2.0/?method=user.gettoptracks&user=${u}&period=1month&limit=6&api_key=${k}&format=json`).then(r => r.json()).then(d => {
       const wrap = $('lfm-tracks'); if (!wrap || !d.toptracks) return;
@@ -320,19 +326,24 @@
     const list = $('al-list'), tabs = $('al-tabs'); if (!list) return;
     let allEntries = [], activeStatus = 'ALL', page = 1;
     const PER_PAGE = 18;
-    const card = $('anilist-card');
+    const card = list.parentElement;
     let summaryEl = null, pagerEl = null;
     function ensureChrome() {
-      if (!summaryEl) { summaryEl = document.createElement('div'); summaryEl.className = 'al-summary'; card.insertBefore(summaryEl, list); }
+      if (!summaryEl) { summaryEl = document.createElement('div'); summaryEl.className = 'al-summary'; list.parentNode.insertBefore(summaryEl, list); }
       if (!pagerEl) { pagerEl = document.createElement('div'); pagerEl.className = 'al-pagination'; card.appendChild(pagerEl); }
     }
-    const query = `query{user:MediaListCollection(userName:"${CONFIG.anilistUser}",type:ANIME){lists{name status entries{media{id title{romaji english}coverImage{medium}episodes meanScore}score progress}}}}`;
-    fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query }) })
+    const query = `query{user:MediaListCollection(userName:"${CONFIG.anilistUser}",type:ANIME){lists{name status entries{media{id title{romaji english}coverImage{large}episodes meanScore}score progress}}}}`;
+    fetch('https://graphql.anilist.co?_=' + Date.now(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query }) })
       .then(r => r.json()).then(d => {
         const lists = (d.data && d.data.user && d.data.user.lists) || [];
         lists.forEach(l => (l.entries || []).forEach(e => { e._status = l.status; allEntries.push(e); }));
         renderSummary(); render();
       }).catch(() => { list.innerHTML = '<div class="al-empty">Could not load anime list.</div>'; });
+
+    // Fetch user avatar separately
+    const userQuery = `query{User(name:\"${CONFIG.anilistUser}\"){avatar{large}}}`;
+    fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: userQuery }) })
+      .then(r => r.json()).then(d => { const av = $('al-avatar'); if (av && d && d.data && d.data.User && d.data.User.avatar && d.data.User.avatar.large) av.src = d.data.User.avatar.large; }).catch(() => {});
     function renderSummary() {
       ensureChrome();
       const total = allEntries.length;
@@ -349,7 +360,7 @@
       if (!items.length) { list.innerHTML = '<div class="al-empty">No entries here yet.</div>'; pagerEl.innerHTML = ''; return; }
       list.innerHTML = slice.map(e => {
         const t = (e.media && (e.media.title.romaji || e.media.title.english)) || '—';
-        const img = (e.media && e.media.coverImage && e.media.coverImage.medium) || '';
+        const img = (e.media && e.media.coverImage && e.media.coverImage.large) || '';
         const score = e.score ? '★ ' + e.score : (e.progress ? e.progress + ' ep' : '');
         return `<div class="al-item"><img loading="lazy" alt="${esc(t)}" src="${img}" onerror="this.style.opacity=0"><div class="al-item-info"><div class="al-item-name">${esc(t)}</div><div class="al-item-score">${score}</div></div></div>`;
       }).join('');
