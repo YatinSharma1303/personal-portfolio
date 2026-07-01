@@ -295,31 +295,67 @@
      ============================================================ */
   function fetchLastfm() {
     const u = CONFIG.lastfmUser, k = CONFIG.lastfmKey;
-    const info = fetch(`https://ws.audioscrobbler.com/2.0/?method=user.getinfo&user=${u}&api_key=${k}&format=json`).then(r => r.json()).then(d => {
-      if (d.error) { console.warn('Last.fm error:', d.message); return; }
+    const API = 'https://ws.audioscrobbler.com/2.0/';
+    // Try sizes in priority order; return first non-empty URL. Last.fm often
+    // has empty #text for smaller sizes, so we cascade up to larger ones.
+    function img(images) {
+      if (!images || !images.length) return '';
+      const sizes = ['extralarge', 'large', 'medium', 'small', 'mega'];
+      // build a size->url map of non-empty values
+      const map = {};
+      images.forEach(im => { const url = (im && (im['#text'] || im['text'])) || ''; if (url) map[im.size] = url; });
+      for (const s of sizes) { if (map[s]) return map[s]; }
+      return '';
+    }
+    const info = fetch(`${API}?method=user.getinfo&user=${u}&api_key=${k}&format=json`).then(r => r.json()).then(d => {
       const i = d && d.user; if (!i) return;
-      animateCounter('lfm-scrobbles', i.playcount ?? 0);
-      animateCounter('lfm-artists', i.artist_count ?? 0);
-      animateCounter('lfm-tracks', i.track_count ?? 0);
-      animateCounter('lfm-albums', i.album_count ?? 0);
       const av = $('lfm-avatar');
-      if (av && i.image && i.image.length) {
-        const imgObj = i.image.find(x => x.size === 'large' || x.size === 'extralarge') || i.image[i.image.length - 1];
-        const imgUrl = imgObj && (imgObj['#text'] || imgObj['text']);
-        if (imgUrl) av.src = imgUrl; else av.style.visibility = 'hidden';
-      }
+      if (av) { const url = img(i.image); if (url) av.src = url; }
+      const strip = $('lfm-statstrip');
+      if (strip) strip.textContent = `${(i.playcount||0).toLocaleString()} scrobbles · ${(i.artist_count||0).toLocaleString()} artists · ${(i.album_count||0).toLocaleString()} albums`;
     });
-    const tracks = fetch(`https://ws.audioscrobbler.com/2.0/?method=user.gettoptracks&user=${u}&period=1month&limit=6&api_key=${k}&format=json`).then(r => r.json()).then(d => {
-      if (d.error) return;
+    const tracks = fetch(`${API}?method=user.gettoptracks&user=${u}&period=1month&limit=5&api_key=${k}&format=json`).then(r => r.json()).then(d => {
       const wrap = $('lfm-tracks'); if (!wrap || !d.toptracks) return;
       const t = d.toptracks.track || [];
       wrap.innerHTML = t.map((tr, idx) => {
-        const imgObj = tr.image && (tr.image.find(i => i.size === 'medium') || tr.image[tr.image.length - 1]);
-        const img = (imgObj && (imgObj['#text'] || imgObj['text'])) || '';
-        return `<div class="lfm-track"><span class="lfm-track-rank">${idx + 1}</span>${img ? `<img class="lfm-track-img" alt="" src="${img}">` : ''}<div class="lfm-track-info"><div class="lfm-track-name">${esc(tr.name)}</div><div class="lfm-track-artist">${tr.artist ? esc(tr.artist.name) : ''}</div></div></div>`;
+        const art = img(tr.image);
+        const plays = tr.playcount || '0';
+        const artHTML = art ? `<img class="lfm-track-img" alt="" src="${art}" onerror="this.style.visibility='hidden'">` : '<span class="lfm-track-img lfm-noart">\u266A</span>';
+        return `<div class="lfm-track"><span class="lfm-track-rank">${idx+1}</span>${artHTML}<div class="lfm-track-info"><div class="lfm-track-name">${esc(tr.name)}</div><div class="lfm-track-artist">${tr.artist ? esc(tr.artist.name) : ''}</div></div><span class="lfm-track-plays">${plays}x</span></div>`;
       }).join('');
     });
-    return Promise.allSettled([info, tracks]);
+    const artists = fetch(`${API}?method=user.gettopartists&user=${u}&period=1month&limit=5&api_key=${k}&format=json`).then(r => r.json()).then(d => {
+      const wrap = $('lfm-artists'); if (!wrap || !d.topartists) return;
+      const a = d.topartists.artist || [];
+      wrap.innerHTML = a.map((ar) => {
+        const art = img(ar.image);
+        const plays = ar.playcount || '0';
+        const artHTML = art ? `<img class="lfm-artist-img" alt="" src="${art}" onerror="this.style.visibility='hidden'">` : '<span class="lfm-artist-img lfm-noart">\u266A</span>';
+        return `<div class="lfm-artist">${artHTML}<span class="lfm-artist-name">${esc(ar.name)}</span><span class="lfm-artist-plays">${plays}x</span></div>`;
+      }).join('');
+    });
+    const recent = fetch(`${API}?method=user.getrecenttracks&user=${u}&limit=8&api_key=${k}&format=json`).then(r => r.json()).then(d => {
+      const tracks = (d.recenttracks && d.recenttracks.track) || [];
+      if (!tracks.length) return;
+      const first = tracks[0];
+      const isLive = first['@attr'] && first['@attr'].nowplaying === 'true';
+      const npArt = img(first.image);
+      const npArtEl = $('lfm-np-art'); if (npArtEl) { if (npArt) { npArtEl.src = npArt; npArtEl.onerror = function(){ this.style.visibility='hidden'; }; } else this.style.visibility='hidden'; }
+      const npTrack = $('lfm-np-track'); if (npTrack) npTrack.textContent = first.name || '\u2014';
+      const npArtist = $('lfm-np-artist'); if (npArtist) npArtist.textContent = (first.artist && (first.artist['#text'] || first.artist.name)) || '\u2014';
+      const npCard = $('lfm-nowplaying'); if (npCard) npCard.classList.toggle('live', !!isLive);
+      const npLabel = $('lfm-np-label'); if (npLabel) npLabel.textContent = isLive ? 'NOW PLAYING' : 'LAST PLAYED';
+      const recentWrap = $('lfm-recent'); if (!recentWrap) return;
+      const tickerTracks = isLive ? tracks.slice(1, 8) : tracks.slice(0, 8);
+      recentWrap.innerHTML = tickerTracks.map(tr => {
+        const art = img(tr.image);
+        const name = esc(tr.name || '\u2014');
+        const artist = esc((tr.artist && (tr.artist['#text'] || tr.artist.name)) || '');
+        const artHTML = art ? `<img class="lfm-recent-img" alt="" src="${art}" onerror="this.style.visibility='hidden'">` : '';
+        return `<div class="lfm-recent-item">${artHTML}<div class="lfm-recent-info"><div class="lfm-recent-name">${name}</div><div class="lfm-recent-artist">${artist}</div></div></div>`;
+      }).join('');
+    });
+    return Promise.allSettled([info, tracks, artists, recent]);
   }
 
   /* ============================================================

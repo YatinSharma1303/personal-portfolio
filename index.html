@@ -307,16 +307,37 @@
     <div class="lastfm-card glass-card fade-in">
       <div class="lfm-head">
         <img class="lfm-avatar" id="lfm-avatar" alt="Last.fm avatar" src=""/>
-        <div><div class="lfm-title">YATINSHARMA</div><div class="lfm-sub">Last.fm · scrobbler</div></div>
+        <div><div class="lfm-title">YATINSHARMA</div><div class="lfm-statstrip" id="lfm-statstrip">Last.fm · scrobbler</div></div>
+        <a class="lfm-link" href="https://www.last.fm/user/YATINSHARMA" target="_blank" rel="noopener">View ↗</a>
       </div>
-      <a class="lfm-link" href="https://www.last.fm/user/YATINSHARMA" target="_blank" rel="noopener">View Profile ↗</a>
-      <div class="lfm-stats">
-        <div class="stat-card"><span id="lfm-scrobbles">—</span><label>Scrobbles</label></div>
-        <div class="stat-card"><span id="lfm-artists">—</span><label>Artists</label></div>
-        <div class="stat-card"><span id="lfm-tracks">—</span><label>Tracks</label></div>
-        <div class="stat-card"><span id="lfm-albums">—</span><label>Albums</label></div>
+
+      <div class="lfm-nowplaying" id="lfm-nowplaying">
+        <div class="lfm-np-art-wrap">
+          <img class="lfm-np-art" id="lfm-np-art" alt="album art"/>
+          <div class="lfm-np-eq" id="lfm-np-eq"><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="lfm-np-info">
+          <div class="lfm-np-label" id="lfm-np-label">NOW PLAYING</div>
+          <div class="lfm-np-track" id="lfm-np-track">—</div>
+          <div class="lfm-np-artist" id="lfm-np-artist">—</div>
+        </div>
       </div>
-      <div class="lfm-tracks" id="lfm-tracks"><!-- populated by JS --></div>
+
+      <div class="lfm-columns">
+        <div class="lfm-col">
+          <div class="lfm-col-title">TOP TRACKS</div>
+          <div class="lfm-tracks" id="lfm-tracks"></div>
+        </div>
+        <div class="lfm-col">
+          <div class="lfm-col-title">TOP ARTISTS</div>
+          <div class="lfm-artists" id="lfm-artists"></div>
+        </div>
+      </div>
+
+      <div class="lfm-recent-wrap">
+        <div class="lfm-col-title">RECENTLY PLAYED</div>
+        <div class="lfm-recent" id="lfm-recent"></div>
+      </div>
     </div>
   </section>
 
