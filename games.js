@@ -87,6 +87,14 @@
   const rand = (a, b) => Math.random() * (b - a) + a;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
+  // High-score persistence (localStorage). Keyed per-game.
+  function bestScore(gameId) { return parseInt(localStorage.getItem('pg_best_' + gameId) || '0', 10) || 0; }
+  function saveBest(gameId, val) {
+    const cur = bestScore(gameId);
+    if (val > cur) { localStorage.setItem('pg_best_' + gameId, String(val)); return true; }
+    return false;
+  }
+
   /* ============================================================
      1. SNAKE  (keyboard + swipe + on-screen D-pad; no 180 reversal)
      ============================================================ */
@@ -99,7 +107,7 @@
     function reset() {
       snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}];
       dir = {x:1,y:0}; nextDir = {x:1,y:0}; score = 0; alive = true; tick = 120; acc = 0; dirLocked = false;
-      placeFood(); setScore('Score: 0');
+      placeFood(); setScore('Score: 0  Best: ' + bestScore('snake'));
     }
     function placeFood() {
       let p;
@@ -133,11 +141,11 @@
         ctx.fillStyle = i===0 ? '#fff' : 'rgba(255,255,255,'+Math.max(0.3, 0.9-i*0.04)+')';
         ctx.fillRect(s.x*CELL+2, s.y*CELL+2, CELL-4, CELL-4);
       });
-      if (!alive) {
+      if (!alive) { try{window.haptic(40);}catch(e){} saveBest('snake', score);
         ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(0,0,W,H);
         ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
         ctx.font = 'bold 30px Inter, sans-serif'; ctx.fillText('Game Over', W/2, H/2-10);
-        ctx.font = '15px JetBrains Mono, monospace'; ctx.fillText('Score: '+score+' - press Restart', W/2, H/2+22);
+        ctx.font = '15px JetBrains Mono, monospace'; ctx.fillText('Score: '+score+'  Best: ' + bestScore('snake'), W/2, H/2+22);
       }
     }
     reset(); draw();
@@ -224,7 +232,7 @@
     function serve() {
       P.score = 0; AI.score = 0;
       state = 'serving'; serveTimer = 60; serveDir = Math.random() < 0.5 ? 1 : -1;
-      setScore('You 0 - 0 AI');
+      setScore('You 0 - 0 AI  Best: ' + bestScore('pong'));
     }
     function nextServe(dir) { state = 'serving'; serveTimer = 50; serveDir = dir; }
 
@@ -293,7 +301,7 @@
         ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.textAlign = 'center';
         ctx.font = '20px JetBrains Mono, monospace'; ctx.fillText('Get ready' + dots, W/2, H/2);
       } else if (state === 'over') {
-        const msg = P.score >= 5 ? 'You win!' : 'AI wins';
+        saveBest('pong', P.score); const msg = P.score >= 5 ? 'You win!' : 'AI wins';
         drawOverlay(msg, 'Score: ' + P.score + ' - ' + AI.score + ' - press Start');
       }
     }
@@ -345,7 +353,7 @@
   function flappy(host){
     const W=420,H=560; const c=canvasHost(W,H); const ctx=c.getContext('2d');
     let bird,vy,pipes,score,running,started, GAP=150, acc=0, PIPE_EVERY=1500;
-    function reset(){bird={x:90,y:H/2,r:12};vy=0;pipes=[];score=0;running=true;started=false;acc=0;setScore('');}
+    function reset(){bird={x:90,y:H/2,r:12};vy=0;pipes=[];score=0;running=true;started=false;acc=0;setScore('Best: '+bestScore('flappy'));}
     function addPipe(){ const top=rand(60,H-GAP-80); pipes.push({x:W, top, bot:top+GAP, passed:false}); }
     function flap(){ if(!running)return; if(!started)started=true; vy=-7.5; }
     function step(dt){
@@ -356,7 +364,7 @@
       pipes=pipes.filter(p=>p.x>-50);
       if(bird.y<bird.r||bird.y>H-bird.r) running=false;
       if(pipes.some(p=>bird.x+bird.r>p.x&&bird.x-bird.r<p.x+40&&(bird.y-bird.r<p.top||bird.y+bird.r>p.bot))) running=false;
-      if(!running) setScore('Final: '+score);
+      if(!running){ try{window.haptic(40);}catch(e){} saveBest('flappy', score); setScore('Final: '+score+'  Best: '+bestScore('flappy')); }
     }
     function draw(){
       ctx.fillStyle='#0a0a0e'; ctx.fillRect(0,0,W,H);
@@ -469,7 +477,9 @@
         const dx = player.x - cx, dy = player.y - cy;
         if (dx*dx + dy*dy < player.r * player.r) {
           running = false;
-          setScore('Survived: ' + Math.round(score/60) + 's');
+          try{window.haptic(40);}catch(e){}
+          saveBest('dodge', Math.round(score/60));
+          setScore('Survived: ' + Math.round(score/60) + 's  Best: ' + bestScore('dodge'));
           break;
         }
       }
@@ -537,4 +547,3 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderCards);
   else renderCards();
 })();
-  

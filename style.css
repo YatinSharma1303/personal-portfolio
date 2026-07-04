@@ -342,6 +342,36 @@ html.light .sp-yt-link { color: var(--gray); border-color: var(--border); }
   width: 320px; height: 180px; opacity: 0; pointer-events: none;
 }
 
+/* ============ HERO STAGGERED ENTRANCE ============ */
+.hero-reveal { opacity: 0; transform: translateY(28px); }
+.hero.revealed .hero-reveal {
+  animation: heroReveal 0.8s cubic-bezier(0.22,1,0.36,1) forwards;
+  animation-delay: calc(var(--d, 0) * 0.1s);
+}
+@keyframes heroReveal { to { opacity: 1; transform: translateY(0); } }
+
+/* ============ HERO STATUS BADGE ============ */
+.hero-status-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; color: var(--gray);
+  padding: 7px 14px; border-radius: var(--radius-btn);
+  border: 1px solid var(--border); background: rgba(255,255,255,0.03);
+  margin-bottom: 22px;
+}
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #34d399; box-shadow: 0 0 8px #34d399; animation: pulse 2s ease-in-out infinite; }
+
+/* ============ MAGNETIC BUTTONS ============ */
+.magnetic { transition: transform 0.2s cubic-bezier(0.22,1,0.36,1); will-change: transform; }
+
+/* ============ KEYBOARD FOCUS RINGS ============ */
+a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px;
+}
+
+/* ============ IMAGE BLUR-UP ============ */
+.blur-up { filter: blur(12px); transition: filter 0.5s ease; }
+.blur-up.loaded { filter: blur(0); }
+
 /* ============ HERO ============ */
 .hero {
   position: relative; z-index: 1;

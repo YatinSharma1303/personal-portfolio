@@ -758,4 +758,47 @@
     const y = $('year'); if (y) y.textContent = new Date().getFullYear();
   })();
 
+  /* ============================================================
+     21. HERO STAGGERED ENTRANCE
+     Fires once the intro overlay dismisses.
+     ============================================================ */
+  (function heroEntrance() {
+    const hero = document.querySelector('.hero');
+    if (!hero) return;
+    function fire() { hero.classList.add('revealed'); }
+    setTimeout(fire, 400);
+    if (!document.getElementById('intro-overlay')) fire();
+  })();
+
+  /* ============================================================
+     22. MAGNETIC BUTTONS
+     Desktop-only: buttons drift toward the cursor on hover.
+     ============================================================ */
+  (function magnetic() {
+    if (window.matchMedia('(hover: none)').matches) return;
+    document.querySelectorAll('.magnetic').forEach(btn => {
+      const strength = 0.3;
+      btn.addEventListener('mousemove', (e) => {
+        const r = btn.getBoundingClientRect();
+        const x = e.clientX - r.left - r.width / 2;
+        const y = e.clientY - r.top - r.height / 2;
+        btn.style.transform = 'translate(' + (x * strength) + 'px, ' + (y * strength) + 'px)';
+      });
+      btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
+    });
+  })();
+
+  /* ============================================================
+     23. HAPTIC FEEDBACK + BLUR-UP IMAGES
+     ============================================================ */
+  window.haptic = function (ms) {
+    try { if (navigator.vibrate) navigator.vibrate(ms || 12); } catch (e) {}
+  };
+  (function blurUp() {
+    document.querySelectorAll('img.blur-up').forEach(img => {
+      if (img.complete) img.classList.add('loaded');
+      else img.addEventListener('load', () => img.classList.add('loaded'), { once: true });
+    });
+  })();
+
 })();
