@@ -12,12 +12,12 @@
     githubUser: 'YatinSharma1303',
     lastfmUser: 'YATINSHARMA',
     anilistUser: 'YatinSharma1303',
-    lastfmKey: 'ff50164039e4af6c3662d01fcb66877d', // ⚠️ Replace with YOUR Last.fm key (last.fm/api/account/create)
+    lastfmKey: 'd5e4d0f7d8d1cd1f2e40c4e573d23dd6', // ⚠️ Replace with YOUR Last.fm key (last.fm/api/account/create)
     ytVideoId: 'XtwqzajH_8A', // Fullmetal Alchemist Brotherhood OST (YouTube embed)
     amaLimit: 20,
     firebase: {
-      apiKey: 'AIzaSyBA2du9aSIi7xoDttbICzmEd-nq0W39zrU',
-      projectId: 'portfolio-yatin'
+      apiKey: 'YOUR_FIREBASE_WEB_API_KEY',
+      projectId: 'YOUR_FIREBASE_PROJECT_ID'
     },
     amaCollection: 'amaQuestions',
     timezone: 'Asia/Kolkata'
@@ -752,18 +752,27 @@
 
     let votedSet = new Set();
     try { votedSet = new Set(JSON.parse(localStorage.getItem('yatin_ama_votes') || '[]')); } catch (e) {}
+    let reactedSet = new Set();
+    try { reactedSet = new Set(JSON.parse(localStorage.getItem('yatin_ama_reactions') || '[]')); } catch (e) {}
 
     let answeredDocs = [], activeSort = 'top', page = 1;
 
     function fromDoc(doc) {
       const f = doc.fields || {};
+      const reactions = {};
+      if (f.reactions && f.reactions.mapValue && f.reactions.mapValue.fields) {
+        Object.keys(f.reactions.mapValue.fields).forEach(emoji => {
+          reactions[emoji] = Number(f.reactions.mapValue.fields[emoji].integerValue || f.reactions.mapValue.fields[emoji].doubleValue || 0);
+        });
+      }
       return {
         id: f.id?.stringValue || (doc.name ? doc.name.split('/').pop() : ''),
         name: f.name?.stringValue || 'Anonymous',
         question: f.question?.stringValue || '',
         answer: f.answer?.stringValue || '',
         answeredAt: f.answeredAt?.stringValue || '',
-        votes: Number(f.votes?.integerValue || f.votes?.doubleValue || 0)
+        votes: Number(f.votes?.integerValue || f.votes?.doubleValue || 0),
+        reactions: reactions
       };
     }
     function sorted() {
@@ -782,19 +791,27 @@
       const slice = arr.slice((page - 1) * PER_PAGE, page * PER_PAGE);
       list.innerHTML = slice.map(q => {
         const up = votedSet.has(q.id);
-        return `<div class="ama-q">
-          <div class="ama-q-text">${esc(q.question)}</div>
-          <div class="ama-q-ans">${esc(q.answer)}</div>
-          <div class="ama-q-meta">${esc(q.name || 'Anonymous')} · ${esc((q.answeredAt||'').slice(0,10))}</div>
-          <div class="ama-q-vote">
-            <button class="ama-vote-btn ${up ? 'voted' : ''}" data-id="${q.id}" data-dir="1" title="Helpful">▲</button>
-            <span class="ama-vote-count" data-count="${q.id}">${q.votes}</span>
-            <button class="ama-vote-btn ${up ? 'voted' : ''}" data-id="${q.id}" data-dir="-1" title="Undo">▼</button>
-          </div>
-        </div>`;
+        const REACTION_EMOJIS = ['\uD83D\uDC4D', '\uD83D\uDD25', '\uD83D\uDC4F', '\uD83E\uDD29'];
+        const reactionHTML = REACTION_EMOJIS.map(emoji => {
+          const count = (q.reactions && q.reactions[emoji]) || 0;
+          const reacted = reactedSet.has(q.id + ':' + emoji);
+          return '<button class="ama-react-btn ' + (reacted ? 'react-active' : '') + '" data-id="' + q.id + '" data-emoji="' + emoji + '">' + emoji + '<span>' + count + '</span></button>';
+        }).join('');
+        return '<div class="ama-q">' +
+          '<div class="ama-q-text">' + esc(q.question) + '</div>' +
+          '<div class="ama-q-ans">' + esc(q.answer) + '</div>' +
+          '<div class="ama-q-meta">' + esc(q.name || 'Anonymous') + ' - ' + esc((q.answeredAt || '').slice(0, 10)) + '</div>' +
+          '<div class="ama-q-vote">' +
+          '<button class="ama-vote-btn ' + (up ? 'voted' : '') + '" data-id="' + q.id + '" data-dir="1" title="Helpful">\u25B2</button>' +
+          '<span class="ama-vote-count" data-count="' + q.id + '">' + q.votes + '</span>' +
+          '<button class="ama-vote-btn ' + (up ? 'voted' : '') + '" data-id="' + q.id + '" data-dir="-1" title="Undo">\u25BC</button>' +
+          '</div>' +
+          '<div class="ama-q-reactions">' + reactionHTML + '</div>' +
+          '</div>';
       }).join('');
       renderPager(pages);
       list.querySelectorAll('.ama-vote-btn').forEach(b => b.addEventListener('click', () => vote(b.dataset.id, +b.dataset.dir)));
+      list.querySelectorAll('.ama-react-btn').forEach(b => b.addEventListener('click', () => toggleReaction(b.dataset.id, b.dataset.emoji)));
     }
     function renderPager(pages) {
       if (pages <= 1) { pager.innerHTML = ''; return; }
@@ -812,6 +829,17 @@
       const doc = answeredDocs.find(q => q.id === id); if (doc) doc.votes = Math.max(0, doc.votes + delta);
       render();
       fetch('/api/ama-vote', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, delta }) }).catch(() => {});
+    }
+    function toggleReaction(id, emoji) {
+      const key = id + ':' + emoji;
+      const has = reactedSet.has(key);
+      const delta = has ? -1 : 1;
+      if (has) reactedSet.delete(key); else reactedSet.add(key);
+      localStorage.setItem('yatin_ama_reactions', JSON.stringify([...reactedSet]));
+      const doc = answeredDocs.find(q => q.id === id);
+      if (doc) { if (!doc.reactions) doc.reactions = {}; doc.reactions[emoji] = Math.max(0, (doc.reactions[emoji] || 0) + delta); }
+      render();
+      fetch('/api/reactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, emoji, delta }) }).catch(() => {});
     }
     function loadAnswered() {
       if (!FIREBASE_READY) return;
@@ -1026,6 +1054,33 @@
       if (!badge) { badge = document.createElement('div'); badge.className = 'visitor-badge'; document.body.appendChild(badge); }
       badge.textContent = (d.total || 0).toLocaleString() + ' visits';
     }).catch(() => {});
+  })();
+
+  /* ============================================================
+     27b. WAKATIME CODING STATS
+     ============================================================ */
+  (function wakatime() {
+    const langsEl = $('wt-languages'); if (!langsEl) return;
+    const totalEl = $('wt-total');
+    const dailyEl = $('wt-daily');
+    const editorsEl = $('wt-editors');
+    const COLORS = ['#00c8ff','#7850ff','#00f0b4','#f59e0b','#ef4444','#a855f7'];
+    fetch('/api/wakatime').then(r => r.json()).then(d => {
+      if (d.error) { langsEl.innerHTML = '<div class="wt-loading">' + esc(d.error) + '</div>'; return; }
+      if (totalEl) totalEl.textContent = d.total || '—';
+      if (dailyEl) dailyEl.textContent = 'avg ' + (d.daily || '') + '/day';
+      if (d.languages && d.languages.length) {
+        const maxPct = d.languages[0].percent || 100;
+        langsEl.innerHTML = d.languages.map((l, i) => {
+          const w = (l.percent / maxPct * 100);
+          const c = COLORS[i % COLORS.length];
+          return '<div class="wt-lang"><span class="wt-lang-name">' + esc(l.name) + '</span><div class="wt-lang-bar"><div class="wt-lang-fill" style="width:' + w + '%;background:' + c + '"></div></div><span class="wt-lang-time">' + esc(l.time) + '</span></div>';
+        }).join('');
+      }
+      if (editorsEl && d.editors && d.editors.length) {
+        editorsEl.innerHTML = d.editors.map(e => '<span class="wt-editor-pill">' + esc(e) + '</span>').join('');
+      }
+    }).catch(() => { langsEl.innerHTML = '<div class="wt-loading">Could not load stats.</div>'; });
   })();
 
   /* ============================================================

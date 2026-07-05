@@ -1,6 +1,6 @@
 /* ============================================================
    api/reactions.js — Toggle an emoji reaction on a question.
-   Uses Firestore increment for atomic, race-safe counting.
+   Uses Firestore FieldTransform increment (atomic, race-safe).
    ============================================================ */
 const crypto = require('crypto');
 const COLLECTION = 'amaQuestions';
@@ -19,9 +19,9 @@ async function getToken() {
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: 'RS256', typ: 'JWT' };
   const payload = { iss: sa.client_email, scope: 'https://www.googleapis.com/auth/datastore', aud: 'https://oauth2.googleapis.com/token', iat: now, exp: now + 3600 };
-  const unsigned = `${base64url(JSON.stringify(header))}.${base64url(JSON.stringify(payload))}`;
+  const unsigned = base64url(JSON.stringify(header)) + '.' + base64url(JSON.stringify(payload));
   const sig = crypto.createSign('RSA-SHA256').update(unsigned).sign(sa.private_key, 'base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-  const r = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: `${unsigned}.${sig}` }) });
+  const r = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: unsigned + '.' + sig }) });
   const d = await r.json();
   return d.access_token;
 }
@@ -34,40 +34,43 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const id = String(body.id || '').slice(0, 120);
-    const emoji = String(body.emoji || '').slice(0, 10);
-    const delta = Number(body.delta) || 1;
+    const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+    const id = String(body.id || '').trim().slice(0, 120);
+    const emoji = String(body.emoji || '').trim().slice(0, 10);
+    const delta = Number(body.delta) === 1 ? 1 : -1;
     if (!id || !emoji) return res.status(400).json({ error: 'id and emoji required' });
 
     const token = await getToken();
-    const field = `reactions.${emoji}`;
-    const docUrl = `https://firestore.googleapis.com/v1/projects/${projectId()}/databases/(default)/documents/${COLLECTION}/${encodeURIComponent(id)}`;
-    const r = await fetch(`${docUrl}?updateMask.fieldPaths=${encodeURIComponent(field)}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ fields: { reactions: { mapValue: { fields: { [emoji]: { integerValue: String(delta) } } } } } })
+    const docUrl = 'https://firestore.googleapis.com/v1/projects/' + projectId() + '/databases/(default)/documents/' + COLLECTION + '/' + encodeURIComponent(id);
+    const commitUrl = 'https://firestore.googleapis.com/v1/projects/' + projectId() + '/databases/(default)/documents:commit';
+
+    // Atomic increment on the reactions.EMOJI nested field.
+    const commitBody = JSON.stringify({
+      writes: [{
+        transform: {
+          document: docUrl,
+          fieldTransforms: [{
+            fieldPath: 'reactions.' + emoji,
+            increment: delta
+          }]
+        }
+      }]
     });
 
-    // Actually we need a proper increment transform for race safety.
-    // Use commit with FieldTransform.
-    const commitUrl = `https://firestore.googleapis.com/v1/projects/${projectId()}/databases/(default)/documents:commit`;
     const commitRes = await fetch(commitUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({
-        writes: [{
-          transform: {
-            document: docUrl,
-            fieldTransforms: [{ fieldPath: field, increment: delta }]
-          }
-        }]
-      })
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: commitBody
     });
 
-    res.status(200).json({ ok: true });
+    if (!commitRes.ok) {
+      const err = await commitRes.json().catch(() => null);
+      throw new Error((err && err.error && err.error.message) || 'Firestore commit failed');
+    }
+
+    return res.status(200).json({ ok: true, id: id, emoji: emoji, delta: delta });
   } catch (e) {
-    console.error('Reaction failed:', e);
-    res.status(500).json({ error: e.message || 'Failed' });
+    console.error('Reaction error:', e.message);
+    return res.status(500).json({ error: e.message || 'Failed to toggle reaction' });
   }
 };
