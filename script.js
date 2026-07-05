@@ -12,12 +12,12 @@
     githubUser: 'YatinSharma1303',
     lastfmUser: 'YATINSHARMA',
     anilistUser: 'YatinSharma1303',
-    lastfmKey: 'ff50164039e4af6c3662d01fcb66877d', // ⚠️ Replace with YOUR Last.fm key (last.fm/api/account/create)
+    lastfmKey: 'd5e4d0f7d8d1cd1f2e40c4e573d23dd6', // ⚠️ Replace with YOUR Last.fm key (last.fm/api/account/create)
     ytVideoId: 'XtwqzajH_8A', // Fullmetal Alchemist Brotherhood OST (YouTube embed)
     amaLimit: 20,
     firebase: {
-      apiKey: 'AIzaSyBA2du9aSIi7xoDttbICzmEd-nq0W39zrU',
-      projectId: 'portfolio-yatin'
+      apiKey: 'YOUR_FIREBASE_WEB_API_KEY',
+      projectId: 'YOUR_FIREBASE_PROJECT_ID'
     },
     amaCollection: 'amaQuestions',
     timezone: 'Asia/Kolkata'
@@ -907,16 +907,137 @@
   })();
 
   /* ============================================================
-     23. HAPTIC FEEDBACK + BLUR-UP IMAGES
+     23. HAPTIC FEEDBACK + BLUR-UP IMAGES + SOUND FX
      ============================================================ */
-  window.haptic = function (ms) {
-    try { if (navigator.vibrate) navigator.vibrate(ms || 12); } catch (e) {}
-  };
+  window.haptic = function (ms) { try { if (navigator.vibrate) navigator.vibrate(ms || 12); } catch (e) {} };
+  // Web Audio sound effects (no audio files needed).
+  window.sfx = (function () {
+    let ctx = null, muted = false;
+    try { muted = localStorage.getItem('pg_muted') === '1'; } catch (e) {}
+    function play(freq, dur, type) {
+      if (muted) return;
+      try {
+        if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator(); const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = type || 'square'; osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (dur || 0.1));
+        osc.start(); osc.stop(ctx.currentTime + (dur || 0.1));
+      } catch (e) {}
+    }
+    return {
+      play: play,
+      blip: function () { play(660, 0.05, 'square'); },
+      crash: function () { play(120, 0.3, 'sawtooth'); },
+      win: function () { play(523, 0.1); setTimeout(() => play(659, 0.1), 100); setTimeout(() => play(784, 0.2), 200); },
+      toggle: function () { muted = !muted; try { localStorage.setItem('pg_muted', muted ? '1' : '0'); } catch (e) {} return muted; },
+      isMuted: function () { return muted; }
+    };
+  })();
   (function blurUp() {
     document.querySelectorAll('img.blur-up').forEach(img => {
       if (img.complete) img.classList.add('loaded');
       else img.addEventListener('load', () => img.classList.add('loaded'), { once: true });
     });
   })();
+
+  /* ============================================================
+     24. CURSOR GLOW + TRAIL
+     ============================================================ */
+  (function cursorFX() {
+    if (window.matchMedia('(hover: none)').matches) return;
+    const glow = $('cursor-glow');
+    const canvas = $('cursor-trail'); if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let dots = [], mx = 0, my = 0;
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    resize(); window.addEventListener('resize', resize);
+    window.addEventListener('mousemove', (e) => {
+      mx = e.clientX; my = e.clientY;
+      if (glow) { glow.style.left = mx + 'px'; glow.style.top = my + 'px'; }
+      dots.push({ x: mx, y: my, life: 1 });
+      if (dots.length > 25) dots.shift();
+    });
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = 0; i < dots.length; i++) {
+        const d = dots[i]; d.life -= 0.04;
+        if (d.life <= 0) continue;
+        ctx.fillStyle = 'rgba(0,200,255,' + (d.life * 0.5) + ')';
+        ctx.beginPath(); ctx.arc(d.x, d.y, d.life * 4, 0, 7); ctx.fill();
+      }
+      dots = dots.filter(d => d.life > 0);
+      requestAnimationFrame(draw);
+    }
+    draw();
+  })();
+
+  /* ============================================================
+     25. SECTION DIVIDERS
+     ============================================================ */
+  (function sectionDividers() {
+    const sections = document.querySelectorAll('.section, .hero');
+    const labels = { hero: '00', about: '01', skills: '02', projects: '03', music: '04', anime: '05', interests: '06', ama: '07', playground: '08', testimonials: '09', presence: '10' };
+    for (let i = 1; i < sections.length; i++) {
+      const prev = sections[i - 1]; const cur = sections[i];
+      const lbl = labels[cur.id];
+      if (!lbl) continue;
+      const div = document.createElement('div');
+      div.className = 'section-divider fade-in';
+      div.innerHTML = '<div class="section-divider-line"></div><span class="section-divider-label">' + lbl + ' / ' + (cur.querySelector('.section-title')?.textContent || cur.id) + '</span><div class="section-divider-line"></div>';
+      cur.parentNode.insertBefore(div, cur);
+    }
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
+    }, { threshold: 0.3 });
+    document.querySelectorAll('.section-divider').forEach(d => obs.observe(d));
+  })();
+
+  /* ============================================================
+     26. GITHUB CONTRIBUTION GRAPH
+     ============================================================ */
+  (function contributions() {
+    const grid = $('contrib-grid'); if (!grid) return;
+    const totalEl = $('contrib-total');
+    fetch('/api/contributions?user=' + CONFIG.githubUser)
+      .then(r => r.json())
+      .then(d => {
+        if (d.error || !d.days) { grid.innerHTML = '<div class="contrib-loading">Could not load (GitHub may be rate-limited).</div>'; return; }
+        if (totalEl) totalEl.textContent = (d.total || d.days.filter(x => x.level > 0).length).toLocaleString();
+        // Group days into weeks (columns).
+        const weeks = [];
+        let week = [];
+        d.days.forEach(day => { week.push(day); if (week.length === 7) { weeks.push(week); week = []; } });
+        if (week.length) weeks.push(week);
+        grid.innerHTML = weeks.map(w => '<div class="contrib-week">' + w.map(day => '<div class="contrib-day" data-level="' + day.level + '" title="' + day.date + ': ' + day.level + '"></div>').join('') + '</div>').join('');
+      })
+      .catch(() => { grid.innerHTML = '<div class="contrib-loading">Contribution data unavailable.</div>'; });
+  })();
+
+  /* ============================================================
+     27. VISITOR COUNTER
+     ============================================================ */
+  (function visitorCount() {
+    // Count once per session.
+    if (sessionStorage.getItem('visited')) return;
+    sessionStorage.setItem('visited', '1');
+    fetch('/api/visitor', { method: 'POST' }).then(r => r.json()).then(d => {
+      if (d.total) {
+        let badge = document.querySelector('.visitor-badge');
+        if (!badge) { badge = document.createElement('div'); badge.className = 'visitor-badge'; document.body.appendChild(badge); }
+        badge.textContent = d.total.toLocaleString() + ' visits';
+      }
+    }).catch(() => {});
+  })();
+
+  /* ============================================================
+     28. SERVICE WORKER REGISTRATION
+     ============================================================ */
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+  }
 
 })();

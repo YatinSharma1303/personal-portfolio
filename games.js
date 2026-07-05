@@ -7,13 +7,14 @@
   'use strict';
 
   const GAMES = [
-    { id: 'snake',      icon: '♞', name: 'Snake',        desc: 'Classic game. High chance of self-sabotage.' },
-    { id: 'pong',       icon: '◉', name: 'Ping Pong',    desc: 'You vs an AI paddle. First to 5 wins.' },
-    { id: 'roast',      icon: '▱', name: 'Roast Quiz',   desc: 'A personality test where every answer is a personal attack.' },
-    { id: 'flappy',     icon: '⌁', name: 'Flappy',       desc: 'Infuriating physics. Avoid the pipes.' },
-    { id: 'mines',      icon: '⚑', name: 'Minesweeper',  desc: 'Classic logic. Avoid the mines.' },
-    { id: 'reaction',   icon: '◌', name: 'Reaction Test',desc: 'Click when it turns green.' },
-    { id: 'dodge',      icon: '⌖', name: 'Dodge',        desc: 'Survive against angry geometry.' }
+    { id: 'snake',        icon: '♞', name: 'Snake',        desc: 'Classic game. High chance of self-sabotage.' },
+    { id: 'pong',         icon: '◉', name: 'Ping Pong',    desc: 'You vs an AI paddle. First to 5 wins.' },
+    { id: 'roast',        icon: '▱', name: 'Roast Quiz',   desc: 'A personality test where every answer is a personal attack.' },
+    { id: 'flappy',       icon: '⌁', name: 'Flappy',       desc: 'Infuriating physics. Avoid the pipes.' },
+    { id: 'mines',        icon: '⚑', name: 'Minesweeper',  desc: 'Classic logic. Avoid the mines.' },
+    { id: 'reaction',     icon: '◌', name: 'Reaction Test',desc: 'Click when it turns green.' },
+    { id: 'dodge',        icon: '⌖', name: 'Dodge',        desc: 'Survive against angry geometry.' },
+    { id: 'codebreaker',  icon: '⬡', name: 'Code Breaker', desc: 'Crack the secret color code. Logic + deduction.' }
   ];
 
   /* ── DOM shell ── */
@@ -26,6 +27,7 @@
     overlay.innerHTML = `
       <div class="pg-topbar">
         <button class="pg-close" id="pg-close" aria-label="Close">✕</button>
+        <button class="sound-toggle" id="pg-sound-toggle" title="Toggle sound">🔊</button>
         <div class="pg-title" id="pg-title">playground</div>
         <div class="pg-score" id="pg-score"></div>
       </div>
@@ -34,6 +36,13 @@
     document.body.appendChild(overlay);
     host = overlay.querySelector('#pg-host');
     overlay.querySelector('#pg-close').addEventListener('click', close);
+    const soundBtn = overlay.querySelector('#pg-sound-toggle');
+    if (soundBtn) {
+      try { if (window.sfx && window.sfx.isMuted()) soundBtn.classList.add('muted'); soundBtn.textContent = (window.sfx && window.sfx.isMuted()) ? '🔇' : '🔊'; } catch (e) {}
+      soundBtn.addEventListener('click', function () {
+        try { const m = window.sfx.toggle(); soundBtn.classList.toggle('muted', m); soundBtn.textContent = m ? '🔇' : '🔊'; } catch (e) {}
+      });
+    }
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && overlay.classList.contains('open')) close(); });
   }
 
@@ -129,7 +138,7 @@
       }
       snake.unshift(head);
       if (head.x===food.x && head.y===food.y) {
-        score++; setScore('Score: '+score); placeFood();
+        score++; try{window.sfx.blip();}catch(e){} setScore('Score: '+score+'  Best: '+bestScore('snake')); placeFood();
         if (tick > 65) tick -= 4;
       } else { snake.pop(); }
     }
@@ -254,6 +263,7 @@
         if (ball.y > P.y && ball.y < P.y + PH) {
           ball.x = PW + 10;
           ball.vx = Math.abs(ball.vx) * 1.06;
+          try{window.sfx.blip();}catch(e){}
           ball.vy += (ball.y - (P.y + PH/2)) * 0.10;
           if (Math.abs(ball.vy) < 1.5) ball.vy = ball.vy < 0 ? -1.5 : 1.5;
         }
@@ -360,7 +370,7 @@
       if(!running||!started)return;
       vy+=0.42; bird.y+=vy;
       acc+=dt; if(acc>=PIPE_EVERY){acc=0;addPipe();}
-      pipes.forEach(p=>{ p.x-=2.6; if(!p.passed && p.x+40<bird.x){p.passed=true;score++;setScore('Score: '+score);} });
+      pipes.forEach(p=>{ p.x-=2.6; if(!p.passed && p.x+40<bird.x){p.passed=true;score++;try{window.sfx.blip();}catch(e){}setScore('Score: '+score);} });
       pipes=pipes.filter(p=>p.x>-50);
       if(bird.y<bird.r||bird.y>H-bird.r) running=false;
       if(pipes.some(p=>bird.x+bird.r>p.x&&bird.x-bird.r<p.x+40&&(bird.y-bird.r<p.top||bird.y+bird.r>p.bot))) running=false;
@@ -525,7 +535,108 @@
     obs.observe(host, { childList: true });
   }
 
-  const RUNNERS = { snake, pong, roast, flappy, mines, reaction, dodge };
+  const RUNNERS = { snake, pong, roast, flappy, mines, reaction, dodge, codebreaker };
+
+  /* ============================================================
+     8. CODE BREAKER (Mastermind-style logic game)
+     ============================================================ */
+  function codebreaker(host) {
+    const COLORS = 6; const SLOTS = 4; const MAX_ROWS = 8;
+    let secret = [], currentRow = 0, active = [], over = false, won = false;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'pg-codebreaker';
+    host.appendChild(wrap);
+
+    const rowsEl = document.createElement('div');
+    rowsEl.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+    wrap.appendChild(rowsEl);
+
+    const statusEl = document.createElement('div');
+    statusEl.className = 'cb-status';
+    wrap.appendChild(statusEl);
+
+    const pegsEl = document.createElement('div');
+    pegsEl.className = 'cb-pegs';
+    wrap.appendChild(pegsEl);
+
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:10px;';
+    wrap.appendChild(btnRow);
+
+    function reset() {
+      secret = [];
+      for (let i = 0; i < SLOTS; i++) secret.push(Math.floor(rand(0, COLORS)));
+      currentRow = 0; active = [0, 0, 0, 0]; over = false; won = false;
+      render();
+      statusEl.textContent = 'Guess the ' + SLOTS + '-color code. Dots: green = right spot, blue = wrong spot.';
+      try { window.sfx.blip(); } catch (e) {}
+    }
+
+    function check(guess) {
+      let hits = 0, misses = 0;
+      const sCopy = secret.slice(), gCopy = guess.slice();
+      for (let i = 0; i < SLOTS; i++) { if (gCopy[i] === sCopy[i]) { hits++; gCopy[i] = -1; sCopy[i] = -2; } }
+      for (let i = 0; i < SLOTS; i++) { if (gCopy[i] >= 0 && sCopy.indexOf(gCopy[i]) >= 0) { misses++; sCopy[sCopy.indexOf(gCopy[i])] = -2; } }
+      return { hits, misses };
+    }
+
+    function render() {
+      rowsEl.innerHTML = '';
+      for (let r = 0; r < MAX_ROWS; r++) {
+        const row = document.createElement('div'); row.className = 'cb-row';
+        const guess = (r === currentRow && !over) ? active : (r < currentRow ? window._cbHistory[r] : null);
+        for (let s = 0; s < SLOTS; s++) {
+          const slot = document.createElement('div'); slot.className = 'cb-slot';
+          if (guess) slot.dataset.color = guess[s];
+          if (r === currentRow && !over) {
+            slot.style.cursor = 'pointer'; slot.style.borderColor = 'var(--accent)';
+            slot.addEventListener('click', () => { active[s] = (active[s] + 1) % COLORS; try { window.sfx.blip(); } catch (e) {} render(); });
+          }
+          row.appendChild(slot);
+        }
+        if (r < currentRow) {
+          const fb = window._cbFeedback[r]; const fbEl = document.createElement('div'); fbEl.className = 'cb-feedback';
+          for (let h = 0; h < fb.hits; h++) { const p = document.createElement('div'); p.className = 'cb-peg hit'; fbEl.appendChild(p); }
+          for (let m = 0; m < fb.misses; m++) { const p = document.createElement('div'); p.className = 'cb-peg miss'; fbEl.appendChild(p); }
+          row.appendChild(fbEl);
+        }
+        rowsEl.appendChild(row);
+      }
+      if (over) {
+        statusEl.textContent = won ? 'You cracked it!' : 'Code was: ' + secret.map(s => ['R','O','G','B','P','M'][s]).join(' ');
+        statusEl.style.color = won ? '#34d399' : '#ff6b6b';
+      } else {
+        statusEl.textContent = 'Row ' + (currentRow + 1) + ' / ' + MAX_ROWS + '. Click slots to cycle colors.';
+        statusEl.style.color = '';
+      }
+      // Color pegs legend
+      pegsEl.innerHTML = '';
+      const names = ['Red','Orange','Green','Blue','Purple','Pink'];
+      for (let c = 0; c < COLORS; c++) {
+        const p = document.createElement('div'); p.className = 'cb-peg-btn'; p.dataset.color = c; p.title = names[c];
+        p.style.background = ['#ef4444','#f59e0b','#22c55e','#3b82f6','#a855f7','#ec4899'][c];
+        pegsEl.appendChild(p);
+      }
+    }
+
+    function submit() {
+      if (over) return;
+      if (!window._cbHistory) { window._cbHistory = []; window._cbFeedback = []; }
+      const fb = check(active);
+      window._cbHistory[currentRow] = active.slice();
+      window._cbFeedback[currentRow] = fb;
+      if (fb.hits === SLOTS) { over = true; won = true; try { window.sfx.win(); } catch (e) {} render(); return; }
+      currentRow++; active = [0, 0, 0, 0];
+      if (currentRow >= MAX_ROWS) { over = true; won = false; try { window.sfx.crash(); } catch (e) {} }
+      render();
+    }
+
+    btnRow.appendChild(button('Submit Guess', submit));
+    btnRow.appendChild(button('New Game', reset));
+    window._cbHistory = []; window._cbFeedback = [];
+    reset();
+  }
 
   /* ── public API ── */
   window.YatinPlayground = { GAMES, open, close };
