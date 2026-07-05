@@ -338,7 +338,14 @@
       return new Promise(function(resolve) {
         if (!url) { resolve(''); return; }
         var img = new Image();
-        img.onload = function() { resolve(url); };
+        img.onload = function() {
+          // Reject tiny placeholder images (Last.fm returns tiny white 1x1 or 34x34 images)
+          if (img.naturalWidth < 60 || img.naturalHeight < 60) {
+            resolve('');
+          } else {
+            resolve(url);
+          }
+        };
         img.onerror = function() { resolve(''); };
         img.src = url;
       });
@@ -350,7 +357,7 @@
       if (url) {
         return '<div class="' + className + '" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>';
       }
-      return '<div class="' + className + ' lfm-noart" style="background:#141414 !important">' + (fallbackText || '\u266A') + '</div>';
+      return '<div class="' + className + ' lfm-noart" style="background:#141414 !important">' + (fallbackText || '♪') + '</div>';
     }
 
     // 1. User info + avatar
@@ -376,7 +383,7 @@
       });
       Promise.all(artPromises).then(function(arts) {
         wrap.innerHTML = tracks.map(function(tr, idx) {
-          return '<div class="lfm-track"><span class="lfm-track-rank">' + (idx+1) + '</span>' + artDiv('lfm-track-img', arts[idx], '\u266A') + '<div class="lfm-track-info"><div class="lfm-track-name">' + esc(tr.name) + '</div><div class="lfm-track-artist">' + (tr.artist ? esc(tr.artist.name) : '') + '</div></div><span class="lfm-track-plays">' + (tr.playcount||0) + 'x</span></div>';
+          return '<div class="lfm-track"><span class="lfm-track-rank">' + (idx+1) + '</span>' + artDiv('lfm-track-img', arts[idx], '♪') + '<div class="lfm-track-info"><div class="lfm-track-name">' + esc(tr.name) + '</div><div class="lfm-track-artist">' + (tr.artist ? esc(tr.artist.name) : '') + '</div></div><span class="lfm-track-plays">' + (tr.playcount||0) + 'x</span></div>';
         }).join('');
       });
     }).catch(function () {});
@@ -440,7 +447,7 @@
           recentWrap.innerHTML = tickerTracks.map(function(tr, idx) {
             var name = esc(tr.name || '\u2014');
             var artist = esc((tr.artist && (tr.artist['#text'] || tr.artist.name)) || '');
-            return '<div class="lfm-recent-item">' + artDiv('lfm-recent-img', arts[idx], '\u266A') + '<div class="lfm-recent-info"><div class="lfm-recent-name">' + name + '</div><div class="lfm-recent-artist">' + artist + '</div></div></div>';
+            return '<div class="lfm-recent-item">' + artDiv('lfm-recent-img', arts[idx], '♪') + '<div class="lfm-recent-info"><div class="lfm-recent-name">' + name + '</div><div class="lfm-recent-artist">' + artist + '</div></div></div>';
           }).join('');
         });
       }).catch(function () {});
