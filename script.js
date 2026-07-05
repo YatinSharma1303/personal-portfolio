@@ -411,9 +411,26 @@
           .catch(() => '');
       });
       Promise.all(artPromises).then(function(arts) {
+        // Premium gradient circles (Material Design 3 style) for artist fallbacks
+        var GRADIENTS = [
+          'linear-gradient(135deg, #f43f5e, #ec4899)',
+          'linear-gradient(135deg, #8b5cf6, #6366f1)',
+          'linear-gradient(135deg, #06b6d4, #3b82f6)',
+          'linear-gradient(135deg, #10b981, #14b8a6)',
+          'linear-gradient(135deg, #f59e0b, #ef4444)',
+          'linear-gradient(135deg, #a855f7, #d946ef)',
+          'linear-gradient(135deg, #0ea5e9, #6366f1)',
+          'linear-gradient(135deg, #f97316, #eab308)'
+        ];
         wrap.innerHTML = artists.map(function(ar, idx) {
           var letter = (ar.name || '?').charAt(0).toUpperCase();
-          return '<div class="lfm-artist">' + artDiv('lfm-artist-img', arts[idx], letter) + '<span class="lfm-artist-name">' + esc(ar.name) + '</span><span class="lfm-artist-plays">' + (ar.playcount||0) + 'x</span></div>';
+          if (arts[idx]) {
+            var artHTML = '<div class="lfm-artist-img" style="background:#141414 url(\'' + arts[idx] + '\') center/cover no-repeat"></div>';
+          } else {
+            var gradient = GRADIENTS[idx % GRADIENTS.length];
+            var artHTML = '<div class="lfm-artist-img lfm-noart lfm-artist-gradient" style="background:' + gradient + '">' + esc(letter) + '</div>';
+          }
+          return '<div class="lfm-artist">' + artHTML + '<span class="lfm-artist-name">' + esc(ar.name) + '</span><span class="lfm-artist-plays">' + (ar.playcount||0) + 'x</span></div>';
         }).join('');
       });
     }).catch(function () {});
