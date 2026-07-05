@@ -342,24 +342,52 @@
       if (strip) strip.textContent = `${(i.playcount||0).toLocaleString()} scrobbles · ${(i.artist_count||0).toLocaleString()} artists · ${(i.album_count||0).toLocaleString()} albums`;
     }).catch(function () {});
 
-    // 2. Top tracks
+    // 2. Top tracks — gettoptracks API does NOT return images!
+    // So we fetch each track's album art separately via track.getInfo.
     fetch(`${lfmAPI}?method=user.gettoptracks&user=${u}&period=1month&limit=5&api_key=${k}&format=json`).then(r => r.json()).then(function (d) {
       const wrap = $('lfm-tracks'); if (!wrap || !d.toptracks) return;
-      wrap.innerHTML = (d.toptracks.track || []).map(function (tr, idx) {
-        const art = lfmImg(tr.image);
-        const artHTML = art ? `<img class="lfm-track-img" alt="" src="${art}" onerror="this.className='lfm-track-img lfm-noart';this.src='';this.textContent='\u266A'">` : `<span class="lfm-track-img lfm-noart">\u266A</span>`;
-        return `<div class="lfm-track"><span class="lfm-track-rank">${idx+1}</span>${artHTML}<div class="lfm-track-info"><div class="lfm-track-name">${esc(tr.name)}</div><div class="lfm-track-artist">${tr.artist ? esc(tr.artist.name) : ''}</div></div><span class="lfm-track-plays">${tr.playcount||0}x</span></div>`;
-      }).join('');
+      const tracks = d.toptracks.track || [];
+      
+      // Fetch album art for each track in parallel
+      const artPromises = tracks.map(function(tr) {
+        const artistName = encodeURIComponent(tr.artist ? tr.artist.name : '');
+        const trackName = encodeURIComponent(tr.name);
+        return fetch(`${lfmAPI}?method=track.getInfo&api_key=${k}&artist=${artistName}&track=${trackName}&format=json`)
+          .then(r => r.json())
+          .then(info => lfmImg(info.track && info.track.album ? info.track.album.image : []))
+          .catch(() => '');
+      });
+      
+      Promise.all(artPromises).then(function(arts) {
+        wrap.innerHTML = tracks.map(function(tr, idx) {
+          const art = arts[idx] || '';
+          const artHTML = art ? '<img class="lfm-track-img" alt="" src="' + art + '" onerror="this.outerHTML=\'<span class=\\\"lfm-track-img lfm-noart\\\">\u266A</span>\'">' : '<span class="lfm-track-img lfm-noart">\u266A</span>';
+          return '<div class="lfm-track"><span class="lfm-track-rank">' + (idx+1) + '</span>' + artHTML + '<div class="lfm-track-info"><div class="lfm-track-name">' + esc(tr.name) + '</div><div class="lfm-track-artist">' + (tr.artist ? esc(tr.artist.name) : '') + '</div></div><span class="lfm-track-plays">' + (tr.playcount||0) + 'x</span></div>';
+        }).join('');
+      });
     }).catch(function () {});
 
-    // 3. Top artists
+    // 3. Top artists — gettopartists returns images but they may be empty
     fetch(`${lfmAPI}?method=user.gettopartists&user=${u}&period=1month&limit=5&api_key=${k}&format=json`).then(r => r.json()).then(function (d) {
       const wrap = $('lfm-artists'); if (!wrap || !d.topartists) return;
-      wrap.innerHTML = (d.topartists.artist || []).map(function (ar) {
-        const art = lfmImg(ar.image);
-        const artHTML = art ? `<img class="lfm-artist-img" alt="" src="${art}" onerror="this.className='lfm-artist-img lfm-noart';this.src='';this.textContent='\u266A'">` : `<span class="lfm-artist-img lfm-noart">\u266A</span>`;
-        return `<div class="lfm-artist">${artHTML}<span class="lfm-artist-name">${esc(ar.name)}</span><span class="lfm-artist-plays">${ar.playcount||0}x</span></div>`;
-      }).join('');
+      const artists = d.topartists.artist || [];
+      
+      // Fetch artist images separately via artist.getInfo for reliability
+      const artPromises = artists.map(function(ar) {
+        const artistName = encodeURIComponent(ar.name);
+        return fetch(`${lfmAPI}?method=artist.getInfo&api_key=${k}&artist=${artistName}&format=json`)
+          .then(r => r.json())
+          .then(info => lfmImg(info.artist ? info.artist.image : []))
+          .catch(() => '');
+      });
+      
+      Promise.all(artPromises).then(function(arts) {
+        wrap.innerHTML = artists.map(function(ar, idx) {
+          const art = arts[idx] || '';
+          const artHTML = art ? '<img class="lfm-artist-img" alt="" src="' + art + '" onerror="this.outerHTML=\'<span class=\\\"lfm-artist-img lfm-noart\\\">\u266A</span>\'">' : '<span class="lfm-artist-img lfm-noart">\u266A</span>';
+          return '<div class="lfm-artist">' + artHTML + '<span class="lfm-artist-name">' + esc(ar.name) + '</span><span class="lfm-artist-plays">' + (ar.playcount||0) + 'x</span></div>';
+        }).join('');
+      });
     }).catch(function () {});
 
     // 4. Recent tracks (now playing + ticker) — runs once, then polls
