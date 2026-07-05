@@ -822,13 +822,29 @@
     }
     function toggleReaction(id, emoji) {
       const key = id + ':' + emoji;
-      const has = reactedSet.has(key);
-      const delta = has ? -1 : 1;
-      if (has) reactedSet.delete(key); else reactedSet.add(key);
-      localStorage.setItem('yatin_ama_reactions', JSON.stringify([...reactedSet]));
+      // Check if already reacted (via Set or UI state as fallback)
+      const btn = document.querySelector('.ama-react-btn[data-id="' + id + '"][data-emoji="' + emoji + '"]');
+      const isReacted = reactedSet.has(key) || (btn && btn.classList.contains('react-active'));
+      
+      const delta = isReacted ? -1 : 1;
+      
+      if (isReacted) {
+        reactedSet.delete(key);
+      } else {
+        reactedSet.add(key);
+      }
+      
+      // Safely save to localStorage
+      try { localStorage.setItem('yatin_ama_reactions', JSON.stringify([...reactedSet])); } catch (e) {}
+      
+      // Update local state
       const doc = answeredDocs.find(q => q.id === id);
-      if (doc) { if (!doc.reactions) doc.reactions = {}; doc.reactions[emoji] = Math.max(0, (doc.reactions[emoji] || 0) + delta); }
-      render();
+      if (doc) { 
+        if (!doc.reactions) doc.reactions = {}; 
+        doc.reactions[emoji] = Math.max(0, (doc.reactions[emoji] || 0) + delta); 
+      }
+      
+      render(); // Re-render to update UI
       fetch('/api/reactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, emoji, delta }) }).catch(() => {});
     }
     function loadAnswered() {
