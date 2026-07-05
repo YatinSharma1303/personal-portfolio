@@ -791,7 +791,7 @@
       const slice = arr.slice((page - 1) * PER_PAGE, page * PER_PAGE);
       list.innerHTML = slice.map(q => {
         const up = votedSet.has(q.id);
-        const REACTION_EMOJIS = ['\uD83D\uDC4D', '\uD83D\uDD25', '\uD83D\uDC4F', '\uD83E\uDD29'];
+        const REACTION_EMOJIS = ['👍', '🔥', '👏', '🤩'];
         const reactionHTML = REACTION_EMOJIS.map(emoji => {
           const count = (q.reactions && q.reactions[emoji]) || 0;
           const reacted = reactedSet.has(q.id + ':' + emoji);
@@ -851,6 +851,11 @@
           limit: 50
         } })
       }).then(r => r.json()).then(data => {
+        // Check for Firestore permission/query errors (REST returns 200 + error body!)
+        if (data && data.length && data[0].error) {
+          console.error('Firestore query error:', data[0].error.message);
+          return;
+        }
         answeredDocs = (data || []).filter(d => d.document).map(d => fromDoc(d.document));
         answeredDocs.sort((a, b) => new Date(b.answeredAt || 0) - new Date(a.answeredAt || 0));
         render();
