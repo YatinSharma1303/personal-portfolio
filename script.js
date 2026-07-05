@@ -768,10 +768,16 @@
         for (let j = i+1; j < dots.length; j++) {
           const dx = dots[i].x - dots[j].x, dy = dots[i].y - dots[j].y;
           const dist = Math.sqrt(dx*dx + dy*dy);
-          if (dist < 120) { ctx.strokeStyle = 'rgba(0,200,255,' + (0.15 * (1 - dist/120)) + ')'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(dots[i].x, dots[i].y); ctx.lineTo(dots[j].x, dots[j].y); ctx.stroke(); }
+          // Detect light mode to adjust particle colors for visibility
+      var isLight = document.documentElement.classList.contains('light');
+      var lineColor = isLight ? '20, 80, 180' : '0, 200, 255'; // Darker blue for light mode
+      var dotColor = isLight ? 'rgba(30, 80, 180, 0.6)' : 'rgba(120,200,255,0.6)';
+      var lineOpacity = isLight ? 0.3 : 0.15;
+      
+      if (dist < 120) { ctx.strokeStyle = 'rgba(' + lineColor + ',' + (lineOpacity * (1 - dist/120)) + ')'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(dots[i].x, dots[i].y); ctx.lineTo(dots[j].x, dots[j].y); ctx.stroke(); }
         }
       }
-      ctx.fillStyle = 'rgba(120,200,255,0.6)';
+      ctx.fillStyle = dotColor;
       dots.forEach(d => { ctx.beginPath(); ctx.arc(d.x, d.y, 1.5, 0, 7); ctx.fill(); });
       requestAnimationFrame(draw);
     }

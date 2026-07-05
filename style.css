@@ -346,6 +346,7 @@ html.light .theme-toggle .icon-sun { display: block; }
 
 /* ============ SITE-WIDE PARTICLES ============ */
 .site-particles { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.4; }
+html.light .site-particles { opacity: 0.8; }
 .hero-inner { position: relative; z-index: 2; }
 /* ============ HERO TERMINAL ============ */
 .hero-terminal { max-width: 480px; margin: 0 auto 28px; text-align: left; background: rgba(8,8,12,0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; backdrop-filter: blur(8px); }
