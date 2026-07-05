@@ -1127,3 +1127,32 @@ html.light .visitor-badge { background: rgba(255,255,255,0.6); }
 .shortcut-close { color: var(--gray); }
 .shortcut-list div { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 14px; color: var(--gray); }
 kbd { background: var(--surface2); border: 1px solid var(--border-hover); border-radius: 4px; padding: 4px 8px; font-family: var(--mono); font-size: 12px; color: var(--accent); min-width: 20px; text-align: center; }
+
+/* ============ I. DAY IN THE LIFE TIMELINE ============ */
+.timeline-section { margin-top: 60px; padding: 20px; border-radius: 20px; background: rgba(12,12,12,0.5); border: 1px solid var(--border); }
+.timeline-title { font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; color: var(--gray-dim); margin-bottom: 24px; text-align: center; }
+.timeline-track { display: flex; justify-content: space-between; position: relative; }
+.timeline-track::before { content: ''; position: absolute; top: 24px; left: 0; width: 100%; height: 2px; background: var(--border); z-index: 0; }
+.timeline-item { flex: 1; text-align: center; position: relative; z-index: 1; padding: 0 10px; }
+.timeline-dot { width: 50px; height: 50px; background: var(--bg); border: 2px solid var(--accent); border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 0 15px rgba(0,200,255,0.2); }
+.timeline-time { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+.timeline-desc { font-size: 12px; color: var(--gray); line-height: 1.4; }
+
+/* ============ L. ACHIEVEMENT TOAST ============ */
+.achievement-toast {
+  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(150px);
+  background: rgba(12,12,16,0.9); border: 1px solid var(--accent); border-radius: 12px;
+  padding: 16px 24px; display: flex; align-items: center; gap: 16px; z-index: 9999;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 20px rgba(0,200,255,0.2);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  transition: transform 0.5s cubic-bezier(0.22,1,0.36,1);
+}
+.achievement-toast.show { transform: translateX(-50%) translateY(0); }
+.toast-icon { font-size: 24px; }
+.toast-title { font-weight: 700; font-size: 14px; color: #fff; }
+.toast-desc { font-size: 12px; color: var(--gray); font-family: var(--mono); }
+
+/* ============ K. GAME DIFFICULTY SELECTOR ============ */
+.diff-selector { display: flex; gap: 8px; justify-content: center; margin-bottom: 10px; }
+.diff-btn { padding: 4px 12px; border-radius: 6px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: var(--gray-dim); font-size: 12px; font-family: var(--mono); cursor: pointer; transition: all 0.2s ease; }
+.diff-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }

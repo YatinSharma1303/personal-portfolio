@@ -56,6 +56,26 @@
     host.innerHTML = '';
     stopLoop();
     current = g.id;
+    
+    // K. Difficulty selector for supported games
+    if (['snake', 'dodge'].includes(current)) {
+      const diffWrap = document.createElement('div');
+      diffWrap.className = 'diff-selector';
+      ['Easy', 'Medium', 'Hard'].forEach(d => {
+        const btn = document.createElement('button');
+        btn.className = 'diff-btn ' + (d === 'Medium' ? 'active' : '');
+        btn.textContent = d;
+        btn.dataset.diff = d;
+        btn.addEventListener('click', () => {
+          diffWrap.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+        });
+        diffWrap.appendChild(btn);
+      });
+      host.appendChild(diffWrap);
+    }
+
+    if (window.unlockAchievement) window.unlockAchievement('gamer', 'Let\'s Play!', 'Opened the playground.');
     const runner = RUNNERS[g.id];
     if (runner) runner(host, overlay);
   }

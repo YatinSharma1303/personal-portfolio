@@ -90,7 +90,7 @@
     const saved = localStorage.getItem('theme');
     if (saved === 'light') document.documentElement.classList.add('light');
     if (btn) btn.addEventListener('click', () => {
-      document.documentElement.classList.toggle('light');
+      document.documentElement.classList.toggle("light"); window.unlockAchievement ? window.unlockAchievement("theme", "Stylish!", "Toggled the theme.") : null;
       localStorage.setItem('theme', document.documentElement.classList.contains('light') ? 'light' : 'dark');
     });
   })();
@@ -909,7 +909,12 @@
       const notify = () => fetch('/api/telegram', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, question: text, id, createdAt }) }).catch(() => {});
       const afterSubmit = (ok) => {
         todayCount++; localStorage.setItem(LIMIT_KEY, JSON.stringify({ date: today, count: todayCount })); countEl.textContent = todayCount; input.value = '';
-        status.textContent = ok ? '✅ Sent! Yatin will reply soon — check back here.' : 'Could not send. Try again later.';
+        if (ok) {
+          status.textContent = '✅ Sent! Yatin will reply soon — check back here.';
+          if (window.unlockAchievement) window.unlockAchievement('asked', 'Inquisitive Mind', 'Asked a question!');
+        } else {
+          status.textContent = 'Could not send. Try again later.';
+        }
         status.className = ok ? 'ama-status ok' : 'ama-status err';
         setTimeout(() => { status.textContent = ''; status.className = 'ama-status'; }, 4500);
       };
@@ -1058,6 +1063,47 @@
       else if (key === 'escape' && overlay.classList.contains('open')) { toggle(); }
     });
   })();
+
+  /* ============================================================
+     23b. L. ACHIEVEMENTS & Q. AMBIENT SOUNDS
+     ============================================================ */
+  const achievementSystem = {
+    unlocked: new Set(JSON.parse(localStorage.getItem('yatin_achievements') || '[]')),
+    toastTimeout: null,
+    unlock: function(id, title, desc) {
+      if (this.unlocked.has(id)) return;
+      this.unlocked.add(id);
+      localStorage.setItem('yatin_achievements', JSON.stringify([...this.unlocked]));
+      
+      const toast = document.getElementById('achievement-toast');
+      const titleEl = document.getElementById('toast-title');
+      const descEl = document.getElementById('toast-desc');
+      if (!toast || !titleEl || !descEl) return;
+      
+      titleEl.textContent = title;
+      descEl.textContent = desc;
+      toast.classList.add('show');
+      
+      if (this.toastTimeout) clearTimeout(this.toastTimeout);
+      this.toastTimeout = setTimeout(() => toast.classList.remove('show'), 4000);
+    }
+  };
+  // Q. Ambient hover sounds (very subtle)
+  (function ambientSounds() {
+    let hoverEnabled = false;
+    // Enable only after first interaction (browser autoplay policy)
+    document.addEventListener('click', () => { hoverEnabled = true; }, { once: true });
+    document.querySelectorAll('.tb-icon-btn, .pg-card, .presence-link').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        if (hoverEnabled && window.sfx && !window.sfx.isMuted()) {
+          window.sfx.play(800, 0.03, 'sine'); // High, quiet blip
+        }
+      });
+    });
+  })();
+  window.unlockAchievement = achievementSystem.unlock.bind(achievementSystem);
+  // Unlock intro achievement
+  setTimeout(() => { window.unlockAchievement('visitor', 'Welcome!', 'You explored the portfolio.'); }, 5000);
 
   /* ============================================================
      24. CURSOR GLOW + TRAIL
