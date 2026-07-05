@@ -554,19 +554,8 @@
   }
 
   /* ============================================================
-     15. CHANGELOGS PILL + MODAL
+     15. (Removed Changelogs)
      ============================================================ */
-  (function changelog() {
-    const pill = $('changelog-pill'), modal = $('changelog-modal'), close = $('changelog-close'), body = $('changelog-body');
-    if (!pill || !modal) return;
-    const LOGS = [
-      { date: '2026-07-01 · v1.0', items: ['Full portfolio launched — hero, about, skills, projects, music, anime.', 'Ask Me Anything with Firestore + Telegram reply-to-answer.', 'Added Playground: 7 playable mini-games.', 'Added voting + sort + pagination on answered questions.', 'Added time widget, parallax, animated counters.', 'Scroll progress bar, back-to-top, typewriter, active nav, copy email, project thumbnails.'] }
-    ];
-    body.innerHTML = LOGS.map(l => `<div class="changelog-entry"><div class="changelog-date">${l.date}</div><ul>${l.items.map(i => `<li>${i}</li>`).join('')}</ul></div>`).join('');
-    pill.addEventListener('click', () => modal.classList.toggle('open'));
-    close.addEventListener('click', () => modal.classList.remove('open'));
-    document.addEventListener('click', (e) => { if (modal.classList.contains('open') && !modal.contains(e.target) && !pill.contains(e.target)) modal.classList.remove('open'); });
-  })();
 
   /* ============================================================
      16. HERO TERMINAL (typing effect)
@@ -1052,13 +1041,15 @@
      27. VISITOR COUNTER
      ============================================================ */
   (function visitorCount() {
-    if (sessionStorage.getItem('visited')) return;
-    sessionStorage.setItem('visited', '1');
-    fetch('/api/visitor', { method: 'POST' }).then(r => r.json()).then(d => {
-      let badge = document.querySelector('.visitor-badge');
-      if (!badge) { badge = document.createElement('div'); badge.className = 'visitor-badge'; document.body.appendChild(badge); }
-      badge.textContent = (d.total || 0).toLocaleString() + ' visits';
-    }).catch(() => {});
+    fetch('/api/visitor', { method: 'POST' })
+      .then(r => r.json())
+      .then(d => {
+        sessionStorage.setItem('visited', '1');
+        let badge = document.querySelector('.visitor-badge');
+        if (!badge) { badge = document.createElement('div'); badge.className = 'visitor-badge'; document.body.appendChild(badge); }
+        badge.textContent = (d.total || 0).toLocaleString() + ' visits';
+      })
+      .catch(() => {});
   })();
 
   /* ============================================================
