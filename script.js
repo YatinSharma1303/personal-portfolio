@@ -333,6 +333,25 @@
   function fetchLastfm() {
     const u = CONFIG.lastfmUser, k = CONFIG.lastfmKey;
 
+    // Helper: load image safely — returns promise that resolves to URL or empty string
+    function safeImg(url) {
+      return new Promise(function(resolve) {
+        if (!url) { resolve(''); return; }
+        var img = new Image();
+        img.onload = function() { resolve(url); };
+        img.onerror = function() { resolve(''); };
+        img.src = url;
+      });
+    }
+
+    // Helper: build a dark fallback div (NO img tags, NO onerror)
+    function artDiv(className, url, fallbackText) {
+      if (url) {
+        return '<div class="' + className + '" style="background-image:url(\'' + url + '\')"></div>';
+      }
+      return '<div class="' + className + ' lfm-noart">' + (fallbackText || '\u266A') + '</div>';
+    }
+
     // 1. User info + avatar
     fetch(`${lfmAPI}?method=user.getinfo&user=${u}&api_key=${k}&format=json`).then(r => r.json()).then(function (d) {
       const i = d && d.user; if (!i) return;
@@ -342,66 +361,45 @@
       if (strip) strip.textContent = `${(i.playcount||0).toLocaleString()} scrobbles · ${(i.artist_count||0).toLocaleString()} artists · ${(i.album_count||0).toLocaleString()} albums`;
     }).catch(function () {});
 
-    // 2. Top tracks — gettoptracks API does NOT return images!
-    // So we fetch each track's album art separately via track.getInfo.
+    // 2. Top tracks — fetch art via track.getInfo, preload before rendering
     fetch(`${lfmAPI}?method=user.gettoptracks&user=${u}&period=1month&limit=5&api_key=${k}&format=json`).then(r => r.json()).then(function (d) {
       const wrap = $('lfm-tracks'); if (!wrap || !d.toptracks) return;
       const tracks = d.toptracks.track || [];
-      
-      // Fetch album art for each track in parallel
-      const artPromises = tracks.map(function(tr) {
-        const artistName = encodeURIComponent(tr.artist ? tr.artist.name : '');
-        const trackName = encodeURIComponent(tr.name);
+      var artPromises = tracks.map(function(tr) {
+        var artistName = encodeURIComponent(tr.artist ? tr.artist.name : '');
+        var trackName = encodeURIComponent(tr.name);
         return fetch(`${lfmAPI}?method=track.getInfo&api_key=${k}&artist=${artistName}&track=${trackName}&format=json`)
           .then(r => r.json())
-          .then(info => lfmImg(info.track && info.track.album ? info.track.album.image : []))
+          .then(info => { var url = lfmImg(info.track && info.track.album ? info.track.album.image : []); return safeImg(url); })
           .catch(() => '');
       });
-      
       Promise.all(artPromises).then(function(arts) {
         wrap.innerHTML = tracks.map(function(tr, idx) {
-          const art = arts[idx] || '';
-          const artHTML = art ? '<img class="lfm-track-img" alt="" src="' + art + '" onerror="this.outerHTML=\'<span class=\\\"lfm-track-img lfm-noart\\\">\u266A</span>\'">' : '<span class="lfm-track-img lfm-noart">\u266A</span>';
-          return '<div class="lfm-track"><span class="lfm-track-rank">' + (idx+1) + '</span>' + artHTML + '<div class="lfm-track-info"><div class="lfm-track-name">' + esc(tr.name) + '</div><div class="lfm-track-artist">' + (tr.artist ? esc(tr.artist.name) : '') + '</div></div><span class="lfm-track-plays">' + (tr.playcount||0) + 'x</span></div>';
+          return '<div class="lfm-track"><span class="lfm-track-rank">' + (idx+1) + '</span>' + artDiv('lfm-track-img', arts[idx], '\u266A') + '<div class="lfm-track-info"><div class="lfm-track-name">' + esc(tr.name) + '</div><div class="lfm-track-artist">' + (tr.artist ? esc(tr.artist.name) : '') + '</div></div><span class="lfm-track-plays">' + (tr.playcount||0) + 'x</span></div>';
         }).join('');
       });
     }).catch(function () {});
 
-    // 3. Top artists — Last.fm artist images are notoriously broken (404s).
-    // Solution: Try to get image, but use a colored letter-avatar as fallback.
+    // 3. Top artists — preload images, render dark fallback with letter
     fetch(`${lfmAPI}?method=user.gettopartists&user=${u}&period=1month&limit=5&api_key=${k}&format=json`).then(r => r.json()).then(function (d) {
       const wrap = $('lfm-artists'); if (!wrap || !d.topartists) return;
       const artists = d.topartists.artist || [];
-      const GRADIENTS = [
-        'linear-gradient(135deg, #00c8ff, #7850ff)',
-        'linear-gradient(135deg, #7850ff, #00f0b4)',
-        'linear-gradient(135deg, #00f0b4, #00c8ff)',
-        'linear-gradient(135deg, #f59e0b, #ef4444)',
-        'linear-gradient(135deg, #a855f7, #ec4899)'
-      ];
-      // Fetch all artist images in parallel first
-      const artPromises = artists.map(function(ar) {
-        const artistName = encodeURIComponent(ar.name);
+      var artPromises = artists.map(function(ar) {
+        var artistName = encodeURIComponent(ar.name);
         return fetch(`${lfmAPI}?method=artist.getInfo&api_key=${k}&artist=${artistName}&format=json`)
           .then(r => r.json())
-          .then(info => lfmImg(info.artist ? info.artist.image : []))
+          .then(info => { var url = lfmImg(info.artist ? info.artist.image : []); return safeImg(url); })
           .catch(() => '');
       });
-      
       Promise.all(artPromises).then(function(arts) {
         wrap.innerHTML = artists.map(function(ar, idx) {
-          const art = arts[idx] || '';
-          const letter = (ar.name || '?').charAt(0).toUpperCase();
-          // If no image, use the dark lfm-noart fallback with the artist's first letter
-          const artHTML = art 
-            ? '<img class="lfm-artist-img" alt="" src="' + art + '" onerror="this.outerHTML=\'<span class=\\\"lfm-artist-img lfm-noart\\\">' + esc(letter) + '</span>\'">' 
-            : '<span class="lfm-artist-img lfm-noart">' + esc(letter) + '</span>';
-          return '<div class="lfm-artist">' + artHTML + '<span class="lfm-artist-name">' + esc(ar.name) + '</span><span class="lfm-artist-plays">' + (ar.playcount||0) + 'x</span></div>';
+          var letter = (ar.name || '?').charAt(0).toUpperCase();
+          return '<div class="lfm-artist">' + artDiv('lfm-artist-img', arts[idx], letter) + '<span class="lfm-artist-name">' + esc(ar.name) + '</span><span class="lfm-artist-plays">' + (ar.playcount||0) + 'x</span></div>';
         }).join('');
       });
     }).catch(function () {});
 
-    // 4. Recent tracks (now playing + ticker) — runs once, then polls
+    // 4. Recent tracks (now playing + ticker)
     function updateNowPlaying() {
       fetch(`${lfmAPI}?method=user.getrecenttracks&user=${u}&limit=10&api_key=${k}&format=json`).then(r => r.json()).then(function (d) {
         const tracks = (d.recenttracks && d.recenttracks.track) || [];
@@ -409,36 +407,44 @@
         const first = tracks[0];
         const isLive = first['@attr'] && first['@attr'].nowplaying === 'true';
 
-        // Now Playing card
-        const npArt = lfmImg(first.image);
-        const npArtEl = $('lfm-np-art');
-        if (npArtEl) {
-          if (npArt) { npArtEl.src = npArt; npArtEl.style.visibility = 'visible'; npArtEl.onerror = function () { this.style.visibility = 'hidden'; }; }
-          else npArtEl.style.visibility = 'hidden';
-        }
+        // Now Playing card — preload art before setting
+        var npArtUrl = lfmImg(first.image);
+        safeImg(npArtUrl).then(function(validUrl) {
+          const npArtEl = $('lfm-np-art');
+          if (npArtEl) {
+            if (validUrl) {
+              npArtEl.style.backgroundImage = 'url(\'' + validUrl + '\')';
+              npArtEl.style.visibility = 'visible';
+            } else {
+              npArtEl.style.backgroundImage = 'none';
+              npArtEl.style.visibility = 'visible';
+              npArtEl.classList.add('lfm-noart');
+            }
+          }
+        });
+
         const npTrack = $('lfm-np-track'); if (npTrack) npTrack.textContent = first.name || '\u2014';
         const npArtist = $('lfm-np-artist'); if (npArtist) npArtist.textContent = (first.artist && (first.artist['#text'] || first.artist.name)) || '\u2014';
         const npCard = $('lfm-nowplaying'); if (npCard) npCard.classList.toggle('live', !!isLive);
         const npLabel = $('lfm-np-label'); if (npLabel) npLabel.textContent = isLive ? 'NOW PLAYING' : 'LAST PLAYED';
 
-        // Recent ticker
+        // Recent ticker — preload all arts first
         const recentWrap = $('lfm-recent'); if (!recentWrap) return;
         const tickerTracks = isLive ? tracks.slice(1, 9) : tracks.slice(0, 9);
-        recentWrap.innerHTML = tickerTracks.map(function (tr) {
-          const art = lfmImg(tr.image);
-          const name = esc(tr.name || '\u2014');
-          const artist = esc((tr.artist && (tr.artist['#text'] || tr.artist.name)) || '');
-          const artHTML = art
-            ? '<img class="lfm-recent-img" alt="" src="' + art + '" onerror="this.outerHTML=\'<span class=\\\"lfm-recent-img lfm-noart\\\">\u266A</span>\'">'
-            : '<span class="lfm-recent-img lfm-noart">\u266A</span>';
-          // Also add dark bg fallback to the container itself
-          return '<div class="lfm-recent-item">' + artHTML + '<div class="lfm-recent-info"><div class="lfm-recent-name">' + name + '</div><div class="lfm-recent-artist">' + artist + '</div></div></div>';
-        }).join('');
+        var tickerArtPromises = tickerTracks.map(function(tr) {
+          return safeImg(lfmImg(tr.image));
+        });
+        Promise.all(tickerArtPromises).then(function(arts) {
+          recentWrap.innerHTML = tickerTracks.map(function(tr, idx) {
+            var name = esc(tr.name || '\u2014');
+            var artist = esc((tr.artist && (tr.artist['#text'] || tr.artist.name)) || '');
+            return '<div class="lfm-recent-item">' + artDiv('lfm-recent-img', arts[idx], '\u266A') + '<div class="lfm-recent-info"><div class="lfm-recent-name">' + name + '</div><div class="lfm-recent-artist">' + artist + '</div></div></div>';
+          }).join('');
+        });
       }).catch(function () {});
     }
 
     updateNowPlaying();
-    // Poll Now Playing every 12 seconds for live updates (no page refresh needed).
     setInterval(updateNowPlaying, 12000);
     return Promise.resolve();
   }
