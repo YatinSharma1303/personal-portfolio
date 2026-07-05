@@ -1,6 +1,6 @@
 /* ============================================================
    api/reactions.js — Toggle an emoji reaction on a question.
-   Reads the doc, updates the reactions map, and saves it back.
+   Reads the doc, updates the specific emoji, and saves it back.
    ============================================================ */
 const crypto = require('crypto');
 const COLLECTION = 'amaQuestions';
@@ -50,7 +50,7 @@ module.exports = async function handler(req, res) {
 
     const docPath = COLLECTION + '/' + encodeURIComponent(id);
 
-    // 1. Read the current document
+    // 1. Read the current document to get the specific emoji's count
     const doc = await firestore('GET', docPath).catch(() => null);
     let currentCount = 0;
     if (doc && doc.fields && doc.fields.reactions && doc.fields.reactions.mapValue && doc.fields.reactions.mapValue.fields) {
@@ -61,7 +61,7 @@ module.exports = async function handler(req, res) {
     // 2. Calculate new count
     const newCount = Math.max(0, currentCount + delta);
 
-    // 3. Write the entire reactions map back (merge=true)
+    // 3. Write ONLY the specific emoji back (preserves all other reactions)
     const updateBody = {
       fields: {
         reactions: {
@@ -74,7 +74,11 @@ module.exports = async function handler(req, res) {
       }
     };
 
-    await firestore('PATCH', docPath + '?updateMask.fieldPaths=reactions&key=none', updateBody);
+    // Use dotted mask path 'reactions.emoji' so Firestore doesn't overwrite the whole map
+    const maskPath = 'reactions.' + emoji;
+    const updateUrl = docPath + '?updateMask.fieldPaths=' + encodeURIComponent(maskPath);
+    
+    await firestore('PATCH', updateUrl, updateBody);
 
     return res.status(200).json({ ok: true, id: id, emoji: emoji, newCount: newCount });
   } catch (e) {
