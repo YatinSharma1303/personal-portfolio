@@ -168,14 +168,19 @@
 
   <!-- ============ HERO ============ -->
   <header class="hero" id="hero">
+    <canvas class="hero-particles" id="hero-particles"></canvas>
     <div class="hero-inner">
       <div class="hero-reveal" style="--d:0">
         <div class="hero-status-badge"><span class="status-dot"></span> Available for work &amp; collabs</div>
       </div>
       <div class="hero-label hero-reveal" style="--d:1">deployed_code · designed by yatin</div>
-      <p class="hero-eyebrow hero-reveal" style="--d:2"><span id="hero-typed"></span><span class="hero-caret">▌</span></p>
-      <h1 class="hero-h1 hero-reveal" style="--d:3">Building software <span class="hero-h1-grad">end to end.</span></h1>
-      <p class="hero-sub hero-reveal" style="--d:4">Shipping full-stack web experiences — from clean front-ends to the models and APIs behind them.</p>
+      <h1 class="hero-h1 hero-reveal" style="--d:2">Building software <span class="hero-h1-grad">end to end.</span></h1>
+      <p class="hero-sub hero-reveal" style="--d:3">Shipping full-stack web experiences — from clean front-ends to the models and APIs behind them.</p>
+      <!-- Terminal typing effect -->
+      <div class="hero-terminal hero-reveal" style="--d:4">
+        <div class="term-dots"><i></i><i></i><i></i></div>
+        <div class="term-body"><span class="term-line" id="term-line"></span><span class="term-caret">▌</span></div>
+      </div>
       <div class="hero-tags hero-reveal" style="--d:5">
         <span class="tag">AI Apps</span>
         <span class="tag">Web Platforms</span>
@@ -257,6 +262,13 @@
           <div class="gh-stat"><span id="gh-following">—</span><label>Following</label></div>
         </div>
         <a class="btn-ghost sm" href="https://github.com/YatinSharma1303" target="_blank" rel="noopener">Visit GitHub ↗</a>
+      </div>
+    </div>
+    <!-- Tech stack orbit -->
+    <div class="orbit-section fade-in">
+      <div class="orbit-wrap">
+        <div class="orbit-core material-symbols-outlined">code</div>
+        <div class="orbit-ring" id="orbit-ring"></div>
       </div>
     </div>
   </section>
@@ -357,6 +369,7 @@
         <div><div class="al-title">YatinSharma1303</div><div class="al-sub">AniList · anime list</div></div>
         <a class="al-link" href="https://anilist.co/user/YatinSharma1303/" target="_blank" rel="noopener">View Profile ↗</a>
       </div>
+      <div class="al-banner" id="al-banner" style="display:none;"></div>
       <div class="al-tabs" id="al-tabs">
         <button class="al-tab active" data-status="ALL">ALL</button>
         <button class="al-tab" data-status="WATCHING">WATCHING</button>
@@ -440,6 +453,15 @@
     <div class="presence-grid" id="presence-grid"><!-- populated by JS --></div>
     <div class="footer-note">designed &amp; built by <b>yatin</b> · vanilla html/css/js · <span id="year"></span></div>
   </footer>
+
+  <!-- ============ MOBILE BOTTOM NAV ============ -->
+  <nav class="mobile-bottom-nav">
+    <a href="#hero"><span class="material-symbols-outlined">home</span><small>Home</small></a>
+    <a href="#skills"><span class="material-symbols-outlined">bolt</span><small>Skills</small></a>
+    <a href="#projects"><span class="material-symbols-outlined">folder</span><small>Work</small></a>
+    <a href="#playground"><span class="material-symbols-outlined">sports_esports</span><small>Play</small></a>
+    <a href="#ama"><span class="material-symbols-outlined">chat</span><small>Ask</small></a>
+  </nav>
 
   <script src="script.js"></script>
   <script src="games.js"></script>

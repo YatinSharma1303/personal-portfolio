@@ -394,7 +394,7 @@
       .then(r => r.json()).then(d => {
         const lists = (d.data && d.data.user && d.data.user.lists) || [];
         lists.forEach(l => (l.entries || []).forEach(e => { e._status = l.status; allEntries.push(e); }));
-        renderSummary(); render();
+        renderSummary(); render(); renderBanner(allEntries);
       }).catch(() => { list.innerHTML = '<div class="al-empty">Could not load anime list.</div>'; });
 
     // Fetch user avatar separately
@@ -407,6 +407,18 @@
       const eps = allEntries.reduce((s, e) => s + (Number(e.progress) || 0), 0);
       const hrs = Math.round(allEntries.reduce((s, e) => s + (Number(e.progress) || 0) * 24, 0) / 60);
       summaryEl.textContent = total ? `${total} anime · ${eps.toLocaleString()} episodes · ${hrs.toLocaleString()} hrs watched` : '';
+    }
+    function renderBanner(entries) {
+      const banner = $('al-banner'); if (!banner) return;
+      const watching = entries.filter(e => (e._status || '').toUpperCase() === 'CURRENT' || (e._status || '').toUpperCase() === 'WATCHING');
+      const item = watching.length ? watching[0] : entries[0];
+      if (!item || !item.media) { banner.style.display = 'none'; return; }
+      const t = (item.media.title && (item.media.title.romaji || item.media.title.english)) || '\u2014';
+      const img = (item.media.coverImage && item.media.coverImage.large) || '';
+      const progress = item.progress ? item.progress + ' eps watched' : 'in progress';
+      const label = watching.length ? 'CURRENTLY WATCHING' : 'LATEST IN LIST';
+      banner.innerHTML = (img ? '<img class="al-banner-img" alt="' + esc(t) + '" src="' + img + '">' : '') + '<div class="al-banner-info"><div class="al-banner-label">' + label + '</div><div class="al-banner-title">' + esc(t) + '</div><div class="al-banner-progress">' + esc(progress) + '</div></div>';
+      banner.style.display = 'flex';
     }
     function render() {
       ensureChrome();
@@ -550,20 +562,126 @@
   })();
 
   /* ============================================================
-     16. HERO TYPEWRITER (rotating roles)
+     16. HERO TERMINAL (typing effect)
      ============================================================ */
-  (function typewriter() {
-    const el = $('hero-typed'); if (!el) return;
-    const ROLES = ['Full-Stack Developer', 'AI / ML Engineer', 'Problem Solver', 'Open-Source Tinkerer'];
-    let r = 0, c = 0, deleting = false;
+  (function terminal() {
+    const el = $('term-line'); if (!el) return;
+    const LINES = [
+      { cmd: 'whoami', out: 'yatin - full-stack developer' },
+      { cmd: 'cat stack.txt', out: 'react . python . firebase . ai/ml' },
+      { cmd: 'status --current', out: 'building cool stuff' }
+    ];
+    let li = 0, phase = 'cmd', ci = 0;
     function tick() {
-      const word = ROLES[r];
-      if (!deleting) { c++; if (c > word.length) { deleting = true; setTimeout(tick, 1600); return; } }
-      else { c--; if (c === 0) { deleting = false; r = (r + 1) % ROLES.length; } }
-      el.textContent = word.slice(0, c);
-      setTimeout(tick, deleting ? 45 : 85);
+      const item = LINES[li];
+      if (phase === 'cmd') {
+        ci++;
+        el.innerHTML = '<span class="term-cmd">$ ' + esc(item.cmd.slice(0, ci)) + '</span>';
+        if (ci >= item.cmd.length) { phase = 'pause1'; setTimeout(tick, 400); return; }
+        setTimeout(tick, 70);
+      } else if (phase === 'pause1') {
+        phase = 'out'; ci = 0; setTimeout(tick, 200);
+      } else if (phase === 'out') {
+        ci++;
+        el.innerHTML = '<span class="term-cmd">$ ' + item.cmd + '</span><br>' + esc('> ' + item.out.slice(0, ci));
+        if (ci >= item.out.length) { phase = 'pause2'; setTimeout(tick, 1800); return; }
+        setTimeout(tick, 35);
+      } else {
+        li = (li + 1) % LINES.length; phase = 'cmd'; ci = 0; setTimeout(tick, 300);
+      }
     }
-    setTimeout(tick, 600);
+    setTimeout(tick, 1200);
+  })();
+
+  /* ============================================================
+     16b. HERO PARTICLES (neural-network style)
+     ============================================================ */
+  (function particles() {
+    const canvas = $('hero-particles'); if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let dots = [], w, h;
+    function resize() {
+      const hero = document.querySelector('.hero');
+      w = canvas.width = hero.offsetWidth;
+      h = canvas.height = hero.offsetHeight;
+      const count = Math.min(60, Math.floor(w * h / 14000));
+      dots = [];
+      for (let i = 0; i < count; i++) dots.push({ x: Math.random()*w, y: Math.random()*h, vx: (Math.random()-0.5)*0.3, vy: (Math.random()-0.5)*0.3 });
+    }
+    function draw() {
+      ctx.clearRect(0, 0, w, h);
+      dots.forEach(d => { d.x += d.vx; d.y += d.vy; if (d.x<0||d.x>w) d.vx*=-1; if (d.y<0||d.y>h) d.vy*=-1; });
+      for (let i = 0; i < dots.length; i++) {
+        for (let j = i+1; j < dots.length; j++) {
+          const dx = dots[i].x - dots[j].x, dy = dots[i].y - dots[j].y;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist < 120) { ctx.strokeStyle = 'rgba(0,200,255,' + (0.15 * (1 - dist/120)) + ')'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(dots[i].x, dots[i].y); ctx.lineTo(dots[j].x, dots[j].y); ctx.stroke(); }
+        }
+      }
+      ctx.fillStyle = 'rgba(120,200,255,0.6)';
+      dots.forEach(d => { ctx.beginPath(); ctx.arc(d.x, d.y, 1.5, 0, 7); ctx.fill(); });
+      requestAnimationFrame(draw);
+    }
+    resize(); draw();
+    window.addEventListener('resize', resize);
+  })();
+
+  /* ============================================================
+     16c. TECH ORBIT (populate ring with icons)
+     ============================================================ */
+  (function orbit() {
+    const ring = $('orbit-ring'); if (!ring) return;
+    const TECH = ['R','Py','FB','AI','JS','TS','Git','ML'];
+    const radius = 115;
+    TECH.forEach((label, i) => {
+      const angle = (i / TECH.length) * Math.PI * 2;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+      const item = document.createElement('div');
+      item.className = 'orbit-item';
+      item.textContent = label;
+      item.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+      item.style.animation = 'orbitSpin 30s linear infinite reverse';
+      ring.appendChild(item);
+    });
+  })();
+
+  /* ============================================================
+     16d. 3D CARD TILT (project + interest cards)
+     ============================================================ */
+  (function tilt() {
+    if (window.matchMedia('(hover: none)').matches) return;
+    document.querySelectorAll('.project-card, .interest-card').forEach(card => {
+      card.addEventListener('mousemove', (e) => {
+        const r = card.getBoundingClientRect();
+        const cx = e.clientX - r.left, cy = e.clientY - r.top;
+        const rx = ((cy / r.height) - 0.5) * -10;
+        const ry = ((cx / r.width) - 0.5) * 10;
+        card.style.transform = 'perspective(800px) rotateX(' + rx + 'deg) rotateY(' + ry + 'deg)';
+      });
+      card.addEventListener('mouseleave', () => { card.style.transform = ''; });
+    });
+  })();
+
+  /* ============================================================
+     16e. MOBILE BOTTOM NAV active state
+     ============================================================ */
+  (function mobileNav() {
+    const links = document.querySelectorAll('.mobile-bottom-nav a');
+    if (!links.length) return;
+    const sections = [];
+    links.forEach(a => { const id = a.getAttribute('href').slice(1); const sec = document.getElementById(id); if (sec) sections.push({ sec, a }); });
+    if (!sections.length) return;
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          links.forEach(a => a.classList.remove('active'));
+          const m = sections.find(s => s.sec === e.target);
+          if (m) m.a.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-40% 0px -55% 0px' });
+    sections.forEach(s => obs.observe(s.sec));
   })();
 
   /* ============================================================
