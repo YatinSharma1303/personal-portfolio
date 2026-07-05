@@ -394,8 +394,13 @@
           .then(info => {
             const url = lfmImg(info.artist ? info.artist.image : []);
             if (url) {
-              const holder = document.getElementById('artist-img-' + idx);
-              if (holder) { holder.style.backgroundImage = 'url(\'' + url + '\')'; holder.textContent = ''; }
+              // Pre-load the image — only replace gradient if it ACTUALLY loads
+              var testImg = new Image();
+              testImg.onload = function() {
+                var holder = document.getElementById('artist-img-' + idx);
+                if (holder) { holder.style.background = 'url(\'' + url + '\') center/cover'; holder.textContent = ''; }
+              };
+              testImg.src = url;
             }
           })
           .catch(() => {});
@@ -429,7 +434,9 @@
           const art = lfmImg(tr.image);
           const name = esc(tr.name || '\u2014');
           const artist = esc((tr.artist && (tr.artist['#text'] || tr.artist.name)) || '');
-          const artHTML = '<div class="lfm-recent-img" style="background-image:url(\'' + (art || '') + '\')">' + (art ? '' : '<span class="lfm-noart-icon">\u266A</span>') + '</div>';
+          const artHTML = art
+            ? '<div class="lfm-recent-img" style="background-image:url(\'' + art + '\')"></div>'
+            : '<div class="lfm-recent-img lfm-noart">\u266A</div>';
           return '<div class="lfm-recent-item">' + artHTML + '<div class="lfm-recent-info"><div class="lfm-recent-name">' + name + '</div><div class="lfm-recent-artist">' + artist + '</div></div></div>';
         }).join('');
       }).catch(function () {});
