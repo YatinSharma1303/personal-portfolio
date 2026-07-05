@@ -849,7 +849,7 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
 .pg-close { font-size: 20px; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border); color: var(--gray); }
 .pg-close:hover { background: rgba(255,255,255,0.08); color: #fff; }
 .pg-title { font-weight: 700; font-size: 18px; }
-.pg-score { margin-left: auto; font-family: var(--mono); font-size: 13px; color: var(--accent); }
+.pg-score { margin-left: auto; font-family: var(--mono); font-size: 13px; color: var(--accent); margin-right: 12px; }
 .pg-host { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 30px; overflow: auto; }
 .pg-canvas { background: #0a0a0e; border: 1px solid var(--border); border-radius: 16px; max-width: 100%; height: auto; touch-action: none; }
 .pg-btn { padding: 11px 24px; border-radius: var(--radius-btn); font-size: 13px; font-weight: 700; background: var(--white); color: #000; border: none; }
@@ -981,7 +981,7 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
 .testimonial-author { font-family: var(--mono); font-size: 12px; color: var(--accent); }
 
 /* ============ GAME SOUND TOGGLE ============ */
-.sound-toggle { position: absolute; top: 16px; right: 60px; z-index: 5; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border); color: var(--gray); display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; }
+.sound-toggle { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border); color: var(--gray); display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; flex-shrink: 0; }
 .sound-toggle:hover { background: rgba(255,255,255,0.1); color: #fff; }
 .sound-toggle.muted { opacity: 0.4; }
 
