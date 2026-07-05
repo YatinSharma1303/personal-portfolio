@@ -429,8 +429,8 @@
           const art = lfmImg(tr.image);
           const name = esc(tr.name || '\u2014');
           const artist = esc((tr.artist && (tr.artist['#text'] || tr.artist.name)) || '');
-          const artHTML = art ? `<img class="lfm-recent-img" alt="" src="${art}" onerror="this.style.display='none'">` : '';
-          return `<div class="lfm-recent-item">${artHTML}<div class="lfm-recent-info"><div class="lfm-recent-name">${name}</div><div class="lfm-recent-artist">${artist}</div></div></div>`;
+          const artHTML = art ? '<img class="lfm-recent-img" alt="" src="' + art + '" onerror="this.outerHTML=\'<span class="lfm-recent-img lfm-noart">\u266A</span>\'">' : '<span class="lfm-recent-img lfm-noart">\u266A</span>';
+          return '<div class="lfm-recent-item">' + artHTML + '<div class="lfm-recent-info"><div class="lfm-recent-name">' + name + '</div><div class="lfm-recent-artist">' + artist + '</div></div></div>';
         }).join('');
       }).catch(function () {});
     }
