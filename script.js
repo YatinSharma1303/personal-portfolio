@@ -843,23 +843,25 @@
     }
     function loadAnswered() {
       if (!FIREBASE_READY) return;
-      fetch(queryUrl(), {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ structuredQuery: {
-          from: [{ collectionId: COL }],
-          where: { fieldFilter: { field: { fieldPath: 'answered' }, op: 'EQUAL', value: { booleanValue: true } } },
-          limit: 50
-        } })
-      }).then(r => r.json()).then(data => {
-        // Check for Firestore permission/query errors (REST returns 200 + error body!)
-        if (data && data.length && data[0].error) {
-          console.error('Firestore query error:', data[0].error.message);
-          return;
-        }
-        answeredDocs = (data || []).filter(d => d.document).map(d => fromDoc(d.document));
-        answeredDocs.sort((a, b) => new Date(b.answeredAt || 0) - new Date(a.answeredAt || 0));
-        render();
-      }).catch((err) => { console.warn('AMA load failed:', err); });
+      const listUrl = `${base()}/${COL}?pageSize=100&key=${encodeURIComponent(fb.apiKey)}`;
+      fetch(listUrl, { method: 'GET' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) {
+            console.error('Firestore list error:', data.error.message);
+            if (listWrap) { listWrap.hidden = false; list.innerHTML = '<div style="color:#ff6b6b;padding:12px;font-family:monospace;font-size:12px;">Debug: ' + esc(data.error.message) + '</div>'; }
+            return;
+          }
+          const docs = (data.documents || []).map(d => fromDoc(d.document || d));
+          answeredDocs = docs.filter(q => q.answered === true && q.answer);
+          console.log('AMA Debug: Found ' + docs.length + ' total docs, ' + answeredDocs.length + ' answered');
+          answeredDocs.sort((a, b) => new Date(b.answeredAt || 0) - new Date(a.answeredAt || 0));
+          render();
+        })
+        .catch((err) => {
+          console.warn('AMA load failed:', err);
+          if (listWrap) { listWrap.hidden = false; list.innerHTML = '<div style="color:#ff6b6b;padding:12px;font-family:monospace;font-size:12px;">Debug: ' + esc(err.message || 'fetch failed') + '</div>'; }
+        });
     }
     function submit() {
       const text = input.value.trim();
@@ -1071,7 +1073,14 @@
     const editorsEl = $('wt-editors');
     const COLORS = ['#00c8ff','#7850ff','#00f0b4','#f59e0b','#ef4444','#a855f7'];
     fetch('/api/wakatime').then(r => r.json()).then(d => {
-      if (d.error) { langsEl.innerHTML = '<div class="wt-loading">' + esc(d.error) + '</div>'; return; }
+      if (d.error) {
+        if (d.error.includes('not configured')) {
+          langsEl.innerHTML = '<div class="wt-loading">WakaTime API key missing. If you added it, create a NEW Deployment in Vercel.</div>';
+        } else {
+          langsEl.innerHTML = '<div class="wt-loading">' + esc(d.error) + '</div>';
+        }
+        return;
+      }
       if (totalEl) totalEl.textContent = d.total || '—';
       if (dailyEl) dailyEl.textContent = 'avg ' + (d.daily || '') + '/day';
       if (d.languages && d.languages.length) {

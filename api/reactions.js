@@ -1,6 +1,6 @@
 /* ============================================================
    api/reactions.js — Toggle an emoji reaction on a question.
-   Uses Firestore FieldTransform increment (atomic, race-safe).
+   Reads the doc, updates the reactions map, and saves it back.
    ============================================================ */
 const crypto = require('crypto');
 const COLLECTION = 'amaQuestions';
@@ -14,6 +14,7 @@ function serviceAccount() {
 }
 function projectId() { return process.env.FIREBASE_PROJECT_ID || serviceAccount().project_id; }
 function base64url(input) { return Buffer.from(input).toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_'); }
+
 async function getToken() {
   const sa = serviceAccount();
   const now = Math.floor(Date.now() / 1000);
@@ -24,6 +25,13 @@ async function getToken() {
   const r = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: unsigned + '.' + sig }) });
   const d = await r.json();
   return d.access_token;
+}
+
+async function firestore(method, path, body) {
+  const token = await getToken();
+  const url = 'https://firestore.googleapis.com/v1/projects/' + projectId() + '/databases/(default)/documents/' + path;
+  const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: body ? JSON.stringify(body) : undefined });
+  return r.json();
 }
 
 module.exports = async function handler(req, res) {
@@ -40,35 +48,35 @@ module.exports = async function handler(req, res) {
     const delta = Number(body.delta) === 1 ? 1 : -1;
     if (!id || !emoji) return res.status(400).json({ error: 'id and emoji required' });
 
-    const token = await getToken();
-    const docUrl = 'https://firestore.googleapis.com/v1/projects/' + projectId() + '/databases/(default)/documents/' + COLLECTION + '/' + encodeURIComponent(id);
-    const commitUrl = 'https://firestore.googleapis.com/v1/projects/' + projectId() + '/databases/(default)/documents:commit';
+    const docPath = COLLECTION + '/' + encodeURIComponent(id);
 
-    // Atomic increment on the reactions.EMOJI nested field.
-    const commitBody = JSON.stringify({
-      writes: [{
-        transform: {
-          document: docUrl,
-          fieldTransforms: [{
-            fieldPath: 'reactions.' + emoji,
-            increment: delta
-          }]
-        }
-      }]
-    });
-
-    const commitRes = await fetch(commitUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: commitBody
-    });
-
-    if (!commitRes.ok) {
-      const err = await commitRes.json().catch(() => null);
-      throw new Error((err && err.error && err.error.message) || 'Firestore commit failed');
+    // 1. Read the current document
+    const doc = await firestore('GET', docPath).catch(() => null);
+    let currentCount = 0;
+    if (doc && doc.fields && doc.fields.reactions && doc.fields.reactions.mapValue && doc.fields.reactions.mapValue.fields) {
+      const emojiField = doc.fields.reactions.mapValue.fields[emoji];
+      if (emojiField) currentCount = Number(emojiField.integerValue || emojiField.doubleValue || 0);
     }
 
-    return res.status(200).json({ ok: true, id: id, emoji: emoji, delta: delta });
+    // 2. Calculate new count
+    const newCount = Math.max(0, currentCount + delta);
+
+    // 3. Write the entire reactions map back (merge=true)
+    const updateBody = {
+      fields: {
+        reactions: {
+          mapValue: {
+            fields: {
+              [emoji]: { integerValue: String(newCount) }
+            }
+          }
+        }
+      }
+    };
+
+    await firestore('PATCH', docPath + '?updateMask.fieldPaths=reactions&key=none', updateBody);
+
+    return res.status(200).json({ ok: true, id: id, emoji: emoji, newCount: newCount });
   } catch (e) {
     console.error('Reaction error:', e.message);
     return res.status(500).json({ error: e.message || 'Failed to toggle reaction' });
