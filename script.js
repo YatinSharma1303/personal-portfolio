@@ -32,7 +32,18 @@
     if (!images || !images.length) return '';
     const sizes = ['extralarge', 'large', 'medium', 'small', 'mega'];
     const map = {};
-    images.forEach(function (im) { const url = (im && (im['#text'] || im['text'])) || ''; if (url) map[im.size] = url; });
+    // Last.fm's default missing-art image hashes (solid white/grey placeholders)
+    const defaultHashes = ['2a96cbd8b46e442fc41c2b86b821562f', 'c6f59c1e5e7240a4c0d427abd71f3dbb', '4128a6eb29f94943c9d206c08e025042'];
+    
+    images.forEach(function (im) { 
+      const url = (im && (im['#text'] || im['text'])) || ''; 
+      if (url) {
+        // Filter out default placeholder images
+        const isDefault = defaultHashes.some(h => url.includes(h));
+        if (!isDefault) map[im.size] = url; 
+      }
+    });
+    
     for (let i = 0; i < sizes.length; i++) { if (map[sizes[i]]) return map[sizes[i]]; }
     return '';
   }
