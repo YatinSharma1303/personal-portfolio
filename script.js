@@ -379,30 +379,25 @@
         'linear-gradient(135deg, #f59e0b, #ef4444)',
         'linear-gradient(135deg, #a855f7, #ec4899)'
       ];
-      wrap.innerHTML = artists.map(function(ar, idx) {
-        const letter = (ar.name || '?').charAt(0).toUpperCase();
-        const bg = GRADIENTS[idx % GRADIENTS.length];
-        // Colored letter avatar with a hidden img on top — if img loads, it covers the letter
-        const artHTML = '<div class="lfm-artist-avatar" id="artist-img-' + idx + '" style="background:' + bg + '">' + esc(letter) + '</div>';
-        return '<div class="lfm-artist">' + artHTML + '<span class="lfm-artist-name">' + esc(ar.name) + '</span><span class="lfm-artist-plays">' + (ar.playcount||0) + 'x</span></div>';
-      }).join('');
-      // Now try to fetch real images and replace the overlay src
-      artists.forEach(function(ar, idx) {
+      // Fetch all artist images in parallel first
+      const artPromises = artists.map(function(ar) {
         const artistName = encodeURIComponent(ar.name);
-        fetch(`${lfmAPI}?method=artist.getInfo&api_key=${k}&artist=${artistName}&format=json`)
+        return fetch(`${lfmAPI}?method=artist.getInfo&api_key=${k}&artist=${artistName}&format=json`)
           .then(r => r.json())
-          .then(info => {
-            const url = lfmImg(info.artist ? info.artist.image : []);
-            if (url) {
-              var testImg = new Image();
-              testImg.onload = function() {
-                var holder = document.getElementById('artist-img-' + idx);
-                if (holder) { holder.style.background = "url('" + url + "') center/cover, " + holder.style.background; holder.textContent = ''; }
-              };
-              testImg.src = url;
-            }
-          })
-          .catch(() => {});
+          .then(info => lfmImg(info.artist ? info.artist.image : []))
+          .catch(() => '');
+      });
+      
+      Promise.all(artPromises).then(function(arts) {
+        wrap.innerHTML = artists.map(function(ar, idx) {
+          const art = arts[idx] || '';
+          const letter = (ar.name || '?').charAt(0).toUpperCase();
+          // If no image, use the dark lfm-noart fallback with the artist's first letter
+          const artHTML = art 
+            ? '<img class="lfm-artist-img" alt="" src="' + art + '" onerror="this.outerHTML=\'<span class=\\\"lfm-artist-img lfm-noart\\\">' + esc(letter) + '</span>\'">' 
+            : '<span class="lfm-artist-img lfm-noart">' + esc(letter) + '</span>';
+          return '<div class="lfm-artist">' + artHTML + '<span class="lfm-artist-name">' + esc(ar.name) + '</span><span class="lfm-artist-plays">' + (ar.playcount||0) + 'x</span></div>';
+        }).join('');
       });
     }).catch(function () {});
 
@@ -436,6 +431,7 @@
           const artHTML = art
             ? '<img class="lfm-recent-img" alt="" src="' + art + '" onerror="this.outerHTML=\'<span class=\\\"lfm-recent-img lfm-noart\\\">\u266A</span>\'">'
             : '<span class="lfm-recent-img lfm-noart">\u266A</span>';
+          // Also add dark bg fallback to the container itself
           return '<div class="lfm-recent-item">' + artHTML + '<div class="lfm-recent-info"><div class="lfm-recent-name">' + name + '</div><div class="lfm-recent-artist">' + artist + '</div></div></div>';
         }).join('');
       }).catch(function () {});
