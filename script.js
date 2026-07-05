@@ -607,13 +607,30 @@
     const canvas = $('hero-particles'); if (!canvas) return;
     const ctx = canvas.getContext('2d');
     let dots = [], w, h;
-    function resize() {
+    function init() {
       w = canvas.width = window.innerWidth;
       h = canvas.height = window.innerHeight;
       const count = Math.min(80, Math.floor(w * h / 18000));
       dots = [];
       for (let i = 0; i < count; i++) dots.push({ x: Math.random()*w, y: Math.random()*h, vx: (Math.random()-0.5)*0.3, vy: (Math.random()-0.5)*0.3 });
     }
+    // Resize WITHOUT recreating dots — keeps them smooth across viewport changes.
+    function resize() {
+      const newW = window.innerWidth, newH = window.innerHeight;
+      w = canvas.width = newW;
+      h = canvas.height = newH;
+      // keep existing dots, just nudge any that are now off-screen back into bounds
+      dots.forEach(d => {
+        if (d.x > newW) d.x = Math.random() * newW;
+        if (d.y > newH) d.y = Math.random() * newH;
+      });
+    }
+    // Debounce resize so mobile URL-bar toggling doesn't thrash.
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(resize, 200);
+    });
     function draw() {
       ctx.clearRect(0, 0, w, h);
       dots.forEach(d => { d.x += d.vx; d.y += d.vy; if (d.x<0||d.x>w) d.vx*=-1; if (d.y<0||d.y>h) d.vy*=-1; });
@@ -628,8 +645,7 @@
       dots.forEach(d => { ctx.beginPath(); ctx.arc(d.x, d.y, 1.5, 0, 7); ctx.fill(); });
       requestAnimationFrame(draw);
     }
-    resize(); draw();
-    window.addEventListener('resize', resize);
+    init(); draw();
   })();
 
   /* ============================================================
