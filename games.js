@@ -46,6 +46,14 @@
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && overlay.classList.contains('open')) close(); });
   }
 
+  let currentDifficulty = 'Medium';
+
+  function getDifficulty() {
+    const activeBtn = document.querySelector('.diff-btn.active');
+    if (activeBtn) currentDifficulty = activeBtn.dataset.diff;
+    return currentDifficulty;
+  }
+
   function open(gameId) {
     ensureShell();
     overlay.classList.add('open');
@@ -135,7 +143,9 @@
 
     function reset() {
       snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}];
-      dir = {x:1,y:0}; nextDir = {x:1,y:0}; score = 0; alive = true; tick = 120; acc = 0; dirLocked = false;
+      const diff = getDifficulty();
+      const speedMap = { Easy: 160, Medium: 120, Hard: 80 };
+      dir = {x:1,y:0}; nextDir = {x:1,y:0}; score = 0; alive = true; tick = speedMap[diff] || 120; acc = 0; dirLocked = false;
       placeFood(); setScore('Score: 0  Best: ' + bestScore('snake'));
     }
     function placeFood() {
@@ -482,21 +492,29 @@
     const W=480, H=560;
     const c = canvasHost(W, H); const ctx = c.getContext('2d');
     let player, blocks, score, running, started, spawnAcc, spawnEvery, frameCount;
+    let dodgeSettings = { spawn: 850, minVy: 2.5, maxVy: 4.5, decay: 380 };
     function reset() {
+      const diff = getDifficulty();
+      const diffSettings = {
+        Easy: { spawn: 1100, minVy: 2, maxVy: 3.5, decay: 380 },
+        Medium: { spawn: 850, minVy: 2.5, maxVy: 4.5, decay: 380 },
+        Hard: { spawn: 500, minVy: 3.5, maxVy: 6, decay: 280 }
+      };
+      dodgeSettings = diffSettings[diff] || diffSettings.Medium;
       player = { x: W/2, y: H-60, r: 11 };
       blocks = []; score = 0; running = true; started = false;
-      spawnAcc = 0; spawnEvery = 850; frameCount = 0;
+      spawnAcc = 0; spawnEvery = dodgeSettings.spawn; frameCount = 0;
       setScore('');
     }
     function spawn() {
       const s = rand(14, 30);
-      blocks.push({ x: rand(0, W-s), y: -s, s: s, vy: rand(2.5, 4.5) });
+      blocks.push({ x: rand(0, W-s), y: -s, s: s, vy: rand(dodgeSettings.minVy, dodgeSettings.maxVy) });
     }
     function step(dt) {
       frameCount++;
       if (!running || !started) return;
       spawnAcc += dt;
-      if (spawnAcc >= spawnEvery) { spawnAcc = 0; spawn(); if (spawnEvery > 380) spawnEvery -= 7; }
+      if (spawnAcc >= spawnEvery) { spawnAcc = 0; spawn(); if (spawnEvery > dodgeSettings.decay) spawnEvery -= 7; }
       blocks.forEach(b => { b.y += b.vy; });
       blocks = blocks.filter(b => b.y < H + 40);
       score++;
