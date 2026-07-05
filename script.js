@@ -593,28 +593,56 @@
       { cmd: 'status --current', out: 'building cool stuff' }
     ];
     let li = 0, phase = 'cmd', ci = 0;
+    let isVisible = false;
+    let typingTimer = null;
+
     function typeClick() { try { if (window.sfx && !window.sfx.isMuted()) window.sfx.play(900 + Math.random()*200, 0.01, 'square'); } catch(e){} }
+    
     function tick() {
+      // If the terminal is scrolled out of view, stop looping and wait until it's visible again
+      if (!isVisible) { typingTimer = null; return; }
+      
       const item = LINES[li];
       if (phase === 'cmd') {
         ci++;
         typeClick();
         el.innerHTML = '<span class="term-cmd">$ ' + esc(item.cmd.slice(0, ci)) + '</span>';
-        if (ci >= item.cmd.length) { phase = 'pause1'; setTimeout(tick, 400); return; }
-        setTimeout(tick, 70);
+        if (ci >= item.cmd.length) { phase = 'pause1'; typingTimer = setTimeout(tick, 400); return; }
+        typingTimer = setTimeout(tick, 70);
       } else if (phase === 'pause1') {
-        phase = 'out'; ci = 0; setTimeout(tick, 200);
+        phase = 'out'; ci = 0; typingTimer = setTimeout(tick, 200);
       } else if (phase === 'out') {
         ci++;
         typeClick();
         el.innerHTML = '<span class="term-cmd">$ ' + item.cmd + '</span><br>' + esc('> ' + item.out.slice(0, ci));
-        if (ci >= item.out.length) { phase = 'pause2'; setTimeout(tick, 1800); return; }
-        setTimeout(tick, 35);
+        if (ci >= item.out.length) { phase = 'pause2'; typingTimer = setTimeout(tick, 1800); return; }
+        typingTimer = setTimeout(tick, 35);
       } else {
-        li = (li + 1) % LINES.length; phase = 'cmd'; ci = 0; setTimeout(tick, 300);
+        li = (li + 1) % LINES.length; phase = 'cmd'; ci = 0; typingTimer = setTimeout(tick, 300);
       }
     }
-    setTimeout(tick, 1200);
+
+    // Start/Stop typing based on scroll visibility
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        const wasVisible = isVisible;
+        isVisible = entry.isIntersecting;
+        
+        // If it just became visible and the loop isn't running, start it
+        if (isVisible && !wasVisible && !typingTimer) {
+          typingTimer = setTimeout(tick, 0);
+        } 
+        // If it just scrolled out of view, clear the timer to pause sound/typing
+        else if (!isVisible && wasVisible && typingTimer) {
+          clearTimeout(typingTimer);
+          typingTimer = null;
+        }
+      });
+    }, { threshold: 0.2 }); // Trigger when 20% visible
+
+    // Observe the parent terminal container
+    const termBox = el.closest('.hero-terminal');
+    if (termBox) obs.observe(termBox);
   })();
 
   /* ============================================================
@@ -983,7 +1011,7 @@
      ============================================================ */
   window.haptic = function (ms) { try { if (navigator.vibrate) navigator.vibrate(ms || 12); } catch (e) {} };
   
-  // Sound effects (kept for games)
+  // Sound effects
   window.sfx = (function () {
     let ctx = null, muted = false;
     try { muted = localStorage.getItem('pg_muted') === '1'; } catch (e) {}
