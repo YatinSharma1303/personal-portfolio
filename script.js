@@ -413,11 +413,11 @@
       Promise.all(artPromises).then(function(arts) {
         // Premium gradient circles (Material Design 3 style) for artist fallbacks
         var GRADIENTS = [
-          'linear-gradient(135deg, rgba(0, 200, 255, 0.2), rgba(120, 80, 255, 0.2))',
-          'linear-gradient(135deg, rgba(0, 240, 180, 0.2), rgba(0, 200, 255, 0.2))',
-          'linear-gradient(135deg, rgba(120, 80, 255, 0.2), rgba(0, 240, 180, 0.2))',
-          'linear-gradient(135deg, rgba(0, 200, 255, 0.2), rgba(0, 240, 180, 0.2))',
-          'linear-gradient(135deg, rgba(0, 240, 180, 0.2), rgba(120, 80, 255, 0.2))'
+          'linear-gradient(135deg, rgba(0, 200, 255, 0.5), rgba(120, 80, 255, 0.5))',
+          'linear-gradient(135deg, rgba(0, 240, 180, 0.5), rgba(0, 200, 255, 0.5))',
+          'linear-gradient(135deg, rgba(120, 80, 255, 0.5), rgba(0, 240, 180, 0.5))',
+          'linear-gradient(135deg, rgba(0, 200, 255, 0.5), rgba(0, 240, 180, 0.5))',
+          'linear-gradient(135deg, rgba(0, 240, 180, 0.5), rgba(120, 80, 255, 0.5))'
         ];
         wrap.innerHTML = artists.map(function(ar, idx) {
           var letter = (ar.name || '?').charAt(0).toUpperCase();

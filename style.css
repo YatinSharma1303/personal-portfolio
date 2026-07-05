@@ -1221,5 +1221,5 @@ kbd { background: var(--surface2); border: 1px solid var(--border-hover); border
   text-shadow: 0 0 10px rgba(0, 200, 255, 0.8), 0 0 5px rgba(0,0,0,0.5);
   text-transform: uppercase; letter-spacing: -0.02em;
   border: 1px solid rgba(0, 200, 255, 0.2) !important;
-  background-color: #141414 !important; /* dark base under the transparent gradient */
+  background-color: #0c0c0c !important; /* darker base to make 50% gradient pop */
 }
