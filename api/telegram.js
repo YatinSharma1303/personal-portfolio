@@ -1,8 +1,8 @@
 /* ============================================================
    api/telegram.js  —  Vercel serverless function
    Called by the website when a visitor submits a question.
-   Sends a richly-formatted notification to the owner's Telegram
-   with inline action buttons (Answer / Dismiss / Delete / Edit).
+   Sends a beautifully formatted notification with blockquote
+   cards and a 3-row button hierarchy.
    ============================================================ */
 
 const TELEGRAM_API = 'https://api.telegram.org/bot';
@@ -49,29 +49,28 @@ module.exports = async function handler(req, res) {
       });
     } catch (e) {}
 
+    // 1. BLOCKQUOTE QUESTION CARD — visually separates the question from metadata
     const text = [
       `📩 <b>New Question</b>`,
       ``,
-      `<b>👤 From:</b> ${escapeHtml(name)}`,
-      `<b>💬 Question:</b>`,
-      `<i>${escapeHtml(question)}</i>`,
-      ``,
-      `🕐 <i>${escapeHtml(timeStr)} IST</i>`,
-      `🆔 <code>${escapeHtml(questionId)}</code>`,
-      ``,
-      `💡 <i>Reply to this message to answer, or use the buttons below.</i>`
+      `👤 <b>${escapeHtml(name)}</b> asks:`,
+      `<blockquote>${escapeHtml(question)}</blockquote>`,
+      `🕐 ${escapeHtml(timeStr)} IST · 🆔 <code>${escapeHtml(questionId)}</code>`
     ].join('\n');
 
-    // Inline keyboard — tap a button instead of typing a command.
-    // callback_data format: "action:id"
+    // 3. BUTTON LAYOUT REDESIGN — 3-row hierarchy
+    // Row 1: Answer (primary, alone)
+    // Row 2: Edit Answer (secondary, alone)
+    // Row 3: Dismiss + Delete (danger zone, grouped)
     const replyMarkup = {
-      inline_keyboard: [[
-        { text: '💬 Answer', callback_data: `answer:${questionId}` },
-        { text: '🙈 Dismiss', callback_data: `dismiss:${questionId}` }
-      ], [
-        { text: '🗑 Delete', callback_data: `delete:${questionId}` },
-        { text: '✏️ Edit Answer', callback_data: `edit:${questionId}` }
-      ]]
+      inline_keyboard: [
+        [{ text: '💬  Answer', callback_data: `answer:${questionId}` }],
+        [{ text: '✏️  Edit Answer', callback_data: `edit:${questionId}` }],
+        [
+          { text: '🙈  Dismiss', callback_data: `dismiss:${questionId}` },
+          { text: '🗑  Delete', callback_data: `delete:${questionId}` }
+        ]
+      ]
     };
 
     const tgRes = await fetch(`${TELEGRAM_API}${botToken}/sendMessage`, {

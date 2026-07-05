@@ -4,9 +4,10 @@
 
    Handles:
    • Inline button presses (Answer / Dismiss / Delete / Edit)
+   • Delete confirmation flow (2-step)
    • Reply-to-message answers (free-form text)
    • /start, /help, /stats, /refresh, /pending commands
-   • /edit two-step flow
+   • After-action status cards with timestamps
 
    Security: webhook secret is FAIL-CLOSED.
    ============================================================ */
@@ -154,11 +155,6 @@ async function dismissQuestion(id) {
 async function deleteQuestion(id) {
   return firestore('DELETE', docPath(COLLECTION, id));
 }
-async function editQuestionText(id, text) {
-  return firestore('PATCH', `${docPath(COLLECTION, id)}?${mask(['question'])}`, {
-    fields: { question: { stringValue: text.slice(0, 280) } }
-  });
-}
 
 /* ── Edit session ── */
 async function saveEditSession(chatId, questionId) {
@@ -215,7 +211,44 @@ async function getStats() {
   const answered = all.filter(q => questionState(q) === 'ANSWERED').length;
   const dismissed = all.filter(q => questionState(q) === 'DISMISSED').length;
   const totalVotes = all.reduce((s, q) => s + (q.votes || 0), 0);
-  return { total: all.length, unanswered, answered, dismissed, totalVotes };
+  // Find most voted question
+  const answeredQs = all.filter(q => questionState(q) === 'ANSWERED');
+  const mostVoted = answeredQs.length > 0 ? answeredQs.reduce((max, q) => (q.votes || 0) > (max.votes || 0) ? q : max) : null;
+  return { total: all.length, unanswered, answered, dismissed, totalVotes, mostVoted };
+}
+
+/* ── Time formatter ── */
+function formatTime(iso) {
+  try {
+    return new Date(iso).toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short',
+      hour: '2-digit', minute: '2-digit', hour12: true
+    });
+  } catch (e) { return ''; }
+}
+
+/* ── 4. POLISHED STATS DASHBOARD ── */
+async function sendStats(chatId, replyToId) {
+  try {
+    const s = await getStats();
+    let mv = '';
+    if (s.mostVoted) {
+      const qText = esc(s.mostVoted.question).slice(0, 60);
+      mv = `\n🔥 <b>Most voted:</b> "${qText}" (${s.mostVoted.votes || 0} votes)`;
+    }
+    const statsText = [
+      `📊 <b>AMA Statistics</b>`,
+      `──────────────────────`,
+      `📥 Total         ${s.total}`,
+      `⏳ Unanswered    ${s.unanswered}`,
+      `✅ Answered      ${s.answered}`,
+      `🙈 Dismissed     ${s.dismissed}`,
+      `👍 Total votes   ${s.totalVotes}${mv}`
+    ].join('\n');
+    await sendTelegram(chatId, statsText, replyToId);
+  } catch (e) {
+    await sendTelegram(chatId, '⚠️ Could not load stats.', replyToId);
+  }
 }
 
 /* ── Command messages ── */
@@ -224,15 +257,15 @@ const HELP_TEXT = [
   ``,
   `<b>📋 Commands:</b>`,
   `• <b>/help</b> — Show this menu`,
-  `• <b>/stats</b> — Question statistics`,
+  `• <b>/stats</b> — Question statistics dashboard`,
   `• <b>/pending</b> — List unanswered questions`,
   `• <b>/refresh</b> — List unanswered + dismissed`,
   ``,
   `<b>⚡ Quick actions (via buttons):</b>`,
   `• <b>💬 Answer</b> — Reply to any question message`,
+  `• <b>✏️ Edit Answer</b> — Change your reply`,
   `• <b>🙈 Dismiss</b> — Hide a question (keeps data)`,
-  `• <b>🗑 Delete</b> — Permanently remove`,
-  `• <b>✏️ Edit</b> — Change your answer to a question`,
+  `• <b>🗑 Delete</b> — Permanently remove (with confirmation)`,
   ``,
   `<i>Every new question from your site appears here automatically.</i>`
 ].join('\n');
@@ -282,28 +315,60 @@ module.exports = async function handler(req, res) {
       const [action, ...rest] = data.split(':');
       const questionId = rest.join(':');
 
-      if (action === 'answer') {
+      // 2. DELETE CONFIRMATION FLOW
+      if (action === 'delete') {
+        await answerCallback(callback.id, '⚠️ Confirm deletion?');
+        await editMessage(cbChatId, cbMessageId,
+          `⚠️ <b>Confirm Delete</b>\n\nAre you sure you want to permanently delete this question?\n🆔 <code>${esc(questionId)}</code>`,
+          { inline_keyboard: [[
+            { text: '✅ Confirm Delete', callback_data: `confirmdelete:${questionId}` },
+            { text: '❌ Cancel', callback_data: `canceldelete:${questionId}` }
+          ]] }
+        );
+      }
+      else if (action === 'confirmdelete') {
+        try {
+          await deleteQuestion(questionId);
+          await answerCallback(callback.id, '✅ Deleted permanently');
+          // 5. AFTER-ACTION STATUS CARD
+          await editMessage(cbChatId, cbMessageId,
+            `🗑 <b>Question Deleted</b>\n\nThe question and all its data have been permanently removed.\n\n🕐 ${formatTime(new Date().toISOString())} IST`
+          );
+        } catch (e) { await answerCallback(callback.id, '⚠️ Could not delete'); }
+      }
+      else if (action === 'canceldelete') {
+        await answerCallback(callback.id, 'Cancelled');
+        // Restore the original buttons
+        await editMessage(cbChatId, cbMessageId,
+          `📩 <b>Question Restored</b>\n\n🆔 <code>${esc(questionId)}</code>`,
+          { inline_keyboard: [
+            [{ text: '💬  Answer', callback_data: `answer:${questionId}` }],
+            [{ text: '✏️  Edit Answer', callback_data: `edit:${questionId}` }],
+            [{ text: '🙈  Dismiss', callback_data: `dismiss:${questionId}` },
+             { text: '🗑  Delete', callback_data: `delete:${questionId}` }]
+          ] }
+        );
+      }
+      else if (action === 'answer') {
         await answerCallback(callback.id, '💬 Reply to the question message above to type your answer.');
       }
       else if (action === 'dismiss') {
         try {
           await dismissQuestion(questionId);
           await answerCallback(callback.id, '🙈 Dismissed');
-          await editMessage(cbChatId, cbMessageId, `🙈 <b>This question was dismissed.</b>\n🆔 <code>${esc(questionId)}</code>`);
+          // 5. AFTER-ACTION STATUS CARD
+          await editMessage(cbChatId, cbMessageId,
+            `🙈 <b>Question Dismissed</b>\n\nThis question has been hidden from your website.\nData is preserved.\n\n🆔 <code>${esc(questionId)}</code>\n🕐 ${formatTime(new Date().toISOString())} IST`
+          );
         } catch (e) { await answerCallback(callback.id, '⚠️ Could not dismiss'); }
-      }
-      else if (action === 'delete') {
-        try {
-          await deleteQuestion(questionId);
-          await answerCallback(callback.id, '🗑 Deleted');
-          await editMessage(cbChatId, cbMessageId, `🗑 <b>This question was deleted.</b>`);
-        } catch (e) { await answerCallback(callback.id, '⚠️ Could not delete'); }
       }
       else if (action === 'edit') {
         try {
           await saveEditSession(cbChatId, questionId);
           await answerCallback(callback.id, '✏️ Send the new answer now');
-          await sendTelegram(cbChatId, `✏️ <b>Edit Answer</b>\nSend the new answer text for this question:\n<code>${esc(questionId)}</code>\n\n<i>Type the new answer as your next message.</i>`);
+          await sendTelegram(cbChatId,
+            `✏️ <b>Edit Answer Mode</b>\n\nSend the new answer text for:\n🆔 <code>${esc(questionId)}</code>\n\n<i>Type the new answer as your next message.</i>`
+          );
         } catch (e) { await answerCallback(callback.id, '⚠️ Could not start edit'); }
       }
       else {
@@ -323,7 +388,7 @@ module.exports = async function handler(req, res) {
 
     const text = String(message.text || message.caption || '').trim();
     if (!text) return res.status(200).json({ ok: true, ignored: 'empty' });
-    const command = text.split(/\s+/)[0].toLowerCase().replace(/@\w+$/, ''); // strip @botname
+    const command = text.split(/\s+/)[0].toLowerCase().replace(/@\w+$/, '');
 
     /* /start */
     if (command === '/start') {
@@ -339,33 +404,21 @@ module.exports = async function handler(req, res) {
 
     /* /stats */
     if (command === '/stats') {
-      try {
-        const s = await getStats();
-        const statsText = [
-          `<b>📊 AMA Statistics</b>`,
-          ``,
-          `📥 <b>Total questions:</b> ${s.total}`,
-          `⏳ <b>Unanswered:</b> ${s.unanswered}`,
-          `✅ <b>Answered:</b> ${s.answered}`,
-          `🙈 <b>Dismissed:</b> ${s.dismissed}`,
-          `👍 <b>Total votes:</b> ${s.totalVotes}`
-        ].join('\n');
-        await sendTelegram(chatId, statsText, message.message_id);
-      } catch (e) { await sendTelegram(chatId, '⚠️ Could not load stats.', message.message_id); }
+      await sendStats(chatId, message.message_id);
       return res.status(200).json({ ok: true });
     }
 
-    /* /pending — list unanswered only */
+    /* /pending */
     if (command === '/pending') {
       const all = await listAllQuestions();
       const items = all.filter(q => questionState(q) === 'UNANSWERED')
                        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-      if (!items.length) { await sendTelegram(chatId, '✅ <b>No unanswered questions.</b> All caught up!', message.message_id); return res.status(200).json({ ok: true }); }
+      if (!items.length) { await sendTelegram(chatId, '✅ <b>No unanswered questions.</b>\nAll caught up!', message.message_id); return res.status(200).json({ ok: true }); }
       await sendQuestionsList(chatId, '⏳ <b>Unanswered Questions</b>', items, message.message_id);
       return res.status(200).json({ ok: true });
     }
 
-    /* /refresh — unanswered + dismissed */
+    /* /refresh */
     if (command === '/refresh') {
       const all = await listAllQuestions();
       const items = all.filter(q => questionState(q) === 'UNANSWERED' || questionState(q) === 'DISMISSED')
@@ -375,13 +428,16 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
-    /* If /edit was started, next normal message becomes the new ANSWER */
+    /* Edit answer session */
     const pending = await getEditSession(chatId);
     const pendingQuestionId = pending?.fields?.questionId?.stringValue;
     if (pendingQuestionId && !text.startsWith('/')) {
       await answerQuestion(pendingQuestionId, text);
       await clearEditSession(chatId);
-      await sendTelegram(chatId, `✅ <b>Answer updated.</b>\n🆔 <code>${esc(pendingQuestionId)}</code>\n\n<i>Refresh your website to see the change.</i>`, message.message_id);
+      await sendTelegram(chatId,
+        `✅ <b>Answer Updated</b>\n\n🆔 <code>${esc(pendingQuestionId)}</code>\n\n<i>Refresh your website to see the change.</i>`,
+        message.message_id
+      );
       return res.status(200).json({ ok: true, edited: pendingQuestionId });
     }
 
@@ -402,10 +458,11 @@ module.exports = async function handler(req, res) {
 
     await answerQuestion(questionId, text);
     await sendTelegram(chatId, [
-      `✅ <b>Answer published!</b>`,
+      `✅ <b>Answer Published!</b>`,
+      `──────────────────────`,
       `🆔 <code>${esc(questionId)}</code>`,
-      `💬 Your answer is now live on the website.`,
       ``,
+      `Your answer is now live on the website.`,
       `<i>Refresh the page to see it.</i>`
     ].join('\n'), message.message_id);
     return res.status(200).json({ ok: true, answered: questionId });
@@ -416,7 +473,7 @@ module.exports = async function handler(req, res) {
   }
 };
 
-/* ── Helper: send a paginated list of questions with buttons ── */
+/* ── Helper: send a list of questions ── */
 async function sendQuestionsList(chatId, title, items, replyToId) {
   let chunk = title + '\n\n';
   let sent = 0;
@@ -424,7 +481,7 @@ async function sendQuestionsList(chatId, title, items, replyToId) {
     const q = items[i];
     const tag = questionState(q);
     const tagEmoji = tag === 'UNANSWERED' ? '⏳' : '🙈';
-    const line = `${i + 1}. ${tagEmoji} <b>[${tag}]</b> ${esc(q.name)}\n   <i>${esc(q.question).slice(0, 120)}</i>\n   🆔 <code>${esc(q.id)}</code>\n`;
+    const line = `${i + 1}. ${tagEmoji} <b>[${tag}]</b> ${esc(q.name)}\n   <blockquote>${esc(q.question).slice(0, 120)}</blockquote>\n   🆔 <code>${esc(q.id)}</code>\n`;
     if ((chunk + line + '\n').length > 3500) {
       await sendTelegram(chatId, chunk.trim(), sent === 0 ? replyToId : undefined);
       sent++; chunk = '';
@@ -432,5 +489,5 @@ async function sendQuestionsList(chatId, title, items, replyToId) {
     chunk += line + '\n';
   }
   if (chunk.trim()) { await sendTelegram(chatId, chunk.trim(), sent === 0 ? replyToId : undefined); sent++; }
-  await sendTelegram(chatId, `<i>${items.length} question${items.length === 1 ? '' : 's'} listed. Reply to any question message to answer it, or use its buttons.</i>`);
+  await sendTelegram(chatId, `<i>${items.length} question${items.length === 1 ? '' : 's'} listed.\nReply to any question message to answer it, or use its buttons.</i>`);
 }
