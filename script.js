@@ -367,26 +367,38 @@
       });
     }).catch(function () {});
 
-    // 3. Top artists — gettopartists returns images but they may be empty
+    // 3. Top artists — Last.fm artist images are notoriously broken (404s).
+    // Solution: Try to get image, but use a colored letter-avatar as fallback.
     fetch(`${lfmAPI}?method=user.gettopartists&user=${u}&period=1month&limit=5&api_key=${k}&format=json`).then(r => r.json()).then(function (d) {
       const wrap = $('lfm-artists'); if (!wrap || !d.topartists) return;
       const artists = d.topartists.artist || [];
-      
-      // Fetch artist images separately via artist.getInfo for reliability
-      const artPromises = artists.map(function(ar) {
+      const GRADIENTS = [
+        'linear-gradient(135deg, #00c8ff, #7850ff)',
+        'linear-gradient(135deg, #7850ff, #00f0b4)',
+        'linear-gradient(135deg, #00f0b4, #00c8ff)',
+        'linear-gradient(135deg, #f59e0b, #ef4444)',
+        'linear-gradient(135deg, #a855f7, #ec4899)'
+      ];
+      wrap.innerHTML = artists.map(function(ar, idx) {
+        const letter = (ar.name || '?').charAt(0).toUpperCase();
+        const bg = GRADIENTS[idx % GRADIENTS.length];
+        // Colored letter avatar with a hidden img on top — if img loads, it covers the letter
+        const artHTML = '<div class="lfm-artist-avatar" style="background:' + bg + '">' + esc(letter) + '<img class="lfm-artist-img-overlay" alt="" src="" style="display:none" onload="this.style.display=\'block\'" onerror="this.style.display=\'none\'"></div>';
+        return '<div class="lfm-artist">' + artHTML + '<span class="lfm-artist-name">' + esc(ar.name) + '</span><span class="lfm-artist-plays">' + (ar.playcount||0) + 'x</span></div>';
+      }).join('');
+      // Now try to fetch real images and replace the overlay src
+      artists.forEach(function(ar, idx) {
         const artistName = encodeURIComponent(ar.name);
-        return fetch(`${lfmAPI}?method=artist.getInfo&api_key=${k}&artist=${artistName}&format=json`)
+        fetch(`${lfmAPI}?method=artist.getInfo&api_key=${k}&artist=${artistName}&format=json`)
           .then(r => r.json())
-          .then(info => lfmImg(info.artist ? info.artist.image : []))
-          .catch(() => '');
-      });
-      
-      Promise.all(artPromises).then(function(arts) {
-        wrap.innerHTML = artists.map(function(ar, idx) {
-          const art = arts[idx] || '';
-          const artHTML = art ? '<img class="lfm-artist-img" alt="" src="' + art + '" onerror="this.outerHTML=\'<span class=\\\"lfm-artist-img lfm-noart\\\">\u266A</span>\'">' : '<span class="lfm-artist-img lfm-noart">\u266A</span>';
-          return '<div class="lfm-artist">' + artHTML + '<span class="lfm-artist-name">' + esc(ar.name) + '</span><span class="lfm-artist-plays">' + (ar.playcount||0) + 'x</span></div>';
-        }).join('');
+          .then(info => {
+            const url = lfmImg(info.artist ? info.artist.image : []);
+            if (url) {
+              const overlay = wrap.querySelectorAll('.lfm-artist-img-overlay')[idx];
+              if (overlay) overlay.src = url;
+            }
+          })
+          .catch(() => {});
       });
     }).catch(function () {});
 
