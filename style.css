@@ -1243,3 +1243,92 @@ html.light .cursor-glow { background: radial-gradient(circle, rgba(100,80,220,0.
 /* I. SMOOTH SCROLL SNAP (Optional, subtle) */
 /* html { scroll-snap-type: y proximity; }
 .section { scroll-snap-align: start; } */
+
+/* ============ COMPREHENSIVE LIGHT MODE FIXES ============ */
+
+/* Hero "View Projects" button */
+html.light .btn-primary { background: var(--white); color: #fff; }
+html.light .btn-primary:hover { box-shadow: 0 0 28px rgba(0,0,0,0.15); }
+html.light .btn-ghost { border-color: rgba(80,80,140,0.3); }
+
+/* GitHub card with chart */
+html.light .gh-card { background: rgba(255,255,255,0.6); }
+html.light .gh-lang-chart { background: #dddde8; }
+html.light .gh-lang-chart::after { background: var(--bg); }
+
+/* Tech stack orbital pills */
+html.light .orbit-item { background: rgba(240,240,248,0.8); border-color: rgba(80,80,140,0.15); color: var(--white); }
+
+/* Day in the Life Timeline */
+html.light .timeline-section { background: rgba(255,255,255,0.5); }
+html.light .timeline-dot { background: var(--bg); border-color: var(--accent); }
+
+/* Skill tabs + items */
+html.light .skill-panel { background: rgba(255,255,255,0.6); }
+html.light .skill-tab { color: var(--gray-dim); border-color: var(--border); }
+html.light .skill-tab.active { background: var(--white); color: #fff; }
+html.light .skill-item { background: rgba(0,0,0,0.02); }
+html.light .skill-item:hover { background: rgba(0,0,0,0.05); }
+
+/* Project cards */
+html.light .project-card { background: rgba(255,255,255,0.6); }
+
+/* AniList tabs */
+html.light .anilist-card { background: rgba(255,255,255,0.6); }
+html.light .al-tab { color: var(--gray-dim); border-color: var(--border); }
+html.light .al-tab.active { background: var(--white); color: #fff; }
+
+/* AMA Send button + Sort pills */
+html.light .ama-card { background: rgba(255,255,255,0.6); }
+html.light .ama-sort-btn { color: var(--gray-dim); border-color: var(--border); }
+html.light .ama-sort-btn.active { background: var(--white); color: #fff; }
+html.light .ama-name-input { background: rgba(0,0,0,0.03); color: var(--white); }
+html.light .ama-input { background: rgba(0,0,0,0.03); color: var(--white); }
+html.light .ama-q { border-color: var(--border); }
+html.light .ama-vote-btn { border-color: var(--border); color: var(--gray); }
+html.light .ama-react-btn { border-color: var(--border); background: rgba(0,0,0,0.03); }
+
+/* Full Music Player */
+html.light .slide-player-panel { background: rgba(245,245,250,0.95); }
+html.light .sp-title { color: var(--white); }
+html.light .sp-now-label { color: var(--accent); }
+html.light .sp-progress-bar { background: rgba(0,0,0,0.1); }
+html.light .sp-progress-fill { background: var(--accent); }
+html.light .sp-vol-slider { background: rgba(0,0,0,0.15); }
+html.light .sp-vol-slider::-webkit-slider-thumb { background: #fff; border: 1px solid var(--border-hover); }
+html.light .sp-close { color: rgba(0,0,0,0.5); border-color: rgba(0,0,0,0.12); }
+html.light .sp-yt-link { color: var(--gray); }
+html.light .sp-vinyl { background: radial-gradient(circle at 50% 50%, #ddd 0 5%, transparent 5%), repeating-radial-gradient(circle at 50% 50%, #ccc 0 1px, #bbb 1px 3px); }
+
+/* Last.fm card */
+html.light .lastfm-card { background: rgba(255,255,255,0.6); }
+html.light .lfm-nowplaying { background: linear-gradient(135deg, rgba(100,80,220,0.05), rgba(0,200,255,0.03)); }
+
+/* Contributions card */
+html.light .contrib-card { background: rgba(255,255,255,0.6); }
+
+/* WakaTime card */
+html.light .wakatime-card { background: rgba(255,255,255,0.6); }
+
+/* Glass card glow in light mode */
+html.light .glass-card::after {
+  background: radial-gradient(120px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(100,80,220,0.2), transparent 40%);
+}
+
+/* Playground cards */
+html.light .pg-overlay { background: rgba(245,245,250,0.96); }
+html.light .pg-close { color: rgba(0,0,0,0.5); border-color: rgba(0,0,0,0.12); }
+html.light .pg-canvas { background: #f0f0f8; }
+
+/* Section dividers */
+html.light .section-divider-line { background: linear-gradient(90deg, transparent, rgba(80,80,140,0.2), transparent); }
+
+/* Shortcut overlay */
+html.light .shortcut-card { background: rgba(255,255,255,0.98); border-color: rgba(0,0,0,0.1); }
+html.light kbd { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); color: var(--accent); }
+
+/* Achievement toast */
+html.light .achievement-toast { background: rgba(255,255,255,0.98); border-color: var(--accent); }
+
+/* Skeleton loading */
+html.light .skeleton { background: linear-gradient(90deg, rgba(0,0,0,0.04) 25%, rgba(0,0,0,0.09) 50%, rgba(0,0,0,0.04) 75%); }
