@@ -993,3 +993,20 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
 .cb-peg-btn { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; transition: transform 0.15s; }
 .cb-peg-btn:hover { transform: scale(1.1); }
 .cb-status { font-family: var(--mono); font-size: 13px; color: var(--gray); text-align: center; }
+
+/* ============ VISITOR COUNTER BADGE ============ */
+.visitor-badge {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  z-index: 800; padding: 8px 16px; border-radius: 999px;
+  background: rgba(18,18,24,0.6); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border); font-family: var(--mono); font-size: 11px;
+  color: var(--gray); letter-spacing: 0.05em; white-space: nowrap;
+  opacity: 0; animation: visitorFadeIn 0.6s ease 1s forwards;
+  display: flex; align-items: center; gap: 6px;
+}
+html.light .visitor-badge { background: rgba(255,255,255,0.6); }
+.visitor-badge::before { content: '\1F465'; font-size: 13px; }
+@keyframes visitorFadeIn { to { opacity: 0.8; } }
+@media (max-width: 600px) {
+  .visitor-badge { bottom: 14px; font-size: 10px; padding: 6px 12px; }
+}
