@@ -843,25 +843,23 @@
     }
     function loadAnswered() {
       if (!FIREBASE_READY) return;
-      const listUrl = `${base()}/${COL}?pageSize=100&key=${encodeURIComponent(fb.apiKey)}`;
-      fetch(listUrl, { method: 'GET' })
-        .then(r => r.json())
-        .then(data => {
-          if (data.error) {
-            console.error('Firestore list error:', data.error.message);
-            if (listWrap) { listWrap.hidden = false; list.innerHTML = '<div style="color:#ff6b6b;padding:12px;font-family:monospace;font-size:12px;">Debug: ' + esc(data.error.message) + '</div>'; }
-            return;
-          }
-          const docs = (data.documents || []).map(d => fromDoc(d.document || d));
-          answeredDocs = docs.filter(q => q.answered === true && q.answer);
-          console.log('AMA Debug: Found ' + docs.length + ' total docs, ' + answeredDocs.length + ' answered');
-          answeredDocs.sort((a, b) => new Date(b.answeredAt || 0) - new Date(a.answeredAt || 0));
-          render();
-        })
-        .catch((err) => {
-          console.warn('AMA load failed:', err);
-          if (listWrap) { listWrap.hidden = false; list.innerHTML = '<div style="color:#ff6b6b;padding:12px;font-family:monospace;font-size:12px;">Debug: ' + esc(err.message || 'fetch failed') + '</div>'; }
-        });
+      fetch(queryUrl(), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ structuredQuery: {
+          from: [{ collectionId: COL }],
+          where: { fieldFilter: { field: { fieldPath: 'answered' }, op: 'EQUAL', value: { booleanValue: true } } },
+          limit: 50
+        } })
+      }).then(r => r.json()).then(data => {
+        if (data && data.length && data[0].error) {
+          console.error('Firestore query error:', data[0].error.message);
+          if (listWrap) { listWrap.hidden = false; list.innerHTML = '<div style="color:#ff6b6b;padding:12px;font-family:monospace;font-size:12px;">Error: ' + esc(data[0].error.message) + '</div>'; }
+          return;
+        }
+        answeredDocs = (data || []).filter(d => d.document).map(d => fromDoc(d.document));
+        answeredDocs.sort((a, b) => new Date(b.answeredAt || 0) - new Date(a.answeredAt || 0));
+        render();
+      }).catch((err) => { console.warn('AMA load failed:', err); });
     }
     function submit() {
       const text = input.value.trim();
