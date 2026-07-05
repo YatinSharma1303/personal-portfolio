@@ -67,9 +67,8 @@
     }
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(tick).catch(tick); else tick();
     tick(); // yt api
-    try { fetchGitHub().then(tick).catch(tick); } catch (e) { tick(); }
-    try { fetchLastfm().then(tick).catch(tick); } catch (e) { tick(); }
-    setTimeout(() => { if (!dismissed) { ready(); dismiss(); } }, HARD + 3000);
+    // Heavy API calls are now lazy-loaded via IntersectionObserver below
+    setTimeout(() => { if (!dismissed) { ready(); dismiss(); } }, 2500); // Faster intro
     overlay.addEventListener('click', () => { ready(); dismiss(); });
     overlay.addEventListener('pointerup', () => { ready(); dismiss(); });
     const enterKeys = ['ArrowDown', 'Space', 'Enter', 'PageDown', 'Escape'];
@@ -851,6 +850,41 @@
         document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (er) {} document.body.removeChild(t);
         btn.classList.add('copied'); setTimeout(() => btn.classList.remove('copied'), 1800);
       }
+    });
+  })();
+
+
+  /* ============================================================
+     LAZY LOAD SECTIONS (Performance)
+     Only fetch heavy data when the user scrolls near the section.
+     ============================================================ */
+  (function lazyLoad() {
+    const triggers = {
+      'gh-card': fetchGitHub,
+      'lastfm-card': fetchLastfm,
+      'anilist-card': function() {
+        // AniList is an IIFE, so we just trigger a custom event or let it run.
+        // Since it's already an IIFE that runs immediately, we leave it as is for now,
+        // or we could wrap it. To keep it simple, we let AniList load normally.
+      },
+      'wakatime-card': function() {}, // Handled by its own IIFE
+      'contrib-card': function() {}   // Handled by its own IIFE
+    };
+    
+    Object.keys(triggers).forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const obs = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            if (typeof triggers[id] === 'function') {
+              try { triggers[id](); } catch(e) {}
+            }
+            obs.unobserve(el); // Only fetch once
+          }
+        });
+      }, { rootMargin: '200px' }); // Start loading 200px before it enters viewport
+      obs.observe(el);
     });
   })();
 

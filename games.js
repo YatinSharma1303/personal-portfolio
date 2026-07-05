@@ -43,7 +43,38 @@
         try { const m = window.sfx.toggle(); soundBtn.classList.toggle('muted', m); soundBtn.textContent = m ? '🔇' : '🔊'; } catch (e) {}
       });
     }
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && overlay.classList.contains('open')) close(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && overlay.classList.contains('open')) {
+        // J. GAME PAUSE ON ESCAPE
+        if (current && stopLoop) {
+          // If game is running, pause it instead of closing
+          if (!overlay.classList.contains('paused')) {
+            overlay.classList.add('paused');
+            stopLoop();
+            // Show pause overlay
+            if (!document.getElementById('pg-pause-screen')) {
+              const pauseScreen = document.createElement('div');
+              pauseScreen.id = 'pg-pause-screen';
+              pauseScreen.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;z-index:100;';
+              pauseScreen.innerHTML = '<h2 style="font-size:32px;font-weight:800;">Paused</h2><p style="font-family:monospace;font-size:12px;color:var(--gray);">Press ESC to resume</p>';
+              host.appendChild(pauseScreen);
+            } else {
+              document.getElementById('pg-pause-screen').style.display = 'flex';
+            }
+          } else {
+            // Resume
+            overlay.classList.remove('paused');
+            const ps = document.getElementById('pg-pause-screen');
+            if (ps) ps.style.display = 'none';
+            // Restart loop for the current game
+            const runner = RUNNERS[current];
+            if (runner) runner(host, overlay); // Re-run to restart loop
+          }
+        } else {
+          close();
+        }
+      }
+    });
   }
 
   let currentDifficulty = 'Medium';
