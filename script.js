@@ -593,10 +593,12 @@
       { cmd: 'status --current', out: 'building cool stuff' }
     ];
     let li = 0, phase = 'cmd', ci = 0;
+    function typeClick() { try { if (window.sfx && !window.sfx.isMuted()) window.sfx.play(900 + Math.random()*200, 0.01, 'square'); } catch(e){} }
     function tick() {
       const item = LINES[li];
       if (phase === 'cmd') {
         ci++;
+        typeClick();
         el.innerHTML = '<span class="term-cmd">$ ' + esc(item.cmd.slice(0, ci)) + '</span>';
         if (ci >= item.cmd.length) { phase = 'pause1'; setTimeout(tick, 400); return; }
         setTimeout(tick, 70);
@@ -604,6 +606,7 @@
         phase = 'out'; ci = 0; setTimeout(tick, 200);
       } else if (phase === 'out') {
         ci++;
+        typeClick();
         el.innerHTML = '<span class="term-cmd">$ ' + item.cmd + '</span><br>' + esc('> ' + item.out.slice(0, ci));
         if (ci >= item.out.length) { phase = 'pause2'; setTimeout(tick, 1800); return; }
         setTimeout(tick, 35);
@@ -1226,6 +1229,108 @@
         editorsEl.innerHTML = ''; // clear empty editors
       }
     }).catch(() => { langsEl.innerHTML = '<div class="wt-loading">Could not load stats.</div>'; });
+  })();
+
+  /* ============================================================
+     29. COMMAND PALETTE (Cmd+K / Ctrl+K)
+     ============================================================ */
+  (function commandPalette() {
+    const overlay = $('cmd-overlay');
+    const input = $('cmd-input');
+    const results = $('cmd-results');
+    if (!overlay || !input || !results) return;
+
+    const COMMANDS = [
+      { icon: '🏠', label: 'Go to Home', hint: 'G', action: () => document.getElementById('hero')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: '👤', label: 'Go to About', hint: 'A', action: () => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: '⚡', label: 'Go to Skills', hint: 'S', action: () => document.getElementById('skills')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: '📁', label: 'Go to Projects', hint: 'P', action: () => document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: '🎵', label: 'Go to Music', hint: '', action: () => document.getElementById('music')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: '🎬', label: 'Go to Anime', hint: '', action: () => document.getElementById('anime')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: '🎮', label: 'Go to Playground', hint: '', action: () => document.getElementById('playground')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: '💬', label: 'Go to Ask Me Anything', hint: '', action: () => document.getElementById('ama')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: '🌙', label: 'Toggle Theme', hint: 'T', action: () => document.getElementById('theme-toggle-btn')?.click() },
+      { icon: '▶', label: 'Play / Pause Music', hint: 'M', action: () => document.getElementById('sp-play-btn')?.click() },
+      { icon: '🔗', label: 'Open GitHub Profile', hint: '', action: () => window.open('https://github.com/YatinSharma1303', '_blank') },
+      { icon: '✉', label: 'Copy Email Address', hint: '', action: () => document.getElementById('copy-email')?.click() },
+    ];
+
+    let selectedIndex = 0;
+    let filtered = COMMANDS.slice();
+
+    function open() {
+      overlay.classList.add('open');
+      input.value = '';
+      filtered = COMMANDS.slice();
+      selectedIndex = 0;
+      render();
+      setTimeout(() => input.focus(), 50);
+    }
+    function close() { overlay.classList.remove('open'); }
+
+    function render() {
+      results.innerHTML = filtered.map((cmd, i) => 
+        '<div class="cmd-item ' + (i === selectedIndex ? 'selected' : '') + '" data-index="' + i + '">' +
+        '<span class="cmd-item-icon">' + cmd.icon + '</span>' +
+        '<span class="cmd-item-label">' + highlightMatch(cmd.label, input.value) + '</span>' +
+        (cmd.hint ? '<span class="cmd-item-hint">' + cmd.hint + '</span>' : '') +
+        '</div>'
+      ).join('');
+      
+      results.querySelectorAll('.cmd-item').forEach(el => {
+        el.addEventListener('click', () => { execute(+el.dataset.index); });
+        el.addEventListener('mouseenter', () => { selectedIndex = +el.dataset.index; updateSelected(); });
+      });
+    }
+
+    function highlightMatch(text, query) {
+      if (!query) return esc(text);
+      const idx = text.toLowerCase().indexOf(query.toLowerCase());
+      if (idx === -1) return esc(text);
+      return esc(text.slice(0, idx)) + '<mark>' + esc(text.slice(idx, idx + query.length)) + '</mark>' + esc(text.slice(idx + query.length));
+    }
+
+    function updateSelected() {
+      results.querySelectorAll('.cmd-item').forEach((el, i) => {
+        el.classList.toggle('selected', i === selectedIndex);
+      });
+      const sel = results.querySelector('.cmd-item.selected');
+      if (sel) sel.scrollIntoView({ block: 'nearest' });
+    }
+
+    function execute(idx) {
+      const cmd = filtered[idx];
+      if (!cmd) return;
+      close();
+      setTimeout(() => cmd.action(), 100);
+    }
+
+    // Keyboard listeners
+    document.addEventListener('keydown', (e) => {
+      // Cmd+K / Ctrl+K
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        overlay.classList.contains('open') ? close() : open();
+        return;
+      }
+      if (!overlay.classList.contains('open')) return;
+      
+      if (e.key === 'Escape') { e.preventDefault(); close(); }
+      else if (e.key === 'ArrowDown') { e.preventDefault(); selectedIndex = Math.min(filtered.length - 1, selectedIndex + 1); updateSelected(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); selectedIndex = Math.max(0, selectedIndex - 1); updateSelected(); }
+      else if (e.key === 'Enter') { e.preventDefault(); execute(selectedIndex); }
+    });
+
+    // Search filter
+    input.addEventListener('input', () => {
+      const q = input.value.toLowerCase().trim();
+      filtered = q ? COMMANDS.filter(c => c.label.toLowerCase().includes(q)) : COMMANDS.slice();
+      selectedIndex = 0;
+      render();
+    });
+
+    // Click outside to close
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   })();
 
   /* ============================================================

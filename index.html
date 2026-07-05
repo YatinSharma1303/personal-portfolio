@@ -549,6 +549,23 @@
     </div>
   </div>
 
+  <!-- ============ COMMAND PALETTE (Cmd+K) ============ -->
+  <div class="cmd-palette-overlay" id="cmd-overlay">
+    <div class="cmd-palette" id="cmd-palette">
+      <div class="cmd-input-wrap">
+        <svg viewBox="0 0 24 24" class="cmd-search-icon"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" class="cmd-input" id="cmd-input" placeholder="Search commands... (type to filter, Enter to run)" autocomplete="off" spellcheck="false"/>
+        <kbd>ESC</kbd>
+      </div>
+      <div class="cmd-results" id="cmd-results"></div>
+      <div class="cmd-footer">
+        <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+        <span><kbd>↵</kbd> Run</span>
+        <span class="cmd-hint">Powered by Yatin's Portfolio</span>
+      </div>
+    </div>
+  </div>
+
   <script src="script.js"></script>
   <script src="games.js"></script>
 </body>

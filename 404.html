@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>404 — Yatin Sharma</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #05050a; color: #fff; font-family: 'Inter', sans-serif;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      overflow: hidden; position: relative;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background: radial-gradient(ellipse 60% 50% at 50% 30%, rgba(0,200,255,0.06), transparent 60%),
+                  radial-gradient(ellipse 40% 40% at 80% 80%, rgba(120,80,255,0.04), transparent 60%);
+    }
+    body::after {
+      content: ''; position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 56px 56px;
+    }
+    .container { position: relative; z-index: 1; text-align: center; padding: 40px; }
+    .terminal {
+      max-width: 480px; margin: 0 auto 32px; text-align: left;
+      background: rgba(8,8,12,0.8); border: 1px solid rgba(0,200,255,0.2); border-radius: 12px;
+      overflow: hidden; backdrop-filter: blur(8px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 30px rgba(0,200,255,0.05);
+    }
+    .term-dots { display: flex; gap: 6px; padding: 12px 16px; background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .term-dots i { width: 10px; height: 10px; border-radius: 50%; }
+    .term-dots i:nth-child(1) { background: #ff5f57; }
+    .term-dots i:nth-child(2) { background: #febc2e; }
+    .term-dots i:nth-child(3) { background: #28c840; }
+    .term-body { padding: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.8; }
+    .term-body .cmd { color: #00c8ff; }
+    .term-body .err { color: #ff6b6b; }
+    .term-body .ok { color: #34d399; }
+    .term-caret { display: inline-block; width: 8px; height: 14px; background: #00c8ff; animation: blink 1s step-end infinite; vertical-align: text-bottom; }
+    @keyframes blink { 0%,50% { opacity: 1; } 50.01%,100% { opacity: 0; } }
+    h1 { font-size: clamp(48px, 10vw, 96px); font-weight: 900; letter-spacing: -0.04em; line-height: 1; margin-bottom: 16px; }
+    h1 span {
+      background: linear-gradient(120deg, #00c8ff, #7850ff, #00f0b4, #00c8ff);
+      background-size: 300% auto; -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+      animation: aurora 8s linear infinite;
+    }
+    @keyframes aurora { to { background-position: 300% center; } }
+    p { font-size: 16px; color: rgba(255,255,255,0.5); margin-bottom: 32px; max-width: 420px; margin-left: auto; margin-right: auto; line-height: 1.6; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 14px 28px; border-radius: 999px;
+      font-size: 14px; font-weight: 700; text-decoration: none;
+      background: #fff; color: #000; border: 1.5px solid #fff;
+      transition: all 0.22s cubic-bezier(0.22,1,0.36,1);
+    }
+    .btn:hover { box-shadow: 0 0 28px rgba(0,200,255,0.3); transform: translateY(-2px); }
+    .btn-ghost {
+      background: transparent; color: #fff; border-color: rgba(255,255,255,0.2);
+      margin-left: 8px;
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.4); }
+    @media (max-width: 500px) { .btn-ghost { margin-left: 0; margin-top: 12px; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="terminal">
+      <div class="term-dots"><i></i><i></i><i></i></div>
+      <div class="term-body">
+        <div><span class="cmd">$</span> find /page</div>
+        <div class="err">bash: cd: /page: No such file or directory</div>
+        <div><span class="cmd">$</span> <span class="ok">echo $?</span></div>
+        <div class="err">404<span class="term-caret"></span></div>
+      </div>
+    </div>
+    <h1>Error <span>404</span></h1>
+    <p>This page got lost in the database. Maybe it was deployed to the wrong Vercel project, or maybe it never existed at all.</p>
+    <a href="/" class="btn">← Back to Home</a>
+    <a href="https://github.com/YatinSharma1303" target="_blank" class="btn btn-ghost">GitHub ↗</a>
+  </div>
+</body>
+</html>
