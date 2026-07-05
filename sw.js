@@ -2,7 +2,7 @@
    Network-First Strategy: Always fetch fresh code from the server. 
    Only use cache if the network fails (offline mode).
 */
-const CACHE = 'yatin-portfolio-v2'; // Bumped to v2 to instantly delete old v1 caches
+const CACHE = 'yatin-portfolio-v3'; // Bumped to v3 to FORCE delete old v1/v2 caches
 
 self.addEventListener('install', (e) => {
   self.skipWaiting(); // Activate immediately
