@@ -346,10 +346,11 @@
 
     // Helper: build a dark fallback div (NO img tags, NO onerror)
     function artDiv(className, url, fallbackText) {
+      // ALWAYS hardcode dark bg in inline style so it can NEVER be overridden
       if (url) {
-        return '<div class="' + className + '" style="background-image:url(\'' + url + '\')"></div>';
+        return '<div class="' + className + '" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>';
       }
-      return '<div class="' + className + ' lfm-noart">' + (fallbackText || '\u266A') + '</div>';
+      return '<div class="' + className + ' lfm-noart" style="background:#141414 !important">' + (fallbackText || '\u266A') + '</div>';
     }
 
     // 1. User info + avatar
@@ -413,10 +414,11 @@
           const npArtEl = $('lfm-np-art');
           if (npArtEl) {
             if (validUrl) {
-              npArtEl.style.backgroundImage = 'url(\'' + validUrl + '\')';
+              npArtEl.style.cssText = 'background:#141414 url(\'' + validUrl + '\') center/cover no-repeat';
               npArtEl.style.visibility = 'visible';
+              npArtEl.classList.remove('lfm-noart');
             } else {
-              npArtEl.style.backgroundImage = 'none';
+              npArtEl.style.cssText = 'background:#141414';
               npArtEl.style.visibility = 'visible';
               npArtEl.classList.add('lfm-noart');
             }
