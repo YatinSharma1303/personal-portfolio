@@ -251,6 +251,48 @@ async function sendStats(chatId, replyToId) {
   }
 }
 
+
+/* ── Fetch a single question ── */
+async function getQuestion(id) {
+  try {
+    const doc = await firestore('GET', docPath(COLLECTION, id));
+    return fromFirestoreDoc(doc);
+  } catch (e) {
+    return null;
+  }
+}
+
+/* ── Build and send the rich "Answered" card with buttons ── */
+async function sendAnsweredCard(chatId, questionId, answerText, replyToId, isUpdate = false) {
+  const q = await getQuestion(questionId);
+  const qName = q ? q.name : 'Anonymous';
+  const qText = q ? q.question : 'Question text unavailable';
+  const headerText = isUpdate ? '✅ <b>Answer Updated</b>' : '✅ <b>Answer Published!</b>';
+
+  const text = [
+    headerText,
+    `──────────────────────`,
+    `👤 <b>${esc(qName)}</b> asked:`,
+    `<blockquote>${esc(qText)}</blockquote>`,
+    ``,
+    `💬 <b>Your answer:</b>`,
+    `<blockquote>${esc(answerText)}</blockquote>`,
+    `🆔 <code>${esc(questionId)}</code>`
+  ].join('\n');
+
+  const replyMarkup = {
+    inline_keyboard: [
+      [{ text: '✏️  Edit Answer', callback_data: `edit:${questionId}` }],
+      [
+        { text: '🙈  Dismiss', callback_data: `dismiss:${questionId}` },
+        { text: '🗑  Delete', callback_data: `delete:${questionId}` }
+      ]
+    ]
+  };
+
+  await sendTelegram(chatId, text, replyToId, replyMarkup);
+}
+
 /* ── Command messages ── */
 const HELP_TEXT = [
   `<b>🤖 AMA Bot — Commands</b>`,
@@ -434,10 +476,7 @@ module.exports = async function handler(req, res) {
     if (pendingQuestionId && !text.startsWith('/')) {
       await answerQuestion(pendingQuestionId, text);
       await clearEditSession(chatId);
-      await sendTelegram(chatId,
-        `✅ <b>Answer Updated</b>\n\n🆔 <code>${esc(pendingQuestionId)}</code>\n\n<i>Refresh your website to see the change.</i>`,
-        message.message_id
-      );
+      await sendAnsweredCard(chatId, pendingQuestionId, text, message.message_id, true);
       return res.status(200).json({ ok: true, edited: pendingQuestionId });
     }
 
@@ -457,14 +496,7 @@ module.exports = async function handler(req, res) {
     }
 
     await answerQuestion(questionId, text);
-    await sendTelegram(chatId, [
-      `✅ <b>Answer Published!</b>`,
-      `──────────────────────`,
-      `🆔 <code>${esc(questionId)}</code>`,
-      ``,
-      `Your answer is now live on the website.`,
-      `<i>Refresh the page to see it.</i>`
-    ].join('\n'), message.message_id);
+    await sendAnsweredCard(chatId, questionId, text, message.message_id);
     return res.status(200).json({ ok: true, answered: questionId });
 
   } catch (error) {
