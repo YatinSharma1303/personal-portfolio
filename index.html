@@ -101,7 +101,7 @@
     </nav>
   </div>
 
-  <!-- ============ SLIDE-IN MUSIC PLAYER ============ -->
+  <!-- ============ SLIDE-IN MUSIC PLAYER (Cyberpunk Glass) ============ -->
   <div class="slide-player-panel" id="slide-music-player">
     <button class="sp-close" id="sp-close" aria-label="Close player">✕</button>
 
@@ -121,39 +121,23 @@
     </div>
 
     <div class="sp-progress">
-      <div class="sp-progress-bar" id="sp-progress-bar"><div class="sp-progress-fill" id="sp-progress-fill"><span class="sp-progress-thumb"></span></div></div>
+      <div class="sp-progress-bar" id="sp-progress-bar"><div class="sp-progress-fill" id="sp-progress-fill"></div></div>
       <div class="sp-times"><span id="sp-curr-time">0:00</span><span id="sp-duration">0:00</span></div>
     </div>
 
     <div class="sp-controls">
-      <button class="sp-ctrl-btn sp-shuffle" id="sp-shuffle" title="Shuffle" aria-label="Shuffle">
-        <svg viewBox="0 0 24 24"><path d="M16 3h5v5 M4 20L21 3 M21 16v5h-5 M15 15l6 6 M4 4l5 5"/></svg>
-      </button>
-      <button class="sp-ctrl-btn" id="sp-restart" title="Restart" aria-label="Restart">
-        <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6z M9 6l11 6-11 6z"/></svg>
-      </button>
-      <button class="sp-play-btn" id="sp-play-btn" title="Play / Pause">
+      <button class="sp-play-btn" id="sp-play-btn" title="Play / Pause" aria-label="Play / Pause">
         <svg class="sp-icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
         <svg class="sp-icon-pause" viewBox="0 0 24 24"><path d="M6 5h4v14H6z M14 5h4v14h-4z"/></svg>
       </button>
-      <button class="sp-ctrl-btn" id="sp-restart-2" title="Restart" aria-label="Restart">
-        <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6z M9 6l11 6-11 6z"/></svg>
-      </button>
-      <button class="sp-ctrl-btn sp-loop active" id="sp-loop" title="Loop (on)" aria-label="Loop">
-        <svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2 M17 17H7v-3l-4 4 4 4v-3h12v-6h-2"/></svg>
-      </button>
     </div>
 
-    <div class="sp-volume">
-      <span class="sp-vol-icon material-symbols-outlined" id="sp-vol-icon">volume_up</span>
+    <div class="sp-footer">
       <input type="range" class="sp-vol-slider" id="sp-vol-slider" min="0" max="100" value="70"/>
-      <span class="sp-vol-val" id="sp-vol-val">70%</span>
+      <a class="sp-yt-link" id="sp-yt-link" href="https://youtu.be/XtwqzajH_8A" target="_blank" rel="noopener" aria-label="Open on YouTube">
+        <svg viewBox="0 0 24 24"><path d="M21 7a3 3 0 0 0-2-2c-2-.5-7-.5-7-.5s-5 0-7 .5a3 3 0 0 0-2 2 31 31 0 0 0 0 10 3 3 0 0 0 2 2c2 .5 7 .5 7 .5s5 0 7-.5a3 3 0 0 0 2-2 31 31 0 0 0 0-10z M10 9l5 3-5 3z"/></svg>
+      </a>
     </div>
-
-    <a class="sp-yt-link" id="sp-yt-link" href="https://youtu.be/XtwqzajH_8A" target="_blank" rel="noopener">
-      <svg viewBox="0 0 24 24"><path d="M21 7a3 3 0 0 0-2-2c-2-.5-7-.5-7-.5s-5 0-7 .5a3 3 0 0 0-2 2 31 31 0 0 0 0 10 3 3 0 0 0 2 2c2 .5 7 .5 7 .5s5 0 7-.5a3 3 0 0 0 2-2 31 31 0 0 0 0-10z M10 9l5 3-5 3z"/></svg>
-      Open on YouTube ↗
-    </a>
   </div>
 
   <!-- ============ HIDDEN YOUTUBE HOST (outside the panel so it initializes) ============ -->

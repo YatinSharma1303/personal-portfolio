@@ -177,21 +177,10 @@
   // Panel play/pause button.
   const playBtn = $('sp-play-btn');
   if (playBtn) playBtn.addEventListener('click', togglePlay);
-  // Restart buttons (prev/next both restart this single track).
-  function restart() {
-    wantPlay = true;
-    if (ytReady) { try { ytPlayer.seekTo(0); ytPlayer.playVideo(); } catch (e) {} }
-  }
-  ['sp-restart', 'sp-restart-2'].forEach(function (id) { const b = $(id); if (b) b.addEventListener('click', restart); });
-  // Loop toggle (visual — loop is always on, but lets it look like a real player).
-  const loopBtn = $('sp-loop');
-  if (loopBtn) loopBtn.addEventListener('click', function () { loopBtn.classList.toggle('active'); });
   // Volume slider.
   const volSlider = $('sp-vol-slider');
   if (volSlider) volSlider.addEventListener('input', function (e) {
     const v = e.target.value; setVolume(v);
-    const lbl = $('sp-vol-val'); if (lbl) lbl.textContent = v + '%';
-    const icon = $('sp-vol-icon'); if (icon) icon.textContent = (+v === 0) ? 'volume_off' : (+v < 50) ? 'volume_down' : 'volume_up';
   });
   // Seek bar.
   const pBar = $('sp-progress-bar');

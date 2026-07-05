@@ -228,115 +228,112 @@ html.light .topbar-pill {
 html.light .theme-toggle .icon-moon { display: none; }
 html.light .theme-toggle .icon-sun { display: block; }
 
-/* ============ SLIDE MUSIC PLAYER (Jukebox redesign) ============ */
+/* ============ SLIDE MUSIC PLAYER (Cyberpunk Glass) ============ */
 .slide-player-panel {
   position: fixed; top: 0; right: 0; height: 100vh; width: 380px; max-width: 90vw;
   z-index: 900; overflow: hidden;
   padding: 70px 26px 30px;
-  display: flex; flex-direction: column; gap: 20px;
+  display: flex; flex-direction: column; gap: 24px;
   transform: translateX(100%); transition: transform 0.45s cubic-bezier(0.22,1,0.36,1);
-  background-color: #05050a;
+  background: rgba(5, 5, 12, 0.85);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-left: 1px solid rgba(0, 200, 255, 0.1);
 }
-.slide-player-panel::before {
-  content: ''; position: absolute; inset: -10% -10% 30% -10%;
-  background: url('assets/cover.jpg') center/cover;
-  filter: blur(46px) saturate(160%) brightness(0.42);
-  opacity: 0.85; z-index: -1; transition: opacity 0.5s ease;
-}
-.slide-player-panel::after {
-  content: ''; position: absolute; inset: 0; z-index: -1;
-  background: linear-gradient(180deg, rgba(5,5,10,0.35) 0%, rgba(5,5,10,0.92) 78%);
-}
-html.light .slide-player-panel { background-color: #eaeaef; }
-html.light .slide-player-panel::after { background: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, rgba(245,245,250,0.95) 78%); }
-html.light .slide-player-panel::before { filter: blur(46px) saturate(150%) brightness(1.05); opacity: 0.5; }
 .slide-player-panel.open { transform: translateX(0); }
+
 .sp-close {
   position: absolute; top: 16px; right: 16px; z-index: 5;
   width: 34px; height: 34px; border-radius: 50%;
   border: 1px solid rgba(255,255,255,0.14); color: rgba(255,255,255,0.6);
   font-size: 14px; backdrop-filter: blur(10px); transition: all 0.18s ease;
 }
-.sp-close:hover { background: rgba(255,255,255,0.12); color: #fff; transform: rotate(90deg); }
-html.light .sp-close { color: rgba(0,0,0,0.5); border-color: rgba(0,0,0,0.12); }
-.sp-art-stage { display: flex; justify-content: center; padding: 8px 0 4px; }
-.sp-vinyl-wrap { position: relative; }
+.sp-close:hover { background: rgba(0, 200, 255, 0.1); border-color: var(--accent); color: #fff; transform: rotate(90deg); }
+
+/* CD & Neon Ring */
+.sp-art-stage { display: flex; justify-content: center; padding: 20px 0 10px; }
+.sp-vinyl-wrap { position: relative; width: 240px; height: 240px; display: flex; justify-content: center; align-items: center; }
 .sp-vinyl-glow {
-  position: absolute; inset: -14%; border-radius: 50%;
-  background: radial-gradient(circle, rgba(0,200,255,0.25), transparent 65%);
-  opacity: 0; transition: opacity 0.6s ease; filter: blur(10px); z-index: -1;
+  position: absolute; inset: -10%; border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,200,255,0.2), transparent 70%);
+  opacity: 0; transition: opacity 0.6s ease; filter: blur(15px); z-index: -1;
 }
 .slide-player-panel.playing .sp-vinyl-glow { opacity: 1; animation: glowPulse 3s ease-in-out infinite; }
-@keyframes glowPulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+@keyframes glowPulse { 0%,100% { opacity: 0.5; transform: scale(1); } 50% { opacity: 1; transform: scale(1.05); } }
+
 .sp-vinyl {
-  width: 210px; height: 210px; border-radius: 50%;
+  width: 200px; height: 200px; border-radius: 50%;
   background:
     radial-gradient(circle at 50% 50%, #000 0 5%, transparent 5%),
-    repeating-radial-gradient(circle at 50% 50%, #1c1c1c 0 1px, #0a0a0a 1px 3px);
-  border: 3px solid #000; position: relative;
-  box-shadow: 0 16px 50px rgba(0,0,0,0.7);
+    repeating-radial-gradient(circle at 50% 50%, #161616 0 1px, #080808 1px 3px);
+  border: 2px solid rgba(0, 0, 0, 0.8); position: relative;
+  box-shadow: 
+    0 0 0 1px rgba(0, 200, 255, 0.2),
+    0 0 25px rgba(0, 200, 255, 0.25),
+    inset 0 0 20px rgba(0, 0, 0, 0.9);
 }
-.sp-vinyl.playing { animation: spin 5s linear infinite; }
+.sp-vinyl.playing { animation: spin 6s linear infinite; }
 .sp-vinyl-label {
-  position: absolute; inset: 8%; border-radius: 50%;
+  position: absolute; inset: 10%; border-radius: 50%;
   background-image: url('assets/cover.jpg'); background-size: cover; background-position: center;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 0 15px rgba(0,0,0,0.5);
 }
 .sp-vinyl-label::after {
   content: ''; position: absolute; top: 50%; left: 50%;
-  width: 22px; height: 22px; margin: -11px 0 0 -11px;
-  border-radius: 50%; background: #0a0a0e; box-shadow: inset 0 0 0 2px rgba(255,255,255,0.12);
+  width: 18px; height: 18px; margin: -9px 0 0 -9px;
+  border-radius: 50%; background: #05050a; 
+  box-shadow: inset 0 0 0 2px rgba(0, 200, 255, 0.3), 0 0 5px rgba(0,0,0,0.8);
 }
-.sp-track-info { text-align: center; }
-.sp-now-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.22em; color: rgba(0,200,255,0.8); margin-bottom: 8px; }
-.sp-title { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; text-shadow: 0 2px 12px rgba(0,0,0,0.5); }
-.sp-artist { font-size: 12px; color: rgba(255,255,255,0.55); font-family: var(--mono); margin-top: 4px; }
-html.light .sp-title { color: var(--white); text-shadow: none; }
-html.light .sp-artist { color: var(--gray); }
-.sp-progress { display: flex; flex-direction: column; gap: 9px; margin-top: 2px; }
-.sp-progress-bar { height: 6px; background: rgba(255,255,255,0.12); border-radius: 3px; cursor: pointer; position: relative; }
-.sp-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #00c8ff, #7850ff); border-radius: 3px; position: relative; transition: width 0.15s linear; }
-.sp-progress-thumb { position: absolute; right: -7px; top: 50%; transform: translateY(-50%) scale(0); width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 0 8px rgba(0,200,255,0.8); transition: transform 0.2s ease; }
-.sp-progress-bar:hover .sp-progress-thumb { transform: translateY(-50%) scale(1); }
-.sp-times { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,0.5); }
-html.light .sp-times span { color: var(--gray); }
-.sp-controls { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 4px; }
-.sp-ctrl-btn {
-  width: 40px; height: 40px; border-radius: 50%; color: rgba(255,255,255,0.65);
-  display: flex; align-items: center; justify-content: center; transition: all 0.18s ease;
+
+/* Track Info */
+.sp-track-info { text-align: center; margin-top: 10px; }
+.sp-now-label { font-family: var(--mono); font-size: 9px; letter-spacing: 0.3em; color: var(--accent); margin-bottom: 8px; text-transform: uppercase; }
+.sp-title { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; color: #fff; }
+.sp-artist { font-size: 12px; color: rgba(255,255,255,0.5); font-family: var(--mono); margin-top: 4px; }
+
+/* Minimalist Neon Progress */
+.sp-progress { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.sp-progress-bar { height: 2px; background: rgba(255,255,255,0.1); border-radius: 2px; cursor: pointer; position: relative; }
+.sp-progress-fill { height: 100%; width: 0%; background: var(--accent); border-radius: 2px; position: relative; transition: width 0.15s linear; box-shadow: 0 0 8px var(--accent); }
+.sp-progress-fill::after {
+  content: ''; position: absolute; right: 0; top: 50%; transform: translate(50%, -50%);
+  width: 8px; height: 8px; border-radius: 50%; background: #fff;
+  box-shadow: 0 0 6px var(--accent);
 }
-.sp-ctrl-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.sp-ctrl-btn:hover { background: rgba(255,255,255,0.1); color: #fff; transform: translateY(-2px); }
-.sp-ctrl-btn.active { color: #00c8ff; filter: drop-shadow(0 0 5px rgba(0,200,255,0.6)); }
-.sp-shuffle { opacity: 0.35; pointer-events: none; }
+.sp-times { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 0.05em; }
+
+/* Massive Play Button */
+.sp-controls { display: flex; align-items: center; justify-content: center; margin-top: 10px; }
 .sp-play-btn {
-  width: 62px; height: 62px; border-radius: 50%;
-  background: #fff; color: #000;
+  width: 72px; height: 72px; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 200, 255, 0.4);
+  color: #fff;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 8px 28px rgba(255,255,255,0.25); transition: transform 0.2s ease;
+  box-shadow: 0 0 20px rgba(0, 200, 255, 0.2), inset 0 0 10px rgba(0, 200, 255, 0.05);
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.sp-play-btn:hover { transform: scale(1.08); box-shadow: 0 8px 36px rgba(255,255,255,0.4); }
-.sp-play-btn svg { width: 26px; height: 26px; fill: currentColor; }
+.sp-play-btn:hover { 
+  transform: scale(1.05); 
+  background: rgba(0, 200, 255, 0.1); 
+  border-color: var(--accent); 
+  box-shadow: 0 0 30px rgba(0, 200, 255, 0.4), inset 0 0 15px rgba(0, 200, 255, 0.1);
+}
+.sp-play-btn svg { width: 28px; height: 28px; fill: currentColor; filter: drop-shadow(0 0 5px rgba(0, 200, 255, 0.6)); }
 .sp-icon-pause { display: none; }
 .slide-player-panel.playing .sp-icon-play { display: none; }
 .slide-player-panel.playing .sp-icon-pause { display: block; }
-.sp-volume { display: flex; align-items: center; gap: 12px; margin-top: 2px; }
-.sp-vol-icon { font-size: 18px; color: rgba(255,255,255,0.5); font-family: 'Material Symbols Outlined'; }
-html.light .sp-vol-icon { color: var(--gray); }
-.sp-vol-slider { flex: 1; -webkit-appearance: none; appearance: none; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.15); outline: none; }
-.sp-vol-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #fff; cursor: pointer; box-shadow: 0 0 6px rgba(0,200,255,0.5); }
-.sp-vol-slider::-moz-range-thumb { width: 14px; height: 14px; border: none; border-radius: 50%; background: #fff; cursor: pointer; }
-.sp-vol-val { font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,0.55); width: 34px; text-align: right; }
-html.light .sp-vol-val { color: var(--gray); }
-.sp-yt-link {
-  margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 11px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12);
-  font-family: var(--mono); font-size: 12px; color: rgba(255,255,255,0.7);
-  transition: all 0.2s ease;
-}
-.sp-yt-link svg { width: 16px; height: 16px; fill: currentColor; }
-.sp-yt-link:hover { background: rgba(255,80,80,0.12); border-color: rgba(255,80,80,0.4); color: #ff6b6b; }
-html.light .sp-yt-link { color: var(--gray); border-color: var(--border); }
+
+/* Minimal Footer (Volume + YT) */
+.sp-footer { margin-top: auto; display: flex; align-items: center; gap: 15px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); }
+.sp-vol-slider { flex: 1; -webkit-appearance: none; appearance: none; height: 2px; border-radius: 2px; background: rgba(255,255,255,0.15); outline: none; }
+.sp-vol-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #fff; cursor: pointer; box-shadow: 0 0 6px var(--accent); }
+.sp-vol-slider::-moz-range-thumb { width: 12px; height: 12px; border: none; border-radius: 50%; background: #fff; cursor: pointer; }
+.sp-yt-link { display: flex; align-items: center; color: rgba(255,255,255,0.4); transition: color 0.2s ease; }
+.sp-yt-link:hover { color: #ff6b6b; }
+.sp-yt-link svg { width: 20px; height: 20px; fill: currentColor; }
+
 .yt-host {
   position: fixed; left: -9999px; top: 0;
   width: 320px; height: 180px; opacity: 0; pointer-events: none;
