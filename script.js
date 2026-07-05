@@ -938,7 +938,8 @@
      23. HAPTIC FEEDBACK + BLUR-UP IMAGES + SOUND FX
      ============================================================ */
   window.haptic = function (ms) { try { if (navigator.vibrate) navigator.vibrate(ms || 12); } catch (e) {} };
-  // Web Audio sound effects (no audio files needed).
+  
+  // Sound effects (kept for games)
   window.sfx = (function () {
     let ctx = null, muted = false;
     try { muted = localStorage.getItem('pg_muted') === '1'; } catch (e) {}
@@ -954,15 +955,44 @@
         osc.start(); osc.stop(ctx.currentTime + (dur || 0.1));
       } catch (e) {}
     }
-    return {
-      play: play,
-      blip: function () { play(660, 0.05, 'square'); },
-      crash: function () { play(120, 0.3, 'sawtooth'); },
-      win: function () { play(523, 0.1); setTimeout(() => play(659, 0.1), 100); setTimeout(() => play(784, 0.2), 200); },
-      toggle: function () { muted = !muted; try { localStorage.setItem('pg_muted', muted ? '1' : '0'); } catch (e) {} return muted; },
-      isMuted: function () { return muted; }
-    };
+    return { play: play, blip: function () { play(660, 0.05, 'square'); }, crash: function () { play(120, 0.3, 'sawtooth'); }, win: function () { play(523, 0.1); setTimeout(() => play(659, 0.1), 100); setTimeout(() => play(784, 0.2), 200); }, toggle: function () { muted = !muted; try { localStorage.setItem('pg_muted', muted ? '1' : '0'); } catch (e) {} return muted; }, isMuted: function () { return muted; } };
   })();
+
+  // N. Touch Ripple Effect
+  (function rippleEffect() {
+    document.querySelectorAll('a, button, .project-card, .interest-card, .pg-card').forEach(el => {
+      el.addEventListener('pointerdown', function(e) {
+        if (e.pointerType === 'mouse') return; // Only for touch
+        const rect = el.getBoundingClientRect();
+        const ripple = document.createElement('span');
+        ripple.className = 'ripple';
+        const size = Math.max(rect.width, rect.height);
+        ripple.style.width = ripple.style.height = size + 'px';
+        ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+        ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+        el.style.overflow = 'hidden'; // ensure ripple stays inside
+        el.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 600);
+      });
+    });
+  })();
+
+  // E. Card Cursor Tracking Glow
+  (function cardGlow() {
+    document.querySelectorAll('.glass-card').forEach(card => {
+      card.addEventListener('mousemove', (e) => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        card.style.setProperty('--card-glow', 'rgba(0, 200, 255, 0.1)');
+        card.style.setProperty('--mouse-x', x + 'px');
+        card.style.setProperty('--mouse-y', y + 'px');
+        // Update the radial gradient position dynamically
+        card.querySelector('::before'); // force style recalc
+      });
+    });
+  })();
+
   (function blurUp() {
     document.querySelectorAll('img.blur-up').forEach(img => {
       if (img.complete) img.classList.add('loaded');
