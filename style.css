@@ -361,8 +361,16 @@ html.light .sp-yt-link { color: var(--gray); border-color: var(--border); }
 .orbit-wrap { position: relative; width: 260px; height: 260px; }
 .orbit-core { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: flex; align-items: center; justify-content: center; font-size: 30px; color: #000; z-index: 2; box-shadow: 0 0 30px rgba(0,200,255,0.4); }
 .orbit-ring { position: absolute; inset: 0; animation: orbitSpin 30s linear infinite; }
-@keyframes orbitSpin { to { transform: rotate(360deg); } }
-.orbit-item { position: absolute; top: 50%; left: 50%; width: 44px; height: 44px; margin: -22px; background: rgba(18,18,24,0.8); border: 1px solid var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; backdrop-filter: blur(8px); box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+@keyframes orbitSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes orbitCounterSpin { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+.orbit-item {
+  position: absolute; top: 50%; left: 50%; width: 44px; height: 44px; margin: -22px;
+  background: rgba(18,18,24,0.8); border: 1px solid var(--border); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+  backdrop-filter: blur(8px); box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  /* Counter-rotate so the text stays upright while revolving */
+  animation: orbitCounterSpin 30s linear infinite;
+}
 /* ============ ANIME BANNER ============ */
 .al-banner { display: flex; gap: 16px; align-items: center; padding: 14px; margin-bottom: 18px; border-radius: 16px; border: 1px solid var(--border); background: linear-gradient(135deg, rgba(0,200,255,0.06), rgba(120,80,255,0.04)); }
 .al-banner-img { width: 60px; height: 84px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }

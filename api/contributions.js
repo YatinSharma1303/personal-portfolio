@@ -1,35 +1,32 @@
 /* ============================================================
    api/contributions.js — Fetches GitHub contribution calendar
-   Scrapes github.com/USERNAME and extracts the contribution data.
-   No auth token required.
+   Uses the reliable public API (jogruber.de) instead of HTML scraping.
    ============================================================ */
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400'); // Cache for 1 hour
 
   const user = (req.query.user || 'YatinSharma1303').replace(/[^a-zA-Z0-9-]/g, '');
 
   try {
-    const response = await fetch(`https://github.com/${user}`, {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    });
-    if (!response.ok) return res.status(502).json({ error: 'GitHub fetch failed' });
+    const response = await fetch(`https://github-contributions-api.jogruber.de/v4/${user}`);
+    const data = await response.json();
 
-    const html = await response.text();
-    // Extract contribution days from the HTML: data-date and data-level attributes
-    const regex = /data-date="(\d{4}-\d{2}-\d{2})"[^>]*data-level="(\d)"/g;
-    const days = [];
-    let match;
-    while ((match = regex.exec(html)) !== null) {
-      days.push({ date: match[1], level: parseInt(match[2], 10) });
+    if (!data || !data.contributions) {
+      return res.status(404).json({ error: 'No contribution data found' });
     }
 
-    // Extract total contributions count
-    let total = 0;
-    const totalMatch = html.match(/(\d[\d,]*)\s+contributions?\s+in\s+the\s+last\s+year/i);
-    if (totalMatch) total = parseInt(totalMatch[1].replace(/,/g, ''), 10);
+    // API returns an array of all days. We just need the fields we use.
+    const days = data.contributions.map(d => ({
+      date: d.date,
+      level: d.level // 0-4
+    }));
 
-    if (!days.length) return res.status(404).json({ error: 'No contribution data found' });
+    // Calculate total from the current year
+    const currentYear = new Date().getFullYear();
+    const total = data.contributions
+      .filter(d => d.date.startsWith(String(currentYear)))
+      .reduce((sum, d) => sum + d.count, 0);
 
     res.status(200).json({ total, days });
   } catch (e) {

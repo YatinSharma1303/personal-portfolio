@@ -651,8 +651,9 @@
       const item = document.createElement('div');
       item.className = 'orbit-item';
       item.textContent = label;
-      item.style.transform = 'translate(' + x + 'px,' + y + 'px)';
-      item.style.animation = 'orbitSpin 30s linear infinite reverse';
+      // Position using top/left so it doesn't conflict with the CSS transform animation
+      item.style.left = `calc(50% + ${x}px)`;
+      item.style.top = `calc(50% + ${y}px)`;
       ring.appendChild(item);
     });
   })();
