@@ -1,6 +1,6 @@
 /* ============================================================
    api/reactions.js — Toggle an emoji reaction on a question.
-   Reads the doc, updates the specific emoji, and saves it back.
+   Reads the whole map, updates it, and saves it back to avoid URL encoding bugs with emojis.
    ============================================================ */
 const crypto = require('crypto');
 const COLLECTION = 'amaQuestions';
@@ -50,34 +50,36 @@ module.exports = async function handler(req, res) {
 
     const docPath = COLLECTION + '/' + encodeURIComponent(id);
 
-    // 1. Read the current document to get the specific emoji's count
+    // 1. Read the current document
     const doc = await firestore('GET', docPath).catch(() => null);
-    let currentCount = 0;
+    let reactionMap = {};
+    
     if (doc && doc.fields && doc.fields.reactions && doc.fields.reactions.mapValue && doc.fields.reactions.mapValue.fields) {
-      const emojiField = doc.fields.reactions.mapValue.fields[emoji];
-      if (emojiField) currentCount = Number(emojiField.integerValue || emojiField.doubleValue || 0);
+      reactionMap = doc.fields.reactions.mapValue.fields;
     }
 
-    // 2. Calculate new count
-    const newCount = Math.max(0, currentCount + delta);
+    // 2. Get current count for this specific emoji
+    let currentCount = 0;
+    if (reactionMap[emoji]) {
+      currentCount = Number(reactionMap[emoji].integerValue || reactionMap[emoji].doubleValue || 0);
+    }
 
-    // 3. Write ONLY the specific emoji back (preserves all other reactions)
+    // 3. Calculate new count and update the map locally
+    const newCount = Math.max(0, currentCount + delta);
+    reactionMap[emoji] = { integerValue: String(newCount) };
+
+    // 4. Send the ENTIRE updated map back (using mask "reactions" avoids emoji URL bugs)
     const updateBody = {
       fields: {
         reactions: {
           mapValue: {
-            fields: {
-              [emoji]: { integerValue: String(newCount) }
-            }
+            fields: reactionMap
           }
         }
       }
     };
 
-    // Use dotted mask path 'reactions.emoji' so Firestore doesn't overwrite the whole map
-    const maskPath = 'reactions.' + emoji;
-    const updateUrl = docPath + '?updateMask.fieldPaths=' + encodeURIComponent(maskPath);
-    
+    const updateUrl = docPath + '?updateMask.fieldPaths=reactions';
     await firestore('PATCH', updateUrl, updateBody);
 
     return res.status(200).json({ ok: true, id: id, emoji: emoji, newCount: newCount });
