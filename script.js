@@ -389,7 +389,7 @@
       if (!summaryEl) { summaryEl = document.createElement('div'); summaryEl.className = 'al-summary'; list.parentNode.insertBefore(summaryEl, list); }
       if (!pagerEl) { pagerEl = document.createElement('div'); pagerEl.className = 'al-pagination'; card.appendChild(pagerEl); }
     }
-    const query = `query{user:MediaListCollection(userName:"${CONFIG.anilistUser}",type:ANIME){lists{name status entries{media{id title{romaji english}coverImage{large}episodes meanScore}score progress}}}}`;
+    const query = `query{user:MediaListCollection(userName:"${CONFIG.anilistUser}",type:ANIME){lists{name status entries{media{id title{romaji english}coverImage{large}episodes meanScore}score progress updatedAt}}}}`;
     fetch('https://graphql.anilist.co?_=' + Date.now(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query }) })
       .then(r => r.json()).then(d => {
         const lists = (d.data && d.data.user && d.data.user.lists) || [];
@@ -410,13 +410,20 @@
     }
     function renderBanner(entries) {
       const banner = $('al-banner'); if (!banner) return;
-      const watching = entries.filter(e => (e._status || '').toUpperCase() === 'CURRENT' || (e._status || '').toUpperCase() === 'WATCHING');
-      const item = watching.length ? watching[0] : entries[0];
+      // Sort all entries by updatedAt (most recent first)
+      const sorted = entries.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      // Check if any are currently being watched
+      const watching = sorted.filter(e => {
+        const s = (e._status || '').toUpperCase();
+        return s === 'CURRENT' || s === 'WATCHING' || s === 'REWATCHING';
+      });
+      const item = watching.length ? watching[0] : sorted[0];
       if (!item || !item.media) { banner.style.display = 'none'; return; }
       const t = (item.media.title && (item.media.title.romaji || item.media.title.english)) || '\u2014';
       const img = (item.media.coverImage && item.media.coverImage.large) || '';
-      const progress = item.progress ? item.progress + ' eps watched' : 'in progress';
-      const label = watching.length ? 'CURRENTLY WATCHING' : 'LATEST IN LIST';
+      const isWatching = watching.length > 0;
+      const label = isWatching ? 'CURRENTLY WATCHING' : 'LATEST WATCHED';
+      const progress = item.progress ? item.progress + ' eps' + (isWatching ? ' watched' : '') : 'completed';
       banner.innerHTML = (img ? '<img class="al-banner-img" alt="' + esc(t) + '" src="' + img + '">' : '') + '<div class="al-banner-info"><div class="al-banner-label">' + label + '</div><div class="al-banner-title">' + esc(t) + '</div><div class="al-banner-progress">' + esc(progress) + '</div></div>';
       banner.style.display = 'flex';
     }
@@ -601,10 +608,9 @@
     const ctx = canvas.getContext('2d');
     let dots = [], w, h;
     function resize() {
-      const hero = document.querySelector('.hero');
-      w = canvas.width = hero.offsetWidth;
-      h = canvas.height = hero.offsetHeight;
-      const count = Math.min(60, Math.floor(w * h / 14000));
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+      const count = Math.min(80, Math.floor(w * h / 18000));
       dots = [];
       for (let i = 0; i < count; i++) dots.push({ x: Math.random()*w, y: Math.random()*h, vx: (Math.random()-0.5)*0.3, vy: (Math.random()-0.5)*0.3 });
     }
@@ -662,28 +668,6 @@
       card.addEventListener('mouseleave', () => { card.style.transform = ''; });
     });
   })();
-
-  /* ============================================================
-     16e. MOBILE BOTTOM NAV active state
-     ============================================================ */
-  (function mobileNav() {
-    const links = document.querySelectorAll('.mobile-bottom-nav a');
-    if (!links.length) return;
-    const sections = [];
-    links.forEach(a => { const id = a.getAttribute('href').slice(1); const sec = document.getElementById(id); if (sec) sections.push({ sec, a }); });
-    if (!sections.length) return;
-    const obs = new IntersectionObserver((entries) => {
-      entries.forEach(e => {
-        if (e.isIntersecting) {
-          links.forEach(a => a.classList.remove('active'));
-          const m = sections.find(s => s.sec === e.target);
-          if (m) m.a.classList.add('active');
-        }
-      });
-    }, { rootMargin: '-40% 0px -55% 0px' });
-    sections.forEach(s => obs.observe(s.sec));
-  })();
-
   /* ============================================================
      17. ACTIVE NAV HIGHLIGHT (sync with scroll position)
      ============================================================ */

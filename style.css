@@ -342,8 +342,8 @@ html.light .sp-yt-link { color: var(--gray); border-color: var(--border); }
   width: 320px; height: 180px; opacity: 0; pointer-events: none;
 }
 
-/* ============ HERO PARTICLES ============ */
-.hero-particles { position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: 0.55; }
+/* ============ SITE-WIDE PARTICLES ============ */
+.site-particles { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.4; }
 .hero-inner { position: relative; z-index: 2; }
 /* ============ HERO TERMINAL ============ */
 .hero-terminal { max-width: 480px; margin: 0 auto 28px; text-align: left; background: rgba(8,8,12,0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; backdrop-filter: blur(8px); }
@@ -370,13 +370,6 @@ html.light .sp-yt-link { color: var(--gray); border-color: var(--border); }
 .al-banner-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; color: #34d399; margin-bottom: 4px; }
 .al-banner-title { font-size: 16px; font-weight: 700; }
 .al-banner-progress { font-family: var(--mono); font-size: 11px; color: var(--gray); margin-top: 4px; }
-/* ============ MOBILE BOTTOM NAV ============ */
-.mobile-bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 700; display: none; justify-content: space-around; background: rgba(10,10,14,0.85); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-top: 1px solid var(--border); padding: 8px 0 env(safe-area-inset-bottom, 8px); }
-html.light .mobile-bottom-nav { background: rgba(245,245,250,0.9); }
-.mobile-bottom-nav a { display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--gray-dim); font-family: var(--mono); font-size: 9px; text-decoration: none; }
-.mobile-bottom-nav a .material-symbols-outlined { font-size: 22px; }
-.mobile-bottom-nav a.active { color: var(--accent); }
-@media (max-width: 600px) { .mobile-bottom-nav { display: flex; } body { padding-bottom: 64px; } }
 /* ============ 3D CARD TILT ============ */
 .project-card, .interest-card { transform-style: preserve-3d; transition: transform 0.15s ease; }
 .project-card .project-body, .interest-card h3, .interest-card p, .interest-card .interest-icon { transform: translateZ(30px); }
