@@ -65,6 +65,7 @@
       <div class="intro-loader" id="intro-dots-loader">
         <span></span><span></span><span></span>
       </div>
+      <div class="intro-percent" id="intro-percent">0%</div>
       <div class="intro-designed">designed by <b>yatin</b></div>
     </div>
 
@@ -244,6 +245,10 @@
           <div class="gh-stat"><span id="gh-repos">—</span><label>Repos</label></div>
           <div class="gh-stat"><span id="gh-followers">—</span><label>Followers</label></div>
           <div class="gh-stat"><span id="gh-following">—</span><label>Following</label></div>
+        </div>
+        <div class="gh-langs-wrap">
+          <div class="gh-lang-chart" id="gh-lang-chart"></div>
+          <div class="gh-lang-legend" id="gh-lang-legend"></div>
         </div>
         <a class="btn-ghost sm" href="https://github.com/YatinSharma1303" target="_blank" rel="noopener">Visit GitHub ↗</a>
       </div>
@@ -482,6 +487,21 @@
     <div class="presence-grid" id="presence-grid"><!-- populated by JS --></div>
     <div class="footer-note">designed &amp; built by <b>yatin</b> · vanilla html/css/js · <span id="year"></span></div>
   </footer>
+
+  <!-- ============ KEYBOARD SHORTCUT OVERLAY ============ -->
+  <div class="shortcut-overlay" id="shortcut-overlay">
+    <div class="shortcut-card">
+      <div class="shortcut-head">Keyboard Shortcuts <button class="shortcut-close" id="shortcut-close" aria-label="Close">✕</button></div>
+      <div class="shortcut-list">
+        <div><kbd>?</kbd> Toggle this menu</div>
+        <div><kbd>G</kbd> Go to GitHub section</div>
+        <div><kbd>P</kbd> Go to Projects</div>
+        <div><kbd>A</kbd> Go to Ask Me Anything</div>
+        <div><kbd>M</kbd> Toggle music player</div>
+        <div><kbd>T</kbd> Toggle dark/light theme</div>
+      </div>
+    </div>
+  </div>
 
   <script src="script.js"></script>
   <script src="games.js"></script>

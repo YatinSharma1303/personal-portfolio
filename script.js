@@ -45,7 +45,7 @@
     if (!overlay) return;
     let done = false, dismissed = false;
     const TOTAL = 4; let finished = 0;
-    const tick = () => { finished++; if (finished >= TOTAL || done) ready(); };
+    const tick = () => { finished++; const percentEl = $('intro-percent'); if (percentEl) percentEl.textContent = Math.min(100, Math.floor((finished / TOTAL) * 100)) + '%'; if (finished >= TOTAL || done) ready(); };
     const HARD = 5000;
     setTimeout(() => { if (!done) ready(); }, HARD);
     function ready() { if (done) return; done = true; overlay.classList.add('hint-ready'); }
@@ -282,10 +282,46 @@
       animateCounter('gh-following', d.following ?? 0);
       const av = $('gh-avatar'); if (av && d.avatar_url) av.src = d.avatar_url;
     }).then(() =>
-      fetch(`https://api.github.com/users/${user}/repos?per_page=6&sort=updated`).then(r => r.json()).then(repos => {
-        const wrap = $('gh-repos-list'); if (!wrap || !Array.isArray(repos)) return;
-        const LANG = { JavaScript: '#f1e05a', Python: '#3572A5', TypeScript: '#3178c6', HTML: '#e34c26', CSS: '#563d7c', 'Jupyter Notebook': '#DA5B0B' };
-        wrap.innerHTML = repos.slice(0, 6).map(r => `<a class="gh-repo" href="${r.html_url}" target="_blank" rel="noopener" style="--lang-color:${LANG[r.language]||'#888'}"><div class="gh-repo-name">${r.name}</div><div class="gh-repo-desc">${esc((r.description||'—').slice(0,90))}</div><div class="gh-repo-meta">${r.language ? `<span class="gh-repo-lang">${r.language}</span>` : ''}<span>★ ${r.stargazers_count}</span></div></a>`).join('');
+      fetch(`https://api.github.com/users/${user}/repos?per_page=100`).then(r => r.json()).then(repos => {
+        if (!Array.isArray(repos)) return;
+        
+        // 1. Render Top 6 Repos
+        const wrap = $('gh-repos-list'); if (wrap) {
+          const LANG_COLOR = { JavaScript: '#f1e05a', Python: '#3572A5', TypeScript: '#3178c6', HTML: '#e34c26', CSS: '#563d7c', 'Jupyter Notebook': '#DA5B0B' };
+          wrap.innerHTML = repos.slice(0, 6).map(r => `<a class="gh-repo" href="${r.html_url}" target="_blank" rel="noopener" style="--lang-color:${LANG_COLOR[r.language]||'#888'}"><div class="gh-repo-name">${r.name}</div><div class="gh-repo-desc">${esc((r.description||'—').slice(0,90))}</div><div class="gh-repo-meta">${r.language ? `<span class="gh-repo-lang">${r.language}</span>` : ''}<span>★ ${r.stargazers_count}</span></div></a>`).join('');
+        }
+
+        // 2. Calculate Languages for Donut Chart
+        const langCounts = {};
+        repos.forEach(r => { if (r.language) langCounts[r.language] = (langCounts[r.language] || 0) + 1; });
+        const sortedLangs = Object.entries(langCounts).sort((a, b) => b[1] - a[1]);
+        const topLangs = sortedLangs.slice(0, 5);
+        const totalRepos = sortedLangs.reduce((s, [, c]) => s + c, 0);
+        
+        const LANG_COLOR = { JavaScript: '#f1e05a', Python: '#3572A5', TypeScript: '#3178c6', HTML: '#e34c26', CSS: '#563d7c', 'Jupyter Notebook': '#DA5B0B' };
+        
+        // Build Conic Gradient
+        let cumulativePercent = 0;
+        const gradientStops = topLangs.map(([lang, count]) => {
+          const percent = (count / totalRepos) * 100;
+          const start = cumulativePercent;
+          cumulativePercent += percent;
+          const color = LANG_COLOR[lang] || '#888888';
+          return `${color} ${start}% ${cumulativePercent}%`;
+        }).join(', ');
+        
+        const chartEl = $('gh-lang-chart');
+        if (chartEl) chartEl.style.background = `conic-gradient(${gradientStops})`;
+        
+        // Build Legend
+        const legendEl = $('gh-lang-legend');
+        if (legendEl) {
+          legendEl.innerHTML = topLangs.map(([lang, count]) => {
+            const color = LANG_COLOR[lang] || '#888888';
+            const percent = Math.round((count / totalRepos) * 100);
+            return `<div class="gh-lang-pill"><span class="gh-lang-dot" style="background:${color}"></span> ${esc(lang)} (${percent}%)</div>`;
+          }).join('');
+        }
       })
     );
   }
@@ -997,6 +1033,29 @@
     document.querySelectorAll('img.blur-up').forEach(img => {
       if (img.complete) img.classList.add('loaded');
       else img.addEventListener('load', () => img.classList.add('loaded'), { once: true });
+    });
+  })();
+
+  /* ============================================================
+     M. KEYBOARD SHORTCUTS OVERLAY
+     ============================================================ */
+  (function shortcuts() {
+    const overlay = $('shortcut-overlay');
+    const closeBtn = $('shortcut-close');
+    if (!overlay || !closeBtn) return;
+    const toggle = () => overlay.classList.toggle('open');
+    closeBtn.addEventListener('click', toggle);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) toggle(); });
+    window.addEventListener('keydown', (e) => {
+      if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+      const key = e.key.toLowerCase();
+      if (key === '?') { e.preventDefault(); toggle(); }
+      else if (key === 't') { document.getElementById('theme-toggle-btn')?.click(); }
+      else if (key === 'm') { document.getElementById('topbar-music-icon')?.click(); }
+      else if (key === 'g') { document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' }); }
+      else if (key === 'p') { document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' }); }
+      else if (key === 'a') { document.getElementById('ama')?.scrollIntoView({ behavior: 'smooth' }); }
+      else if (key === 'escape' && overlay.classList.contains('open')) { toggle(); }
     });
   })();
 

@@ -1087,3 +1087,43 @@ html.light .visitor-badge { background: rgba(255,255,255,0.6); }
 @keyframes rippleEffect {
   to { transform: scale(4); opacity: 0; }
 }
+
+/* ============ P. SKELETON LOADING ============ */
+.skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+@keyframes shimmer { 0% {background-position: 200% 0;} 100% {background-position: -200% 0;} }
+
+/* ============ B. AURORA HERO TEXT ============ */
+.hero-h1-grad {
+  background: linear-gradient(120deg, #00c8ff, #7850ff, #00f0b4, #00c8ff);
+  background-size: 300% auto;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  animation: auroraShift 8s linear infinite;
+  filter: drop-shadow(0 2px 15px rgba(0, 200, 255, 0.25));
+}
+@keyframes auroraShift { to { background-position: 300% center; } }
+
+/* ============ C. PRELOADER PERCENTAGE ============ */
+.intro-percent { font-family: var(--mono); font-size: 14px; color: var(--accent); margin-top: 12px; letter-spacing: 0.1em; }
+
+/* ============ H. GITHUB LANG DONUT CHART ============ */
+.gh-langs-wrap { display: flex; align-items: center; gap: 20px; margin: 20px 0; flex-wrap: wrap; }
+.gh-lang-chart { width: 80px; height: 80px; border-radius: 50%; background: var(--surface2); position: relative; flex-shrink: 0; }
+.gh-lang-chart::after { content: ''; position: absolute; inset: 14px; background: var(--bg); border-radius: 50%; }
+.gh-lang-legend { display: flex; flex-wrap: wrap; gap: 8px; }
+.gh-lang-pill { display: flex; align-items: center; gap: 6px; font-size: 11px; font-family: var(--mono); color: var(--gray); }
+.gh-lang-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* ============ M. KEYBOARD SHORTCUT OVERLAY ============ */
+.shortcut-overlay { position: fixed; inset: 0; z-index: 9500; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; }
+.shortcut-overlay.open { display: flex; }
+.shortcut-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; max-width: 400px; width: 90%; }
+.shortcut-head { display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+.shortcut-close { color: var(--gray); }
+.shortcut-list div { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 14px; color: var(--gray); }
+kbd { background: var(--surface2); border: 1px solid var(--border-hover); border-radius: 4px; padding: 4px 8px; font-family: var(--mono); font-size: 12px; color: var(--accent); min-width: 20px; text-align: center; }
