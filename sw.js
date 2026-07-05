@@ -1,43 +1,40 @@
 /* Service Worker — offline caching for the portfolio.
-   Caches the shell (HTML/CSS/JS) on first visit so returning
-   visitors get instant loads even offline.
+   Network-First Strategy: Always fetch fresh code from the server. 
+   Only use cache if the network fails (offline mode).
 */
-const CACHE = 'yatin-portfolio-v1';
-const ASSETS = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/script.js',
-  '/games.js',
-  '/assets/cover.jpg',
-  '/assets/smarthealthcare.jpg',
-  '/assets/yatinigpt.jpg'
-];
+const CACHE = 'yatin-portfolio-v2'; // Bumped to v2 to instantly delete old v1 caches
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).catch(() => {}));
-  self.skipWaiting();
+  self.skipWaiting(); // Activate immediately
 });
 
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))));
-  self.clients.claim();
+  // Delete all old caches (like v1) to free up space and prevent bugs
+  e.waitUntil(
+    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+  );
+  self.clients.claim(); // Take control of all open tabs immediately
 });
 
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
-  // Only cache same-origin GET requests.
+  
+  // Only intercept same-origin GET requests (HTML, CSS, JS, images)
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
+
+  // Network-First Strategy
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      const fetchPromise = fetch(e.request).then(response => {
-        if (response && response.status === 200) {
-          const clone = response.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone)).catch(() => {});
-        }
-        return response;
-      }).catch(() => cached);
-      return cached || fetchPromise;
+    // 1. Try to fetch the fresh version from the network
+    fetch(e.request).then(response => {
+      // If valid, save a copy to the cache for offline use later
+      if (response && response.status === 200) {
+        const clone = response.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone)).catch(() => {});
+      }
+      return response;
+    }).catch(() => {
+      // 2. If network fails (offline), fall back to the cached version
+      return caches.match(e.request);
     })
   );
 });
