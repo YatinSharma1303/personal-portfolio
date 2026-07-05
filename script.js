@@ -425,7 +425,7 @@
             var artHTML = '<div class="lfm-artist-img" style="background:#141414 url(\'' + arts[idx] + '\') center/cover no-repeat"></div>';
           } else {
             var gradient = GRADIENTS[idx % GRADIENTS.length];
-            var artHTML = '<div class="lfm-artist-img lfm-noart lfm-artist-gradient" style="background:' + gradient + '">' + esc(letter) + '</div>';
+            var artHTML = '<div class="lfm-artist-img lfm-noart lfm-artist-gradient" style="background:' + gradient + '; color:#ffffff !important;">' + esc(letter) + '</div>';
           }
           return '<div class="lfm-artist">' + artHTML + '<span class="lfm-artist-name">' + esc(ar.name) + '</span><span class="lfm-artist-plays">' + (ar.playcount||0) + 'x</span></div>';
         }).join('');
