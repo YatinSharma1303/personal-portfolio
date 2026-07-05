@@ -626,12 +626,12 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .lfm-recent::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 2px; }
 .lfm-recent-item { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 10px; border: 1px solid var(--border); flex-shrink: 0; transition: all 0.15s ease; }
 .lfm-recent-item:hover { border-color: var(--border-hover); background: rgba(255,255,255,0.03); }
-.lfm-recent-img { width: 32px; height: 32px; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: var(--surface2); }
+.lfm-recent-img { width: 32px; height: 32px; border-radius: 6px; background-size: cover; background-position: center; background-color: var(--surface2); flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .lfm-recent-info { min-width: 0; }
 .lfm-recent-name { font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
 .lfm-recent-artist { font-size: 9px; color: var(--gray-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
 @media (max-width: 820px) { .lfm-columns { grid-template-columns: 1fr; } }
-.lfm-noart { display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--gray-dim); font-size: 16px; }
+.lfm-noart { display: flex; align-items: center; justify-content: center; background: var(--surface2) !important; border: 1px solid var(--border); color: var(--gray-dim); font-size: 16px; }
 .lfm-track-img.lfm-noart { border-radius: 8px; }
 .lfm-artist-img.lfm-noart { border-radius: 50%; }
 
@@ -1207,9 +1207,9 @@ kbd { background: var(--surface2); border: 1px solid var(--border-hover); border
   width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
   font-size: 16px; font-weight: 700; color: #fff; position: relative; overflow: hidden;
-  text-transform: uppercase;
+  text-transform: uppercase; background-size: cover; background-position: center;
 }
-.lfm-artist-img-overlay {
-  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
-}
+
 .lfm-recent-img.lfm-noart { border-radius: 6px; }
+
+.lfm-noart-icon { font-size: 14px; color: var(--gray-dim); }
