@@ -1071,13 +1071,9 @@
     const editorsEl = $('wt-editors');
     const COLORS = ['#00c8ff','#7850ff','#00f0b4','#f59e0b','#ef4444','#a855f7'];
     fetch('/api/wakatime').then(r => r.json()).then(d => {
-      if (d.error) {
-        if (d.error.includes('not configured')) {
-          langsEl.innerHTML = '<div class="wt-loading">WakaTime API key missing. If you added it, create a NEW Deployment in Vercel.</div>';
-        } else {
-          langsEl.innerHTML = '<div class="wt-loading">' + esc(d.error) + '</div>';
-        }
-        return;
+      if (d.error) { 
+        langsEl.innerHTML = '<div class="wt-loading">' + esc(d.error) + '</div>';
+        return; 
       }
       if (totalEl) totalEl.textContent = d.total || '—';
       if (dailyEl) dailyEl.textContent = 'avg ' + (d.daily || '') + '/day';
@@ -1088,9 +1084,14 @@
           const c = COLORS[i % COLORS.length];
           return '<div class="wt-lang"><span class="wt-lang-name">' + esc(l.name) + '</span><div class="wt-lang-bar"><div class="wt-lang-fill" style="width:' + w + '%;background:' + c + '"></div></div><span class="wt-lang-time">' + esc(l.time) + '</span></div>';
         }).join('');
+      } else {
+        // Clear the "setup api key" text if the API is working but there's no data yet
+        langsEl.innerHTML = '<div class="wt-loading">No coding activity in the last 7 days. Start coding!</div>';
       }
       if (editorsEl && d.editors && d.editors.length) {
         editorsEl.innerHTML = d.editors.map(e => '<span class="wt-editor-pill">' + esc(e) + '</span>').join('');
+      } else {
+        editorsEl.innerHTML = ''; // clear empty editors
       }
     }).catch(() => { langsEl.innerHTML = '<div class="wt-loading">Could not load stats.</div>'; });
   })();
