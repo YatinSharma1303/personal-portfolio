@@ -1019,15 +1019,12 @@
      27. VISITOR COUNTER
      ============================================================ */
   (function visitorCount() {
-    // Count once per session.
     if (sessionStorage.getItem('visited')) return;
     sessionStorage.setItem('visited', '1');
     fetch('/api/visitor', { method: 'POST' }).then(r => r.json()).then(d => {
-      if (d.total) {
-        let badge = document.querySelector('.visitor-badge');
-        if (!badge) { badge = document.createElement('div'); badge.className = 'visitor-badge'; document.body.appendChild(badge); }
-        badge.textContent = d.total.toLocaleString() + ' visits';
-      }
+      let badge = document.querySelector('.visitor-badge');
+      if (!badge) { badge = document.createElement('div'); badge.className = 'visitor-badge'; document.body.appendChild(badge); }
+      badge.textContent = (d.total || 0).toLocaleString() + ' visits';
     }).catch(() => {});
   })();
 

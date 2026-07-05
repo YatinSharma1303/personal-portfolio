@@ -1,6 +1,6 @@
 /* ============================================================
    api/visitor.js — Increment & return total unique visitors.
-   Uses Firestore (same Firebase project as AMA).
+   Uses Firestore. Creates the doc on first run.
    ============================================================ */
 const crypto = require('crypto');
 const COLLECTION = 'siteStats';
@@ -32,17 +32,34 @@ module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-cache');
   try {
     const token = await getToken();
-    const baseUrl = 'https://firestore.googleapis.com/v1/projects/' + projectId() + '/databases/(default)/documents';
-    const docUrl = baseUrl + '/' + COLLECTION + '/' + DOC;
-    // Read current value
+    const docUrl = 'https://firestore.googleapis.com/v1/projects/' + projectId() + '/databases/(default)/documents/' + COLLECTION + '/' + DOC;
+
+    // Try to read the current count.
     const readRes = await fetch(docUrl, { headers: { Authorization: 'Bearer ' + token } });
-    const doc = await readRes.json().catch(() => ({}));
-    const current = doc.fields ? Number(doc.fields.total?.integerValue || doc.fields.total?.doubleValue || 0) : 0;
-    // Atomic increment via commit + FieldTransform
-    const commitBody = JSON.stringify({ writes: [{ transform: { document: docUrl, fieldTransforms: [{ fieldPath: 'total', increment: 1 }] } }] });
-    await fetch(baseUrl + ':commit', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: commitBody });
-    res.status(200).json({ ok: true, total: current + 1 });
+
+    if (readRes.status === 404) {
+      // First visitor ever — create the document with total: 1.
+      await fetch(docUrl, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ fields: { total: { integerValue: '1' } } })
+      });
+      return res.status(200).json({ ok: true, total: 1 });
+    }
+
+    const doc = await readRes.json().catch(() => null);
+    const current = doc && doc.fields ? Number(doc.fields.total && (doc.fields.total.integerValue || doc.fields.total.doubleValue) || 0) : 0;
+    const next = current + 1;
+
+    // Write back the incremented value.
+    await fetch(docUrl + '?updateMask.fieldPaths=total', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ fields: { total: { integerValue: String(next) } } })
+    });
+
+    return res.status(200).json({ ok: true, total: next });
   } catch (e) {
-    res.status(200).json({ ok: true, total: 0, note: 'Visitor counting needs Firestore configured.' });
+    return res.status(200).json({ ok: true, total: 0 });
   }
 };
