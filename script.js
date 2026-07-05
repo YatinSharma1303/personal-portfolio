@@ -383,7 +383,7 @@
         const letter = (ar.name || '?').charAt(0).toUpperCase();
         const bg = GRADIENTS[idx % GRADIENTS.length];
         // Colored letter avatar with a hidden img on top — if img loads, it covers the letter
-        const artHTML = '<div class="lfm-artist-avatar lfm-artist-img-holder" id="artist-img-' + idx + '" style="background:' + bg + '">' + esc(letter) + '</div>';
+        const artHTML = '<div class="lfm-artist-avatar" id="artist-img-' + idx + '" style="background:' + bg + '">' + esc(letter) + '</div>';
         return '<div class="lfm-artist">' + artHTML + '<span class="lfm-artist-name">' + esc(ar.name) + '</span><span class="lfm-artist-plays">' + (ar.playcount||0) + 'x</span></div>';
       }).join('');
       // Now try to fetch real images and replace the overlay src
@@ -394,11 +394,10 @@
           .then(info => {
             const url = lfmImg(info.artist ? info.artist.image : []);
             if (url) {
-              // Pre-load the image — only replace gradient if it ACTUALLY loads
               var testImg = new Image();
               testImg.onload = function() {
                 var holder = document.getElementById('artist-img-' + idx);
-                if (holder) { holder.style.background = 'url(\'' + url + '\') center/cover'; holder.textContent = ''; }
+                if (holder) { holder.style.background = "url('" + url + "') center/cover, " + holder.style.background; holder.textContent = ''; }
               };
               testImg.src = url;
             }
@@ -435,8 +434,8 @@
           const name = esc(tr.name || '\u2014');
           const artist = esc((tr.artist && (tr.artist['#text'] || tr.artist.name)) || '');
           const artHTML = art
-            ? '<div class="lfm-recent-img" style="background-image:url(\'' + art + '\')"></div>'
-            : '<div class="lfm-recent-img lfm-noart">\u266A</div>';
+            ? '<img class="lfm-recent-img" alt="" src="' + art + '" onerror="this.outerHTML=\'<span class=\\\"lfm-recent-img lfm-noart\\\">\u266A</span>\'">'
+            : '<span class="lfm-recent-img lfm-noart">\u266A</span>';
           return '<div class="lfm-recent-item">' + artHTML + '<div class="lfm-recent-info"><div class="lfm-recent-name">' + name + '</div><div class="lfm-recent-artist">' + artist + '</div></div></div>';
         }).join('');
       }).catch(function () {});
