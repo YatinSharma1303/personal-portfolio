@@ -1650,31 +1650,7 @@
     overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   })();
 
-  /* ============================================================
-     28. SECTION PROGRESS BAR
-     Thin bar under topbar showing how far through the current section you are.
-     ============================================================ */
-  (function sectionProgress() {
-    const fill = $('section-progress-fill');
-    if (!fill) return;
-    const sections = document.querySelectorAll('.section');
-    function update() {
-      const viewportH = window.innerHeight;
-      let currentSection = null;
-      sections.forEach(s => {
-        const rect = s.getBoundingClientRect();
-        if (rect.top < viewportH * 0.5 && rect.bottom > viewportH * 0.3) currentSection = s;
-      });
-      if (!currentSection) { fill.style.width = '0%'; return; }
-      const rect = currentSection.getBoundingClientRect();
-      const sectionH = currentSection.scrollHeight;
-      const scrolledInSection = Math.max(0, -rect.top);
-      const progress = Math.min(100, (scrolledInSection / Math.max(1, sectionH - viewportH)) * 100);
-      fill.style.width = progress + '%';
-    }
-    window.addEventListener('scroll', update, { passive: true });
-    update();
-  })();
+
 
   /* ============================================================
      29. SERVICE WORKER REGISTRATION
