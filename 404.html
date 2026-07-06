@@ -6,82 +6,447 @@
   <title>404 — Yatin Sharma</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #05050a;
+      --surface: rgba(8,8,12,0.8);
+      --white: #ffffff;
+      --gray: rgba(255,255,255,0.5);
+      --gray-dim: rgba(255,255,255,0.25);
+      --border: rgba(255,255,255,0.08);
+      --border-hover: rgba(255,255,255,0.18);
+      --accent: #00c8ff;
+      --accent2: #7850ff;
+      --grid: rgba(255,255,255,0.02);
+      --term-bg: rgba(8,8,12,0.8);
+      --pill-bg: rgba(12,12,12,0.6);
+      --pill-border: rgba(255,255,255,0.08);
+      --pill-hover: rgba(255,255,255,0.05);
+    }
+
+    html.light {
+      --bg: #f0f0f8;
+      --surface: rgba(240,240,248,0.9);
+      --white: #1a1a2e;
+      --gray: rgba(80,80,120,0.6);
+      --gray-dim: rgba(80,80,120,0.35);
+      --border: rgba(80,80,140,0.14);
+      --border-hover: rgba(80,80,140,0.32);
+      --accent: #0077cc;
+      --accent2: #6c3ce0;
+      --grid: rgba(100,80,200,0.06);
+      --term-bg: rgba(240,240,248,0.9);
+      --pill-bg: rgba(255,255,255,0.6);
+      --pill-border: rgba(80,80,140,0.14);
+      --pill-hover: rgba(0,0,0,0.03);
+    }
+
     body {
-      background: #05050a; color: #fff; font-family: 'Inter', sans-serif;
+      background: var(--bg); color: var(--white);
+      font-family: 'Inter', sans-serif;
       min-height: 100vh; display: flex; align-items: center; justify-content: center;
-      overflow: hidden; position: relative;
+      overflow-x: hidden; position: relative;
+      -webkit-font-smoothing: antialiased;
     }
-    body::before {
-      content: ''; position: fixed; inset: 0;
-      background: radial-gradient(ellipse 60% 50% at 50% 30%, rgba(0,200,255,0.06), transparent 60%),
-                  radial-gradient(ellipse 40% 40% at 80% 80%, rgba(120,80,255,0.04), transparent 60%);
-    }
-    body::after {
-      content: ''; position: fixed; inset: 0;
+
+    /* ── Background layers ── */
+    .grid-bg {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
       background-image:
-        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px);
       background-size: 56px 56px;
     }
-    .container { position: relative; z-index: 1; text-align: center; padding: 40px; }
+    body::before {
+      content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 60% 50% at 50% 30%, rgba(0,200,255,0.06), transparent 60%),
+        radial-gradient(ellipse 40% 40% at 80% 80%, rgba(120,80,255,0.04), transparent 60%);
+    }
+    html.light body::before {
+      background:
+        radial-gradient(ellipse 60% 50% at 50% 30%, rgba(100,80,220,0.05), transparent 60%),
+        radial-gradient(ellipse 40% 40% at 80% 80%, rgba(120,80,255,0.03), transparent 60%);
+    }
+
+    /* ── Particles canvas ── */
+    .particles { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.4; }
+    html.light .particles { opacity: 0.7; }
+
+    /* ── Cursor glow ── */
+    .cursor-glow {
+      position: fixed; width: 300px; height: 300px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,200,255,0.08), transparent 60%);
+      pointer-events: none; z-index: 9998; transform: translate(-50%, -50%);
+      transition: opacity 0.3s ease; opacity: 0;
+    }
+    html.light .cursor-glow { background: radial-gradient(circle, rgba(100,80,220,0.1), transparent 60%); }
+    @media (hover: hover) { body:hover .cursor-glow { opacity: 1; } }
+    @media (hover: none) { .cursor-glow { display: none; } }
+
+    /* ── Container ── */
+    .container { position: relative; z-index: 1; text-align: center; padding: 40px 24px; max-width: 560px; width: 100%; }
+
+    /* ── Terminal ── */
     .terminal {
-      max-width: 480px; margin: 0 auto 32px; text-align: left;
-      background: rgba(8,8,12,0.8); border: 1px solid rgba(0,200,255,0.2); border-radius: 12px;
-      overflow: hidden; backdrop-filter: blur(8px);
+      max-width: 460px; margin: 0 auto 36px; text-align: left;
+      background: var(--term-bg); border: 1px solid rgba(0,200,255,0.2); border-radius: 12px;
+      overflow: hidden; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
       box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 30px rgba(0,200,255,0.05);
+    }
+    html.light .terminal {
+      border-color: rgba(0,0,0,0.1);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.08), 0 0 30px rgba(0,200,255,0.03);
     }
     .term-dots { display: flex; gap: 6px; padding: 12px 16px; background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.06); }
     .term-dots i { width: 10px; height: 10px; border-radius: 50%; }
     .term-dots i:nth-child(1) { background: #ff5f57; }
     .term-dots i:nth-child(2) { background: #febc2e; }
     .term-dots i:nth-child(3) { background: #28c840; }
-    .term-body { padding: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.8; }
-    .term-body .cmd { color: #00c8ff; }
-    .term-body .err { color: #ff6b6b; }
-    .term-body .ok { color: #34d399; }
-    .term-caret { display: inline-block; width: 8px; height: 14px; background: #00c8ff; animation: blink 1s step-end infinite; vertical-align: text-bottom; }
+    .term-body { padding: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.9; min-height: 130px; }
+    .term-line { opacity: 0; transform: translateY(6px); transition: opacity 0.3s ease, transform 0.3s ease; }
+    .term-line.visible { opacity: 1; transform: translateY(0); }
+    .cmd { color: var(--accent); }
+    .err { color: #ff6b6b; }
+    .ok { color: #34d399; }
+    .dim { color: var(--gray-dim); }
+    .term-caret {
+      display: inline-block; width: 8px; height: 14px; background: var(--accent);
+      animation: blink 1s step-end infinite; vertical-align: text-bottom;
+    }
     @keyframes blink { 0%,50% { opacity: 1; } 50.01%,100% { opacity: 0; } }
-    h1 { font-size: clamp(48px, 10vw, 96px); font-weight: 900; letter-spacing: -0.04em; line-height: 1; margin-bottom: 16px; }
-    h1 span {
+
+    /* ── Glitch 404 heading ── */
+    h1 {
+      font-size: clamp(56px, 12vw, 110px); font-weight: 900;
+      letter-spacing: -0.04em; line-height: 1; margin-bottom: 16px;
+      position: relative; display: inline-block;
+    }
+    h1 .digit {
+      display: inline-block; position: relative;
       background: linear-gradient(120deg, #00c8ff, #7850ff, #00f0b4, #00c8ff);
       background-size: 300% auto; -webkit-background-clip: text; background-clip: text;
       -webkit-text-fill-color: transparent; color: transparent;
       animation: aurora 8s linear infinite;
+      transition: transform 0.1s ease;
+    }
+    h1 .digit.scrambling {
+      animation: aurora 8s linear infinite, digitGlitch 0.08s steps(2) infinite;
+      filter: blur(0.5px);
+    }
+    h1 .digit.locked {
+      filter: none;
+      animation: aurora 8s linear infinite, digitLock 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
     @keyframes aurora { to { background-position: 300% center; } }
-    p { font-size: 16px; color: rgba(255,255,255,0.5); margin-bottom: 32px; max-width: 420px; margin-left: auto; margin-right: auto; line-height: 1.6; }
+    @keyframes digitGlitch {
+      0%   { transform: translate(2px, -1px) skewX(-2deg); }
+      25%  { transform: translate(-1px, 2px) skewX(1deg); }
+      50%  { transform: translate(1px, -2px) skewX(-1deg); }
+      75%  { transform: translate(-2px, 1px) skewX(2deg); }
+      100% { transform: translate(2px, -1px) skewX(-2deg); }
+    }
+    @keyframes digitLock {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.2); filter: blur(0); }
+      100% { transform: scale(1); }
+    }
+
+    /* ── Description ── */
+    .desc {
+      font-size: 16px; color: var(--gray); margin-bottom: 32px;
+      max-width: 420px; margin-left: auto; margin-right: auto; line-height: 1.6;
+    }
+
+    /* ── Buttons ── */
+    .btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 40px; }
     .btn {
       display: inline-flex; align-items: center; gap: 8px;
       padding: 14px 28px; border-radius: 999px;
       font-size: 14px; font-weight: 700; text-decoration: none;
-      background: #fff; color: #000; border: 1.5px solid #fff;
+      background: var(--white); color: #05050a; border: 1.5px solid var(--white);
       transition: all 0.22s cubic-bezier(0.22,1,0.36,1);
     }
     .btn:hover { box-shadow: 0 0 28px rgba(0,200,255,0.3); transform: translateY(-2px); }
     .btn-ghost {
-      background: transparent; color: #fff; border-color: rgba(255,255,255,0.2);
-      margin-left: 8px;
+      background: transparent; color: var(--white); border-color: var(--border-hover);
     }
-    .btn-ghost:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.4); }
-    @media (max-width: 500px) { .btn-ghost { margin-left: 0; margin-top: 12px; } }
+    .btn-ghost:hover { background: var(--pill-hover); border-color: var(--white); }
+    html.light .btn { background: var(--white); color: #fff; }
+    html.light .btn-ghost { border-color: rgba(80,80,140,0.3); }
+
+    /* ── Quick-link pills ── */
+    .quick-links-label {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      letter-spacing: 0.2em; color: var(--gray-dim); margin-bottom: 14px;
+      text-transform: uppercase;
+    }
+    .quick-links {
+      display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+    }
+    .quick-link {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 18px; border-radius: 999px;
+      background: var(--pill-bg); border: 1px solid var(--pill-border);
+      color: var(--gray); text-decoration: none; font-size: 13px; font-weight: 600;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      transition: all 0.22s ease;
+    }
+    .quick-link:hover {
+      border-color: var(--border-hover); color: var(--white);
+      transform: translateY(-2px); background: var(--pill-hover);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    }
+    html.light .quick-link:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.06); }
+    .quick-link-icon { font-size: 16px; }
+
+    /* ── Easter egg response (hidden initially) ── */
+    .easter-egg {
+      margin-top: 28px; font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; color: var(--gray-dim); opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    .easter-egg.visible { opacity: 1; }
+    .easter-egg .sudo-err { color: #ff6b6b; }
+    .easter-egg .sudo-hint { color: #34d399; }
+
+    /* ── Responsive ── */
+    @media (max-width: 500px) {
+      .btns { flex-direction: column; align-items: center; }
+      .btn { width: 100%; max-width: 260px; justify-content: center; }
+      .quick-links { gap: 8px; }
+      .quick-link { padding: 8px 14px; font-size: 12px; }
+    }
   </style>
 </head>
 <body>
+  <!-- Background layers -->
+  <div class="grid-bg"></div>
+  <canvas class="particles" id="particles"></canvas>
+  <div class="cursor-glow" id="cursor-glow"></div>
+
   <div class="container">
-    <div class="terminal">
+    <!-- Terminal -->
+    <div class="terminal" id="terminal">
       <div class="term-dots"><i></i><i></i><i></i></div>
-      <div class="term-body">
-        <div><span class="cmd">$</span> find /page</div>
-        <div class="err">bash: cd: /page: No such file or directory</div>
-        <div><span class="cmd">$</span> <span class="ok">echo $?</span></div>
-        <div class="err">404<span class="term-caret"></span></div>
+      <div class="term-body" id="term-body">
+        <div class="term-line" id="tl1"><span class="cmd">$</span> navigate <span class="dim" id="bad-path">/undefined-route</span></div>
+        <div class="term-line" id="tl2"><span class="err">Error: Route not found (404)</span></div>
+        <div class="term-line" id="tl3"><span class="cmd">$</span> <span class="ok">suggest</span> --fix</div>
+        <div class="term-line" id="tl4"><span class="ok">→ Try going home. Or pick a section below.</span><span class="term-caret"></span></div>
       </div>
     </div>
-    <h1>Error <span>404</span></h1>
-    <p>This page got lost in the database. Maybe it was deployed to the wrong Vercel project, or maybe it never existed at all.</p>
-    <a href="/" class="btn">← Back to Home</a>
-    <a href="https://github.com/YatinSharma1303" target="_blank" class="btn btn-ghost">GitHub ↗</a>
+
+    <!-- Glitch 404 -->
+    <h1>
+      <span class="digit" data-i="0">4</span><span class="digit" data-i="1">0</span><span class="digit" data-i="2">4</span>
+    </h1>
+
+    <!-- Copy -->
+    <p class="desc">The route you hit doesn't exist. Maybe a typo, maybe a dead link, maybe this page is still shipping.</p>
+
+    <!-- Buttons -->
+    <div class="btns">
+      <a href="/" class="btn">← Back to Home</a>
+      <a href="https://github.com/YatinSharma1303" target="_blank" rel="noopener" class="btn btn-ghost">GitHub ↗</a>
+    </div>
+
+    <!-- Quick-link pills -->
+    <div class="quick-links-label">Quick navigation</div>
+    <div class="quick-links">
+      <a href="/#about" class="quick-link"><span class="quick-link-icon">👤</span> About</a>
+      <a href="/#projects" class="quick-link"><span class="quick-link-icon">📁</span> Projects</a>
+      <a href="/#ama" class="quick-link"><span class="quick-link-icon">💬</span> Ask</a>
+      <a href="/#playground" class="quick-link"><span class="quick-link-icon">🎮</span> Playground</a>
+    </div>
+
+    <!-- Easter egg -->
+    <div class="easter-egg" id="easter-egg">
+      <span class="sudo-err">sudo: permission denied</span> — <span class="sudo-hint">Try going home instead ↗</span>
+    </div>
   </div>
+
+  <script>
+  (function() {
+    'use strict';
+
+    /* ── 1. Light mode: read from localStorage ── */
+    try {
+      if (localStorage.getItem('theme') === 'light') {
+        document.documentElement.classList.add('light');
+      }
+    } catch(e) {}
+
+    /* ── 2. Animated terminal typing ── */
+    var lines = ['tl1','tl2','tl3','tl4'].map(id => document.getElementById(id));
+    var badPath = document.getElementById('bad-path');
+
+    // Show the actual bad URL
+    try {
+      var path = window.location.pathname;
+      if (badPath && path && path !== '/') badPath.textContent = path;
+    } catch(e) {}
+
+    lines.forEach(function(l, i) {
+      setTimeout(function() {
+        if (l) l.classList.add('visible');
+      }, 400 + i * 500);
+    });
+
+    /* ── 3. Glitch 404 scramble ── */
+    var digits = document.querySelectorAll('.digit');
+    var TARGETS = ['4','0','4'];
+    var SCRAMBLE_CHARS = '0123456789#@&%!?'.split('');
+    var scrambleInterval = null;
+
+    // Start scrambling all digits
+    scrambleInterval = setInterval(function() {
+      digits.forEach(function(d, i) {
+        if (d.classList.contains('locked')) return;
+        d.textContent = SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+        d.classList.add('scrambling');
+      });
+    }, 70);
+
+    // Lock digits one by one with a stagger
+    digits.forEach(function(d, i) {
+      setTimeout(function() {
+        d.textContent = TARGETS[i];
+        d.classList.remove('scrambling');
+        d.classList.add('locked');
+        // Clear interval after last digit
+        if (i === digits.length - 1 && scrambleInterval) {
+          clearInterval(scrambleInterval);
+        }
+      }, 800 + i * 350);
+    });
+
+    /* ── 4. Easter egg: click terminal → sudo fix ── */
+    var terminal = document.getElementById('terminal');
+    var easterEgg = document.getElementById('easter-egg');
+    var easterEggTriggered = false;
+
+    if (terminal) {
+      terminal.style.cursor = 'pointer';
+      terminal.addEventListener('click', function() {
+        if (easterEggTriggered) return;
+        easterEggTriggered = true;
+
+        // Append sudo command to terminal
+        var body = document.getElementById('term-body');
+        if (!body) return;
+
+        var sudoLine = document.createElement('div');
+        sudoLine.className = 'term-line';
+        sudoLine.innerHTML = '<span class="cmd">$</span> sudo fix ' + (window.location.pathname || '/broken');
+        body.appendChild(sudoLine);
+
+        var responseLine = document.createElement('div');
+        responseLine.className = 'term-line';
+        responseLine.innerHTML = '<span class="err">sudo: permission denied</span> <span class="dim">— are you root? 😏</span>';
+        body.appendChild(responseLine);
+
+        // Remove caret from last original line
+        var oldCaret = body.querySelector('.term-caret');
+        if (oldCaret) oldCaret.remove();
+
+        // Add new caret to response
+        var newCaret = document.createElement('span');
+        newCaret.className = 'term-caret';
+        responseLine.appendChild(newCaret);
+
+        // Animate in
+        setTimeout(function() { sudoLine.classList.add('visible'); }, 100);
+        setTimeout(function() { responseLine.classList.add('visible'); }, 600);
+
+        // Show the hint below
+        if (easterEgg) {
+          setTimeout(function() { easterEgg.classList.add('visible'); }, 900);
+        }
+      });
+    }
+
+    /* ── 5. Lightweight particles ── */
+    (function particles() {
+      var canvas = document.getElementById('particles');
+      if (!canvas) return;
+      var ctx = canvas.getContext('2d');
+      var dots = [], w, h;
+
+      function init() {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+        var count = Math.min(40, Math.floor(w * h / 30000));
+        dots = [];
+        for (var i = 0; i < count; i++) {
+          dots.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            vx: (Math.random() - 0.5) * 0.25,
+            vy: (Math.random() - 0.5) * 0.25
+          });
+        }
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, w, h);
+        var isLight = document.documentElement.classList.contains('light');
+        var lineColor = isLight ? '80, 80, 180' : '0, 200, 255';
+        var dotColor = isLight ? 'rgba(80,80,180,0.5)' : 'rgba(120,200,255,0.5)';
+        var lineOpacity = isLight ? 0.2 : 0.1;
+
+        for (var i = 0; i < dots.length; i++) {
+          var d = dots[i];
+          d.x += d.vx; d.y += d.vy;
+          if (d.x < 0 || d.x > w) d.vx *= -1;
+          if (d.y < 0 || d.y > h) d.vy *= -1;
+
+          for (var j = i + 1; j < dots.length; j++) {
+            var d2 = dots[j];
+            var dx = d.x - d2.x, dy = d.y - d2.y;
+            var dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 120) {
+              ctx.strokeStyle = 'rgba(' + lineColor + ',' + (lineOpacity * (1 - dist / 120)) + ')';
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.moveTo(d.x, d.y);
+              ctx.lineTo(d2.x, d2.y);
+              ctx.stroke();
+            }
+          }
+        }
+
+        ctx.fillStyle = dotColor;
+        for (var i = 0; i < dots.length; i++) {
+          ctx.beginPath();
+          ctx.arc(dots[i].x, dots[i].y, 1.5, 0, 7);
+          ctx.fill();
+        }
+
+        requestAnimationFrame(draw);
+      }
+
+      init(); draw();
+      var resizeTimer;
+      window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(init, 200);
+      });
+    })();
+
+    /* ── 6. Cursor glow trail ── */
+    (function cursorGlow() {
+      if (window.matchMedia('(hover: none)').matches) return;
+      var glow = document.getElementById('cursor-glow');
+      if (!glow) return;
+      document.addEventListener('mousemove', function(e) {
+        glow.style.left = e.clientX + 'px';
+        glow.style.top = e.clientY + 'px';
+      });
+    })();
+
+  })();
+  </script>
 </body>
 </html>
