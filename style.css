@@ -709,7 +709,8 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .bio-row:last-child { border-bottom: none; }
 .bio-row span { font-family: var(--mono); font-size: 12px; color: var(--gray-dim); }
 .bio-row b { font-size: 14px; }
-.now-badge { font-family: var(--mono); font-size: 12px; color: #34d399; }
+.now-badge { font-family: var(--mono); font-size: 12px; color: #34d399; display: inline-flex; align-items: center; gap: 6px; }
+.now-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #34d399; box-shadow: 0 0 6px #34d399; animation: pulse 2s ease-in-out infinite; flex-shrink: 0; }
 
 .stack-card { padding: 22px; }
 .stack-label { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); margin-bottom: 14px; }
@@ -749,7 +750,7 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
   padding: 16px; border-radius: 18px; border: 1px solid var(--border);
   background: rgba(255,255,255,0.02); transition: all 0.22s ease;
 }
-.skill-item:hover { border-color: var(--border-hover); transform: translateY(-3px); background: rgba(255,255,255,0.05); }
+.skill-item:hover { border-color: var(--border-hover); transform: translateY(-3px); background: rgba(255,255,255,0.05); border-left: 3px solid var(--accent); }
 .skill-item-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .skill-item-icon { font-family: 'Material Symbols Outlined', var(--mono); font-size: 20px; color: var(--accent); }
 .skill-item-name { font-weight: 700; font-size: 15px; }
@@ -764,7 +765,7 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
   transition: all 0.3s cubic-bezier(0.22,1,0.36,1); display: flex; flex-direction: column;
   position: relative;
 }
-.project-card:hover { border-color: var(--border-hover); transform: translateY(-5px); box-shadow: 0 16px 50px rgba(0,0,0,0.5); }
+.project-card:hover { border-color: var(--border-hover); transform: translateY(-5px); box-shadow: 0 16px 50px rgba(0,0,0,0.5), 0 0 30px rgba(0,200,255,0.08); }
 /* Hover preview popup */
 .project-card .project-preview {
   position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%) translateY(10px);
@@ -881,7 +882,13 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
   background: rgba(12,12,12,0.5); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
 }
 html.light .interest-card { background: rgba(255,255,255,0.5); }
-.interest-icon { font-family: 'Material Symbols Outlined'; font-size: 38px; margin-bottom: 16px; color: var(--accent); font-variation-settings: 'FILL' 1; }
+html.light .interest-icon { background: rgba(100,80,220,0.08); border-color: rgba(100,80,220,0.15); }
+.interest-icon {
+  font-family: 'Material Symbols Outlined'; font-size: 38px; margin-bottom: 16px; color: var(--accent); font-variation-settings: 'FILL' 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 64px; height: 64px; border-radius: 16px;
+  background: rgba(0,200,255,0.08); border: 1px solid rgba(0,200,255,0.15);
+}
 .interest-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
 .interest-card p { font-size: 13px; color: var(--gray); line-height: 1.6; }
 
@@ -893,14 +900,14 @@ html.light .interest-card { background: rgba(255,255,255,0.5); }
   background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px;
   padding: 12px 16px; color: var(--white); font-family: inherit; font-size: 14px;
 }
-.ama-name-input:focus { outline: none; border-color: var(--accent); }
+.ama-name-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,200,255,0.1), 0 0 16px rgba(0,200,255,0.08); }
 .ama-input {
   width: 100%; min-height: 90px; resize: vertical;
   background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 16px;
   padding: 16px; color: var(--white); font-family: inherit; font-size: 15px; line-height: 1.5;
   margin-bottom: 14px;
 }
-.ama-input:focus { outline: none; border-color: var(--accent); }
+.ama-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,200,255,0.1), 0 0 16px rgba(0,200,255,0.08); }
 .ama-send { margin-bottom: 8px; }
 .ama-status { font-size: 13px; min-height: 20px; }
 .ama-status.ok { color: #34d399; }
@@ -927,7 +934,8 @@ html.light .interest-card { background: rgba(255,255,255,0.5); }
   border-radius: 18px; border: 1px solid var(--border); transition: all 0.22s ease;
 }
 .presence-link:hover { border-color: var(--border-hover); transform: translateY(-4px); background: rgba(255,255,255,0.05); }
-.presence-icon { font-family: 'Material Symbols Outlined'; font-size: 30px; color: var(--accent); font-variation-settings: 'FILL' 1; }
+.presence-icon { font-family: 'Material Symbols Outlined'; font-size: 30px; color: var(--accent); font-variation-settings: 'FILL' 1; transition: all 0.22s ease; }
+.presence-link:hover .presence-icon { color: var(--white); transform: scale(1.15); }
 .presence-name { font-size: 12px; font-weight: 600; color: var(--gray); }
 /* ============ FOOTER BAR ============ */
 .footer-bar {
@@ -1681,13 +1689,16 @@ html.light .skill-item:hover { background: rgba(0,0,0,0.05); }
 
 /* Project cards */
 html.light .project-card { background: rgba(255,255,255,0.6); }
+html.light .project-card:hover { box-shadow: 0 16px 50px rgba(0,0,0,0.08), 0 0 30px rgba(100,80,220,0.06); }
 
 /* AMA Send button + Sort pills */
 html.light .ama-card { background: rgba(255,255,255,0.6); }
 html.light .ama-sort-btn { color: var(--gray-dim); border-color: var(--border); }
 html.light .ama-sort-btn.active { background: var(--white); color: #fff; }
 html.light .ama-name-input { background: rgba(0,0,0,0.03); color: var(--white); }
+html.light .ama-name-input:focus { box-shadow: 0 0 0 3px rgba(100,80,220,0.1), 0 0 16px rgba(100,80,220,0.06); }
 html.light .ama-input { background: rgba(0,0,0,0.03); color: var(--white); }
+html.light .ama-input:focus { box-shadow: 0 0 0 3px rgba(100,80,220,0.1), 0 0 16px rgba(100,80,220,0.06); }
 html.light .ama-q { border-color: var(--border); }
 html.light .ama-vote-btn { border-color: var(--border); color: var(--gray); }
 html.light .ama-react-btn { border-color: var(--border); background: rgba(0,0,0,0.03); }
