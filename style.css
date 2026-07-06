@@ -5,11 +5,22 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-body, body * {
+/* UI chrome that shouldn't be selectable */
+nav, .topbar-pill, .topbar-nav-icons, .tb-icon-btn, .topbar-divider,
+.topbar-music-widget, .intro-overlay, .cmd-palette-overlay, .cmd-palette,
+.hero-gradient-orb, .grid-bg, .click-splash, .click-splash-inner,
+button, .btn-primary, .btn-ghost, .copy-btn, .quote-swap,
+.skill-tab, .al-tab, .ama-sort-btn, .ama-vote-btn, .ama-react-btn, .ama-send,
+.footer-bar, .footer-link, .footer-logo,
+.presence-link, .presence-icon,
+.orbit-item, .orbit-container,
+.slide-player-panel, .sp-vinyl, .sp-controls, .sp-progress-bar,
+.shortcut-overlay, .shortcut-card,
+.achievement-toast, .cursor-glow, .scroll-progress-bar,
+.back-to-top, .back-to-top-btn,
+.project-dl-btn, .project-live-btn,
+.pg-overlay, .pg-close {
   -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
-}
-input, textarea, [contenteditable] {
-  -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; user-select: text;
 }
 
 :root {
@@ -848,8 +859,7 @@ html.light .back-to-top { background: rgba(255,255,255,0.6); }
 .topbar-music-widget:hover .tb-music-tooltip { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* ============ COPY EMAIL BUTTON ============ */
-.email-wrap { display: flex; align-items: center; gap: 6px; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; user-select: text; }
-.email-wrap b { user-select: text; -webkit-user-select: text; }
+.email-wrap { display: flex; align-items: center; gap: 6px; }
 .copy-btn { font-size: 14px; color: var(--gray-dim); padding: 2px; border-radius: 6px; transition: all 0.15s ease; font-family: 'Material Symbols Outlined'; }
 .copy-btn:hover { color: var(--accent); background: rgba(0,200,255,0.1); }
 .copy-btn.copied { color: #34d399; }
