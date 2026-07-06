@@ -964,6 +964,7 @@
         answer: f.answer?.stringValue || '',
         createdAt: f.createdAt?.stringValue || '',
         answeredAt: f.answeredAt?.stringValue || '',
+        editedAt: f.editedAt?.stringValue || '',
         votes: Number(f.votes?.integerValue || f.votes?.doubleValue || 0),
         reactions: reactions
       };
@@ -997,6 +998,7 @@
             '<span class="ama-q-meta-name"><span class="material-symbols-outlined ama-q-meta-icon">person</span>' + esc(q.name || 'Anonymous') + '</span>' +
             '<span class="ama-q-meta-time"><span class="material-symbols-outlined ama-q-meta-icon">schedule</span>Asked ' + esc(formatAmaTime(q.createdAt)) + '</span>' +
             '<span class="ama-q-meta-time ama-q-meta-answered"><span class="material-symbols-outlined ama-q-meta-icon">check_circle</span>Answered ' + esc(formatAmaTime(q.answeredAt)) + '</span>' +
+            (q.editedAt ? '<span class="ama-q-meta-time ama-q-meta-edited"><span class="material-symbols-outlined ama-q-meta-icon">edit</span>Edited ' + esc(formatAmaTime(q.editedAt)) + '</span>' : '') +
           '</div>' +
           '<div class="ama-q-vote">' +
           '<button class="ama-vote-btn ' + (up ? 'voted' : '') + '" data-id="' + q.id + '" data-dir="1" title="Helpful">\u25B2</button>' +

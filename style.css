@@ -705,6 +705,8 @@ html.light .interest-card { background: rgba(255,255,255,0.5); }
 .ama-q-meta-answered { color: #34d399; opacity: 1; }
 .ama-q-meta-icon { font-size: 15px !important; font-variation-settings: 'FILL' 1, 'wght' 500, 'opsz' 20; flex-shrink: 0; }
 .ama-q-meta-answered .ama-q-meta-icon { color: #34d399; }
+.ama-q-meta-edited { color: #f59e0b; opacity: 0.85; }
+.ama-q-meta-edited .ama-q-meta-icon { color: #f59e0b; }
 .ama-q-meta-time:not(.ama-q-meta-answered) .ama-q-meta-icon { color: var(--accent); }
 
 /* ============ PRESENCE ============ */

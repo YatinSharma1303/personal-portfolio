@@ -148,6 +148,14 @@ async function answerQuestion(id, answer) {
     }
   });
 }
+async function editAnswer(id, answer) {
+  return firestore('PATCH', `${docPath(COLLECTION, id)}?${mask(['answer', 'editedAt'])}`, {
+    fields: {
+      answer: { stringValue: answer.slice(0, 1000) },
+      editedAt: { stringValue: new Date().toISOString() }
+    }
+  });
+}
 async function dismissQuestion(id) {
   return firestore('PATCH', `${docPath(COLLECTION, id)}?${mask(['dismissed', 'answered'])}`, {
     fields: { dismissed: { booleanValue: true }, answered: { booleanValue: false } }
@@ -207,6 +215,7 @@ function buildAllPageText(sorted, page) {
     lines.push('\u2502  \uD83D\uDCAC <blockquote>' + esc(q.question).slice(0, 120) + '</blockquote>');
     if (state === 'ANSWERED' && q.answer) {
       lines.push('\u2502  \u2705 <blockquote>' + esc(q.answer).slice(0, 100) + '</blockquote>');
+      if (q.editedAt) lines.push('\u2502  \u270F\uFE0F Edited ' + esc(formatTime(q.editedAt)));
     }
     if (q.votes > 0) lines.push('\u2502  \uD83D\uDC4D ' + q.votes + ' votes');
     lines.push('\u2502  \uD83C\uDD94 <code>' + esc(q.id) + '</code>');
@@ -252,6 +261,7 @@ async function sendFullDetailCard(chatId, questionId, replyToId) {
     lines.push('\u2502  \u2705 <b>Answer:</b>');
     lines.push('\u2502  <blockquote>' + esc(q.answer) + '</blockquote>');
     lines.push('\u2502  \uD83D\uDD50 Answered ' + esc(formatTime(q.answeredAt)) + ' IST');
+    if (q.editedAt) lines.push('\u2502  \u270F\uFE0F Edited ' + esc(formatTime(q.editedAt)) + ' IST');
     if (rTime) lines.push('\u2502  \u26A1 Responded in <b>' + esc(rTime) + '</b>');
   }
 
@@ -292,6 +302,7 @@ function fromFirestoreDoc(doc) {
     dismissed: !!f.dismissed?.booleanValue,
     createdAt: f.createdAt?.stringValue || '',
     answeredAt: f.answeredAt?.stringValue || '',
+    editedAt: f.editedAt?.stringValue || '',
     votes: Number(f.votes?.integerValue || f.votes?.doubleValue || 0)
   };
 }
@@ -424,6 +435,7 @@ async function sendAnsweredCard(chatId, questionId, answerText, replyToId, isUpd
   let metaLine = '';
   if (rTime) metaLine += '\n\u2502  \u26A1 Responded in <b>' + esc(rTime) + '</b>';
   if (qAge) metaLine += '\n\u2502  \uD83D\uDD50 Question was ' + esc(qAge);
+  if (q && q.editedAt) metaLine += '\n\u2502  \u270F\uFE0F Edited ' + esc(formatTime(q.editedAt)) + ' IST';
   if (qVotes > 0) metaLine += '\n\u2502  \uD83D\uDC4D ' + qVotes + ' votes';
 
   const text = [
@@ -465,6 +477,7 @@ function buildCardForQuestion(q) {
     let metaLine = '';
     if (rTime) metaLine += '\n\u2502  \u26A1 Responded in <b>' + esc(rTime) + '</b>';
     if (qAge) metaLine += '\n\u2502  \uD83D\uDD50 Question was ' + esc(qAge);
+    if (q.editedAt) metaLine += '\n\u2502  \u270F\uFE0F Edited ' + esc(formatTime(q.editedAt)) + ' IST';
     if (q.votes > 0) metaLine += '\n\u2502  \uD83D\uDC4D ' + q.votes + ' votes';
 
     const text = [
@@ -796,7 +809,7 @@ module.exports = async function handler(req, res) {
     const pending = await getEditSession(chatId);
     const pendingQuestionId = pending?.fields?.questionId?.stringValue;
     if (pendingQuestionId && !text.startsWith('/')) {
-      await answerQuestion(pendingQuestionId, text);
+      await editAnswer(pendingQuestionId, text);
       await clearEditSession(chatId);
       await sendAnsweredCard(chatId, pendingQuestionId, text, message.message_id, true);
       return res.status(200).json({ ok: true, edited: pendingQuestionId });
