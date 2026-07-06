@@ -161,6 +161,27 @@ async function dismissQuestion(id) {
     fields: { dismissed: { booleanValue: true }, answered: { booleanValue: false } }
   });
 }
+
+/* ── Retrieve a dismissed question.
+     If it has an answer → restore as ANSWED (reappears on site).
+     If no answer        → restore as UNANSWERED (goes to /pending). ── */
+async function retrieveQuestion(id) {
+  const doc = await firestore('GET', docPath(COLLECTION, id));
+  const q = fromFirestoreDoc(doc);
+  const hasAnswer = q.answer && String(q.answer).trim().length > 0;
+  if (hasAnswer) {
+    await firestore('PATCH', `${docPath(COLLECTION, id)}?${mask(['dismissed', 'answered'])}`, {
+      fields: { dismissed: { booleanValue: false }, answered: { booleanValue: true } }
+    });
+    return { restoredAs: 'answered', question: q };
+  } else {
+    await firestore('PATCH', `${docPath(COLLECTION, id)}?${mask(['dismissed'])}`, {
+      fields: { dismissed: { booleanValue: false } }
+    });
+    return { restoredAs: 'unanswered', question: q };
+  }
+}
+
 async function deleteQuestion(id) {
   return firestore('DELETE', docPath(COLLECTION, id));
 }
@@ -230,6 +251,46 @@ function buildAllPageButtons(page, pages) {
   if (page > 1) row.push({ text: '\u25C0 Previous', callback_data: 'all:' + (page - 1) });
   row.push({ text: page + ' / ' + pages, callback_data: 'all:noop' });
   if (page < pages) row.push({ text: 'Next \u25B6', callback_data: 'all:' + (page + 1) });
+  return { inline_keyboard: [row] };
+}
+
+/* ── Build one page of /dismissed list ── */
+const DISMISSED_PER_PAGE = 4;
+function buildDismissedPageText(sorted, page) {
+  const total = sorted.length;
+  const pages = Math.max(1, Math.ceil(total / DISMISSED_PER_PAGE));
+  if (page > pages) page = pages;
+  if (page < 1) page = 1;
+  const start = (page - 1) * DISMISSED_PER_PAGE;
+  const slice = sorted.slice(start, start + DISMISSED_PER_PAGE);
+  const lines = [
+    '\u250C\u2500\uD83D\uDE48 <b>DISMISSED QUESTIONS</b> (' + total + ') \u2500 Page ' + page + '/' + pages + '\u2500\u2500\u2500\u2510',
+    '\u2502'
+  ];
+  for (let i = 0; i < slice.length; i++) {
+    const q = slice[i];
+    const hasAnswer = q.answer && String(q.answer).trim().length > 0;
+    const tag = hasAnswer ? 'WAS ANSWERED' : 'WAS UNANSWERED';
+    const tagEmoji = hasAnswer ? '\uD83D\uDCDD' : '\u23F3';
+    const qAge = timeAgo(q.createdAt);
+    lines.push('\u2502  ' + tagEmoji + ' <b>[' + tag + ']</b> ' + esc(q.name) + (qAge ? ' \u00B7 ' + esc(qAge) : ''));
+    lines.push('\u2502  \uD83D\uDCAC <blockquote>' + esc(q.question).slice(0, 120) + '</blockquote>');
+    if (hasAnswer) {
+      lines.push('\u2502  \u2705 Answer: <blockquote>' + esc(q.answer).slice(0, 80) + '</blockquote>');
+    }
+    if (q.votes > 0) lines.push('\u2502  \uD83D\uDC4D ' + q.votes + ' votes');
+    lines.push('\u2502  \uD83C\uDD94 <code>' + esc(q.id) + '</code>');
+    lines.push('\u2502');
+  }
+  lines.push('\u2502  <i>Use /retrieve id to restore \u00B7 /retrieveall for all</i>');
+  lines.push('\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518');
+  return { text: lines.join('\n'), pages, page };
+}
+function buildDismissedPageButtons(page, pages) {
+  const row = [];
+  if (page > 1) row.push({ text: '\u25C0 Prev', callback_data: 'dismissed:' + (page - 1) });
+  row.push({ text: page + ' / ' + pages, callback_data: 'dismissed:noop' });
+  if (page < pages) row.push({ text: 'Next \u25B6', callback_data: 'dismissed:' + (page + 1) });
   return { inline_keyboard: [row] };
 }
 
@@ -506,20 +567,29 @@ function buildCardForQuestion(q) {
   }
 
   if (state === 'DISMISSED') {
+    const hasAnswer = q.answer && String(q.answer).trim().length > 0;
+    const tag = hasAnswer ? '\uD83D\uDCDD Was answered (retrieve restores to site)' : '\u23F3 Was unanswered (retrieve restores to pending)';
+    const answerLines = hasAnswer
+      ? ['\u2502', '\u2502  \u2705 <b>Previous answer:</b>', '\u2502  <blockquote>' + esc(q.answer) + '</blockquote>']
+      : [];
     const text = [
       '\u250C\u2500\uD83D\uDE48 <b>QUESTION DISMISSED</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510',
       '\u2502',
+      '\u2502  ' + tag,
+      '\u2502',
       '\u2502  \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:',
       '\u2502  <blockquote>' + esc(q.question) + '</blockquote>',
-      '\u2502',
+      '\u2502'
+    ].concat(answerLines).concat([
       '\u2502  This question is hidden from your site.',
-      '\u2502  Data is safely preserved.',
+      '\u2502  \u21A9\uFE0F Use <b>Retrieve</b> to restore it.',
       '\u2502',
       '\u2502  \uD83C\uDD94 <code>' + esc(q.id) + '</code>',
       '\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
-    ].join('\n');
+    ]).join('\n');
     const replyMarkup = {
       inline_keyboard: [
+        [{ text: '\u21A9\uFE0F  Retrieve', callback_data: 'retrieve:' + q.id }],
         [{ text: '\uD83D\uDCAC  Answer', callback_data: 'answer:' + q.id }],
         [{ text: '\u270F\uFE0F  Edit Answer', callback_data: 'edit:' + q.id }],
         [
@@ -568,6 +638,11 @@ const HELP_TEXT = [
   '\u2502  \u2022 <b>/pending</b> \u2500 Unanswered questions',
   '\u2502  \u2022 <b>/refresh</b> \u2500 Unanswered + dismissed',
   '\u2502  \u2022 <b>/deleteall</b> \u2500 Delete all questions',
+  '\u2502',
+  '\u2502  <b>\uD83D\uDE48 Dismissed & Retrieve</b>',
+  '\u2502  \u2022 <b>/dismissed</b> \u2500 Browse dismissed questions',
+  '\u2502  \u2022 <b>/retrieve id</b> \u2500 Restore a dismissed Q',
+  '\u2502  \u2022 <b>/retrieveall</b> \u2500 Restore all dismissed Qs',
   '\u2502',
   '\u2502  <b>\uD83D\uDD0D Lookup & Browse</b>',
   '\u2502  \u2022 <b>/all</b> \u2500 Browse all Q&A (tap ID to copy)',
@@ -682,7 +757,16 @@ module.exports = async function handler(req, res) {
           await dismissQuestion(questionId);
           await answerCallback(callback.id, '\uD83D\uDE48 Dismissed');
           await editMessage(cbChatId, cbMessageId,
-            '\u250C\u2500\uD83D\uDE48 <b>QUESTION DISMISSED</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  This question has been hidden\n\u2502  from your website.\n\u2502\n\u2502  Data is safely preserved.\n\u2502\n\u2502  \uD83C\uDD94 <code>' + esc(questionId) + '</code>\n\u2502  \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
+            '\u250C\u2500\uD83D\uDE48 <b>QUESTION DISMISSED</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  This question has been hidden\n\u2502  from your website.\n\u2502\n\u2502  Data is safely preserved.\n\u2502  \u21A9\uFE0F Use <b>Retrieve</b> to restore it.\n\u2502\n\u2502  \uD83C\uDD94 <code>' + esc(questionId) + '</code>\n\u2502  \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518',
+            { inline_keyboard: [
+              [{ text: '\u21A9\uFE0F  Retrieve', callback_data: 'retrieve:' + questionId }],
+              [{ text: '\uD83D\uDCAC  Answer', callback_data: 'answer:' + questionId }],
+              [{ text: '\u270F\uFE0F  Edit Answer', callback_data: 'edit:' + questionId }],
+              [
+                { text: '\uD83D\uDE48  Dismiss', callback_data: 'dismiss:' + questionId },
+                { text: '\uD83D\uDDD1  Delete', callback_data: 'delete:' + questionId }
+              ]
+            ] }
           );
         } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not dismiss'); }
       }
@@ -728,6 +812,77 @@ module.exports = async function handler(req, res) {
         await answerCallback(callback.id, 'Cancelled');
         await editMessage(cbChatId, cbMessageId,
           '\u250C\u2500\u2705 <b>CANCELLED</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  All questions are safe.\n\u2502  Nothing was deleted.\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
+        );
+      }
+      /* ── RETRIEVE a dismissed question (inline button or /retrieve) ── */
+      else if (action === 'retrieve') {
+        try {
+          const result = await retrieveQuestion(questionId);
+          const q = result.question;
+          // Update local state for buildCardForQuestion
+          q.dismissed = false;
+          if (result.restoredAs === 'answered') q.answered = true;
+
+          if (result.restoredAs === 'answered') {
+            await answerCallback(callback.id, '\u21A9\uFE0F Retrieved & published');
+            // Build answered card with the original answer
+            q.dismissed = false;
+            q.answered = true;
+            const { text, replyMarkup } = buildCardForQuestion(q);
+            await editMessage(cbChatId, cbMessageId, text, replyMarkup);
+            await sendTelegram(cbChatId,
+              '\u250C\u2500\u21A9\uFE0F <b>RETRIEVED & PUBLISHED</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:\n\u2502  <blockquote>' + esc(q.question) + '</blockquote>\n\u2502\n\u2502  \uD83D\uDCAC <b>Your answer:</b>\n\u2502  <blockquote>' + esc(q.answer) + '</blockquote>\n\u2502\n\u2502  \u2705 This question is back on your site.\n\u2502\n\u2502  \uD83C\uDD94 <code>' + esc(q.id) + '</code>\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
+            );
+          } else {
+            await answerCallback(callback.id, '\u21A9\uFE0F Retrieved to pending');
+            q.dismissed = false;
+            q.answered = false;
+            const { text, replyMarkup } = buildCardForQuestion(q);
+            await editMessage(cbChatId, cbMessageId, text, replyMarkup);
+            await sendTelegram(cbChatId,
+              '\u250C\u2500\u21A9\uFE0F <b>RETRIEVED</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:\n\u2502  <blockquote>' + esc(q.question) + '</blockquote>\n\u2502\n\u2502  This question is back in your\n\u2502  pending queue. Reply to answer it.\n\u2502\n\u2502  \uD83C\uDD94 <code>' + esc(q.id) + '</code>\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
+            );
+          }
+        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not retrieve. Is it dismissed?'); }
+      }
+      /* ── Pagination for /dismissed list ── */
+      else if (action === 'dismissed') {
+        if (questionId === 'noop') { await answerCallback(callback.id, ''); return res.status(200).json({ ok: true, callback: action }); }
+        const page = parseInt(questionId, 10) || 1;
+        try {
+          const all = await listAllQuestions();
+          const dismissed = all.filter(q => questionState(q) === 'DISMISSED')
+                               .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+          const { text, pages } = buildDismissedPageText(dismissed, page);
+          await answerCallback(callback.id, 'Page ' + page + '/' + pages);
+          await editMessage(cbChatId, cbMessageId, text, buildDismissedPageButtons(page, pages));
+        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Error loading page'); }
+      }
+      /* ── Confirm retrieve all ── */
+      else if (action === 'confirmretrieveall') {
+        try {
+          const all = await listAllQuestions();
+          const dismissed = all.filter(q => questionState(q) === 'DISMISSED');
+          let toPending = 0, toSite = 0;
+          for (const q of dismissed) {
+            const hasAnswer = q.answer && String(q.answer).trim().length > 0;
+            if (hasAnswer) toSite++; else toPending++;
+            await retrieveQuestion(q.id);
+          }
+          await answerCallback(callback.id, '\u21A9\uFE0F All retrieved!');
+          await editMessage(cbChatId, cbMessageId,
+            '\u250C\u2500\u2705 <b>ALL RETRIEVED</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  All dismissed questions have been\n\u2502  restored successfully.\n\u2502\n' +
+            (toPending > 0 ? '\u2502  \u23F3 <b>' + toPending + '</b> restored to pending queue\n' : '') +
+            (toSite > 0 ? '\u2502  \u2705 <b>' + toSite + '</b> restored to site (with answers)\n' : '') +
+            '\u2502\n\u2502  \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
+          );
+        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Retrieve all failed'); }
+      }
+      /* ── Cancel retrieve all ── */
+      else if (action === 'cancelretrieveall') {
+        await answerCallback(callback.id, 'Cancelled');
+        await editMessage(cbChatId, cbMessageId,
+          '\u250C\u2500\u2705 <b>CANCELLED</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  All questions remain dismissed.\n\u2502  Nothing was changed.\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
         );
       }
       else {
@@ -843,6 +998,111 @@ module.exports = async function handler(req, res) {
         { inline_keyboard: [[
           { text: '\u2705 Confirm Delete All', callback_data: 'confirmdeleteall' },
           { text: '\u274C Cancel', callback_data: 'canceldeleteall' }
+        ]] }
+      );
+      return res.status(200).json({ ok: true });
+    }
+
+    /* /dismissed — list all dismissed questions with IDs */
+    if (command === '/dismissed') {
+      const all = await listAllQuestions();
+      const dismissed = all.filter(q => questionState(q) === 'DISMISSED')
+                           .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      if (!dismissed.length) {
+        await sendTelegram(chatId,
+          '\u250C\u2500\u2705 <b>NO DISMISSED QUESTIONS</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  No questions have been dismissed.\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518',
+          message.message_id);
+        return res.status(200).json({ ok: true });
+      }
+      const { text, pages, page } = buildDismissedPageText(dismissed, 1);
+      const buttons = buildDismissedPageButtons(page, pages);
+      await sendTelegram(chatId, text, message.message_id, buttons);
+      return res.status(200).json({ ok: true });
+    }
+
+    /* /retrieve <id> — retrieve a specific dismissed question */
+    if (command === '/retrieve') {
+      const qid = text.split(/\s+/)[1];
+      if (!qid) {
+        await sendTelegram(chatId,
+          '\u250C\u2500\uD83D\uDCA1 <b>TIP</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  Send a question ID to retrieve it.\n\u2502\n\u2502  Example:\n\u2502  <code>/retrieve a1b2c3d4-e5f6-...</code>\n\u2502\n\u2502  Use /dismissed to browse all\n\u2502  dismissed question IDs.\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518',
+          message.message_id);
+        return res.status(200).json({ ok: true });
+      }
+      try {
+        // First check if the question exists and is actually dismissed
+        const q = await getQuestion(qid);
+        if (!q) {
+          await sendTelegram(chatId,
+            '\u250C\u2500\u26A0\uFE0F <b>NOT FOUND</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  No question found with that ID.\n\u2502\n\u2502  \uD83C\uDD94 <code>' + esc(qid) + '</code>\n\u2502\n\u2502  Use /dismissed to browse IDs.\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518',
+            message.message_id);
+          return res.status(200).json({ ok: true });
+        }
+        if (questionState(q) !== 'DISMISSED') {
+          const currentState = questionState(q);
+          await sendTelegram(chatId,
+            '\u250C\u2500\u26A0\uFE0F <b>NOT DISMISSED</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  This question is not dismissed.\n\u2502  Current state: <b>' + currentState + '</b>\n\u2502\n\u2502  Only dismissed questions can\n\u2502  be retrieved.\n\u2502\n\u2502  \uD83C\uDD94 <code>' + esc(qid) + '</code>\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518',
+            message.message_id);
+          return res.status(200).json({ ok: true });
+        }
+        const result = await retrieveQuestion(qid);
+        if (result.restoredAs === 'answered') {
+          await sendTelegram(chatId,
+            '\u250C\u2500\u21A9\uFE0F <b>RETRIEVED & PUBLISHED</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:\n\u2502  <blockquote>' + esc(q.question) + '</blockquote>\n\u2502\n\u2502  \uD83D\uDCAC <b>Previous answer:</b>\n\u2502  <blockquote>' + esc(q.answer) + '</blockquote>\n\u2502\n\u2502  \u2705 This question is back on your site\n\u2502  with its original answer.\n\u2502\n\u2502  \uD83C\uDD94 <code>' + esc(qid) + '</code>\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518',
+            message.message_id,
+            { inline_keyboard: [
+              [{ text: '\u270F\uFE0F  Edit Answer', callback_data: 'edit:' + qid }],
+              [
+                { text: '\uD83D\uDE48  Dismiss', callback_data: 'dismiss:' + qid },
+                { text: '\uD83D\uDDD1  Delete', callback_data: 'delete:' + qid }
+              ]
+            ] }
+          );
+        } else {
+          await sendTelegram(chatId,
+            '\u250C\u2500\u21A9\uFE0F <b>RETRIEVED</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:\n\u2502  <blockquote>' + esc(q.question) + '</blockquote>\n\u2502\n\u2502  This question is back in your\n\u2502  pending queue. Reply to answer it.\n\u2502\n\u2502  \uD83C\uDD94 <code>' + esc(qid) + '</code>\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518',
+            message.message_id,
+            { inline_keyboard: [
+              [{ text: '\uD83D\uDCAC  Answer', callback_data: 'answer:' + qid }],
+              [
+                { text: '\uD83D\uDE48  Dismiss', callback_data: 'dismiss:' + qid },
+                { text: '\uD83D\uDDD1  Delete', callback_data: 'delete:' + qid }
+              ]
+            ] }
+          );
+        }
+        return res.status(200).json({ ok: true, retrieved: qid });
+      } catch (e) {
+        await sendTelegram(chatId,
+          '\u250C\u2500\u26A0\uFE0F <b>RETRIEVE FAILED</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  Could not retrieve the question.\n\u2502  Check the ID and try again.\n\u2502\n\u2502  \uD83C\uDD94 <code>' + esc(qid) + '</code>\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518',
+          message.message_id);
+        return res.status(200).json({ ok: true });
+      }
+    }
+
+    /* /retrieveall — retrieve all dismissed questions with confirmation */
+    if (command === '/retrieveall') {
+      const all = await listAllQuestions();
+      const dismissed = all.filter(q => questionState(q) === 'DISMISSED');
+      if (!dismissed.length) {
+        await sendTelegram(chatId,
+          '\u250C\u2500\u2705 <b>NOTHING TO RETRIEVE</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  No dismissed questions found.\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518',
+          message.message_id);
+        return res.status(200).json({ ok: true });
+      }
+      // Count how many had answers vs not
+      const withAnswer = dismissed.filter(q => q.answer && String(q.answer).trim().length > 0).length;
+      const withoutAnswer = dismissed.length - withAnswer;
+      let detailLine = '\u2502  <b>' + dismissed.length + '</b> dismissed question' + (dismissed.length === 1 ? '' : 's') + ' will be restored.';
+      if (withAnswer > 0) detailLine += '\n\u2502  \u2705 ' + withAnswer + ' will go back on site (have answers)';
+      if (withoutAnswer > 0) detailLine += '\n\u2502  \u23F3 ' + withoutAnswer + ' will go to pending queue (no answers)';
+
+      await sendTelegram(chatId,
+        '\u250C\u2500\u21A9\uFE0F <b>CONFIRM RETRIEVE ALL</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n' + detailLine + '\n\u2502\n\u2502  \u21A9\uFE0F This will restore them all.\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518',
+        message.message_id,
+        { inline_keyboard: [[
+          { text: '\u2705 Confirm Retrieve All', callback_data: 'confirmretrieveall' },
+          { text: '\u274C Cancel', callback_data: 'cancelretrieveall' }
         ]] }
       );
       return res.status(200).json({ ok: true });
