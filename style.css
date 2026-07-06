@@ -320,7 +320,7 @@ html.light .tb-icon-btn.active svg { filter: drop-shadow(0 0 6px rgba(100,80,220
 /* PLAYING: disc slides LEFT — peeks out from sleeve's left edge, spins */
 #tb-music-disc.playing .tb-cd-disc {
   left: 0;
-  margin-left: -13px;
+  margin-left: -8px;
   animation: miniSpin 3s linear infinite;
   box-shadow: -2px 0 8px rgba(0,200,255,0.3);
 }
@@ -329,7 +329,8 @@ html.light .tb-icon-btn.active svg { filter: drop-shadow(0 0 6px rgba(100,80,220
 
 .topbar-music-widget {
   display: flex; align-items: center; gap: 8px;
-  padding: 6px 12px 6px 8px; border-radius: var(--radius-btn);
+  padding: 6px 12px 6px 14px; border-radius: var(--radius-btn);
+  position: relative;
 }
 .topbar-music-widget:hover { background: rgba(255,255,255,0.06); }
 
@@ -525,7 +526,8 @@ html.light .theme-toggle .icon-sun { display: block; }
 .slide-player-panel.playing .sp-icon-pause { display: block; }
 
 /* Minimal Footer (Volume + YT) */
-.sp-footer { margin-top: auto; display: flex; align-items: center; gap: 15px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); }
+/* Volume + YT link (above play button) */
+.sp-toolbar { display: flex; align-items: center; gap: 15px; padding-top: 4px; }
 .sp-vol-slider { flex: 1; -webkit-appearance: none; appearance: none; height: 2px; border-radius: 2px; background: rgba(255,255,255,0.15); outline: none; }
 .sp-vol-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #fff; cursor: pointer; box-shadow: 0 0 6px var(--accent); }
 .sp-vol-slider::-moz-range-thumb { width: 12px; height: 12px; border: none; border-radius: 50%; background: #fff; cursor: pointer; }
