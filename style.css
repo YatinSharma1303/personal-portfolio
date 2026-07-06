@@ -1358,7 +1358,7 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
   display: flex; align-items: center; gap: 6px;
 }
 html.light .visitor-badge { background: rgba(255,255,255,0.6); }
-.visitor-badge::before { content: '\1F465'; font-size: 13px; }
+.visitor-badge::before { content: 'group'; font-family: 'Material Symbols Outlined'; font-size: 14px; color: var(--accent); font-variation-settings: 'FILL' 1, 'wght' 400, 'opsz' 24; }
 @keyframes visitorFadeIn { to { opacity: 0.8; } }
 @media (max-width: 600px) {
   .visitor-badge { bottom: 14px; font-size: 10px; padding: 6px 12px; }
@@ -1617,6 +1617,10 @@ html.light .term-caret { color: var(--accent); }
 html.light .cmd-palette { background: rgba(255,255,255,0.98); border-color: rgba(0,0,0,0.1); }
 html.light .cmd-input { color: #000; }
 html.light .cmd-item.selected, html.light .cmd-item:hover { background: rgba(0,0,0,0.05); }
+html.light .cmd-footer { color: #555566; border-top-color: rgba(0,0,0,0.08); }
+html.light .cmd-footer kbd { background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.1); color: #44445a; }
+html.light .cmd-hint { color: #777788; }
+html.light .cmd-esc-kbd { background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.1); color: #44445a; }
 
 html.light .cursor-glow { background: radial-gradient(circle, rgba(100,80,220,0.1), transparent 60%); }
 
