@@ -1404,6 +1404,9 @@ html.light .intro-char.scrambling { color: var(--accent); text-shadow: 0 0 20px 
 html.light .intro-char.locked { color: var(--white); text-shadow: none; }
 html.light .intro-progress-bar { background: rgba(0,0,0,0.06); }
 html.light .intro-progress-fill { box-shadow: 0 0 12px rgba(100,80,220,0.2); }
+html.light .intro-topbar { color: var(--gray); }
+html.light .intro-tag { color: var(--gray-dim); }
+html.light .intro-dot { background: #059669; box-shadow: 0 0 8px rgba(5,150,105,0.5); }
 
 /* Hero "View Projects" button */
 html.light .btn-primary { background: var(--white); color: #fff; }

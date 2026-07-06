@@ -67,13 +67,30 @@
     const percentEl = $('intro-percent');
     const fillEl = $('intro-progress-fill');
     const designedEl = $('intro-designed');
+    const statusText = $('intro-status-text');
+    const timeEl = $('intro-time');
     const chars = overlay.querySelectorAll('.intro-char');
     const TARGET = ['Y','A','T','I','N'];
-    const SCRAMBLE = '!@#$%&*?/\\|0123456789▓▒░█▄▀■□◇◆'.split('');
+    const SCRAMBLE = '!@#$%&*?/\\\|0123456789\u2593\u2592\u2591\u2588\u2584\u2580\u25A0\u25A1\u25C7\u25C6'.split('');
+    const STATUS_MSGS = [
+      { at: 0, text: 'compiling portfolio' },
+      { at: 25, text: 'loading assets' },
+      { at: 50, text: 'initializing modules' },
+      { at: 75, text: 'rendering interface' },
+      { at: 95, text: 'system ready' }
+    ];
     const DURATION = 1800;
     const HARD = 5000;
     const startTime = performance.now();
     let fontsReady = false, rafId = null, scrambleId = null;
+    let lastStatusIdx = -1;
+
+    // Live clock in top-right
+    function updateClock() {
+      if (timeEl) timeEl.textContent = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+    updateClock();
+    const clockId = setInterval(updateClock, 1000);
 
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(() => { fontsReady = true; }).catch(() => { fontsReady = true; });
@@ -107,6 +124,15 @@
       const pct = canFinish ? timePct : Math.min(99, timePct);
       if (percentEl) percentEl.textContent = Math.floor(pct) + '%';
       if (fillEl) fillEl.style.width = Math.floor(pct) + '%';
+      // Update status text based on progress
+      const floorPct = Math.floor(pct);
+      for (let i = STATUS_MSGS.length - 1; i >= 0; i--) {
+        if (floorPct >= STATUS_MSGS[i].at && lastStatusIdx !== i) {
+          if (statusText) statusText.textContent = STATUS_MSGS[i].text;
+          lastStatusIdx = i;
+          break;
+        }
+      }
       if (pct >= 100 && canFinish) { ready(); return; }
       rafId = requestAnimationFrame(updateProgress);
     }
@@ -172,6 +198,7 @@
     function dismiss() {
       if (dismissed || !done) return;
       dismissed = true;
+      clearInterval(clockId);
       playWhoosh();
       shatter();
       // Delay the slide-up slightly so shatter is visible
