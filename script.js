@@ -23,6 +23,9 @@
     timezone: 'Asia/Kolkata'
   };
 
+  /* ── EMAIL (not in HTML to avoid Cloudflare obfuscation) ── */
+  const EMAIL = ['yatinsharma1303','gmail.com'].join('@');
+
   const $ = (id) => document.getElementById(id);
   const esc = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -638,7 +641,7 @@
     const grid = $('presence-grid'); if (!grid) return;
     const LINKS = [
       { icon: 'code', name: 'GitHub', url: 'https://github.com/YatinSharma1303' },
-      { icon: 'mail', name: 'Email', url: 'mailto:yatinsharma1303@gmail.com' },
+      { icon: 'mail', name: 'Email', url: 'mailto:' + EMAIL },
       { icon: 'library_music', name: 'Last.fm', url: 'https://www.last.fm/user/YATINSHARMA' },
       { icon: 'live_tv', name: 'AniList', url: 'https://anilist.co/user/YatinSharma1303/' }
     ];
@@ -888,24 +891,36 @@
   })();
 
   /* ============================================================
-     18. COPY EMAIL BUTTON
+     18. EMAIL — inject into DOM (not in HTML to dodge Cloudflare obfuscation)
      ============================================================ */
-  (function copyEmail() {
-    const btn = $('copy-email'); if (!btn) return;
-    btn.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText('yatinsharma1303@gmail.com');
-        btn.classList.add('copied');
-        const orig = btn.textContent;
-        btn.textContent = 'check';
-        setTimeout(() => { btn.classList.remove('copied'); btn.textContent = orig; }, 1800);
-      } catch (e) {
-        // Fallback
-        const t = document.createElement('textarea'); t.value = 'yatinsharma1303@gmail.com';
-        document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (er) {} document.body.removeChild(t);
-        btn.classList.add('copied'); setTimeout(() => btn.classList.remove('copied'), 1800);
-      }
-    });
+  (function setupEmail() {
+    // Populate bio card email text
+    const emailDisplay = $('email-display');
+    if (emailDisplay) emailDisplay.textContent = EMAIL;
+
+    // Wire footer mailto link
+    const footerLink = $('footer-email-link');
+    if (footerLink) footerLink.href = 'mailto:' + EMAIL;
+
+    // Copy button
+    function wireCopyButton(btn) {
+      if (!btn) return;
+      btn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(EMAIL);
+          btn.classList.add('copied');
+          const orig = btn.textContent;
+          btn.textContent = 'check';
+          setTimeout(() => { btn.classList.remove('copied'); btn.textContent = orig; }, 1800);
+        } catch (e) {
+          // Fallback
+          const t = document.createElement('textarea'); t.value = EMAIL;
+          document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (er) {} document.body.removeChild(t);
+          btn.classList.add('copied'); setTimeout(() => btn.classList.remove('copied'), 1800);
+        }
+      });
+    }
+    wireCopyButton($('copy-email'));
   })();
 
 
