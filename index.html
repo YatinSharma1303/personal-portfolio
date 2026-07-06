@@ -621,10 +621,17 @@
   <!-- ============ COMMAND PALETTE (Cmd+K) ============ -->
   <div class="cmd-palette-overlay" id="cmd-overlay">
     <div class="cmd-palette" id="cmd-palette">
-      <div class="cmd-input-wrap">
-        <span class="material-symbols-outlined cmd-search-icon">search</span>
-        <input type="text" class="cmd-input" id="cmd-input" placeholder="Search commands... (type to filter, Enter to run)" autocomplete="off" spellcheck="false"/>
-        <kbd>ESC</kbd>
+      <div class="cmd-input-wrap" id="cmd-input-wrap">
+        <button class="cmd-search-toggle" id="cmd-search-toggle" title="Search" aria-label="Expand search">
+          <span class="material-symbols-outlined">search</span>
+        </button>
+        <div class="cmd-input-bar" id="cmd-input-bar">
+          <input type="text" class="cmd-input" id="cmd-input" placeholder="Search commands..." autocomplete="off" spellcheck="false"/>
+          <button class="cmd-submit-btn" id="cmd-submit-btn" title="Show results" aria-label="Search">
+            <span class="material-symbols-outlined">manage_search</span>
+          </button>
+        </div>
+        <kbd class="cmd-esc-kbd">ESC</kbd>
       </div>
       <div class="cmd-results" id="cmd-results"></div>
       <div class="cmd-footer">
@@ -637,5 +644,5 @@
 
   <script src="script.js"></script>
   <script src="games.js"></script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a17123840bba3b61',t:'MTc4MzM2NzQyOQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a1712f115d74e3e2',t:'MTc4MzM2NzkwMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

@@ -1549,7 +1549,28 @@
     const overlay = $('cmd-overlay');
     const input = $('cmd-input');
     const results = $('cmd-results');
+    const searchToggle = $('cmd-search-toggle');
+    const inputBar = $('cmd-input-bar');
+    const inputWrap = $('cmd-input-wrap');
+    const submitBtn = $('cmd-submit-btn');
     if (!overlay || !input || !results) return;
+
+    let searchExpanded = false;
+
+    function expandSearch() {
+      if (searchExpanded) return;
+      searchExpanded = true;
+      if (inputWrap) inputWrap.classList.add('expanded');
+      if (inputBar) inputBar.classList.add('expanded');
+      setTimeout(() => input.focus(), 300);
+    }
+
+    function collapseSearch() {
+      searchExpanded = false;
+      if (inputWrap) inputWrap.classList.remove('expanded');
+      if (inputBar) inputBar.classList.remove('expanded');
+      input.value = '';
+    }
 
     const COMMANDS = [
       { icon: 'home', label: 'Go to Home', hint: 'G', action: () => document.getElementById('hero')?.scrollIntoView({ behavior: 'smooth' }) },
@@ -1577,13 +1598,19 @@
 
     function open() {
       overlay.classList.add('open');
-      input.value = '';
       filtered = COMMANDS.slice();
       selectedIndex = 0;
       render();
-      setTimeout(() => input.focus(), 50);
+      // Start collapsed — user clicks search icon to expand
+      searchExpanded = false;
+      if (inputWrap) inputWrap.classList.remove('expanded');
+      if (inputBar) inputBar.classList.remove('expanded');
+      input.value = '';
     }
-    function close() { overlay.classList.remove('open'); }
+    function close() {
+      overlay.classList.remove('open');
+      collapseSearch();
+    }
 
     function render() {
       results.innerHTML = filtered.map((cmd, i) => 
@@ -1627,7 +1654,7 @@
       // Cmd+K / Ctrl+K
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        overlay.classList.contains('open') ? close() : open();
+        if (overlay.classList.contains('open')) { close(); } else { open(); }
         return;
       }
       if (!overlay.classList.contains('open')) return;
@@ -1635,11 +1662,20 @@
       if (e.key === 'Escape') { e.preventDefault(); close(); }
       else if (e.key === 'ArrowDown') { e.preventDefault(); selectedIndex = Math.min(filtered.length - 1, selectedIndex + 1); updateSelected(); }
       else if (e.key === 'ArrowUp') { e.preventDefault(); selectedIndex = Math.max(0, selectedIndex - 1); updateSelected(); }
-      else if (e.key === 'Enter') { e.preventDefault(); execute(selectedIndex); }
+      else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (!searchExpanded) { expandSearch(); return; }
+        execute(selectedIndex);
+      }
+      else if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        // Printable char while collapsed → expand + let input handle it
+        if (!searchExpanded) expandSearch();
+      }
     });
 
-    // Search filter
+    // Search filter — auto-expand on first keystroke
     input.addEventListener('input', () => {
+      if (!searchExpanded) expandSearch();
       const q = input.value.toLowerCase().trim();
       filtered = q ? COMMANDS.filter(c => c.label.toLowerCase().includes(q)) : COMMANDS.slice();
       selectedIndex = 0;
@@ -1648,6 +1684,19 @@
 
     // Click outside to close
     overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+    // Search toggle: click icon to expand search bar
+    if (searchToggle) searchToggle.addEventListener('click', expandSearch);
+
+    // Submit button: trigger search and focus first result
+    if (submitBtn) submitBtn.addEventListener('click', () => {
+      const q = input.value.toLowerCase().trim();
+      filtered = q ? COMMANDS.filter(c => c.label.toLowerCase().includes(q)) : COMMANDS.slice();
+      selectedIndex = 0;
+      render();
+      // Focus the results area so keyboard navigation works
+      if (filtered.length) results.querySelector('.cmd-item')?.focus();
+    });
   })();
 
 
