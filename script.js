@@ -124,10 +124,10 @@
       const pct = canFinish ? timePct : Math.min(99, timePct);
       if (percentEl) percentEl.textContent = Math.floor(pct) + '%';
       if (fillEl) fillEl.style.width = Math.floor(pct) + '%';
-      // Update status text based on progress
+      // Update status text based on progress (only forward)
       const floorPct = Math.floor(pct);
       for (let i = STATUS_MSGS.length - 1; i >= 0; i--) {
-        if (floorPct >= STATUS_MSGS[i].at && lastStatusIdx !== i) {
+        if (floorPct >= STATUS_MSGS[i].at && lastStatusIdx < i) {
           if (statusText) statusText.textContent = STATUS_MSGS[i].text;
           lastStatusIdx = i;
           break;
@@ -143,6 +143,7 @@
       if (rafId) cancelAnimationFrame(rafId);
       if (percentEl) percentEl.textContent = '100%';
       if (fillEl) fillEl.style.width = '100%';
+      if (statusText) statusText.textContent = 'system ready';
 
       // Lock remaining chars in sequence
       if (scrambleId) clearInterval(scrambleId);
