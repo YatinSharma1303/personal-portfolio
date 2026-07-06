@@ -567,6 +567,7 @@ const HELP_TEXT = [
   '\u2502  \u2022 <b>/stats</b> \u2500 Statistics dashboard',
   '\u2502  \u2022 <b>/pending</b> \u2500 Unanswered questions',
   '\u2502  \u2022 <b>/refresh</b> \u2500 Unanswered + dismissed',
+  '\u2502  \u2022 <b>/deleteall</b> \u2500 Delete all questions',
   '\u2502',
   '\u2502  <b>\uD83D\uDD0D Lookup & Browse</b>',
   '\u2502  \u2022 <b>/all</b> \u2500 Browse all Q&A (tap ID to copy)',
@@ -706,6 +707,29 @@ module.exports = async function handler(req, res) {
           await editMessage(cbChatId, cbMessageId, text, buildAllPageButtons(page, pages));
         } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Error loading page'); }
       }
+      else if (action === 'confirmdeleteall') {
+        try {
+          const all = await listAllQuestions();
+          const count = all.length;
+          await answerCallback(callback.id, '\uD83D\uDDD1 Deleting...');
+          await editMessage(cbChatId, cbMessageId,
+            '\u250C\u2500\uD83D\uDDD1 <b>DELETING ALL...</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  Removing ' + count + ' questions...\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
+          );
+          let deleted = 0;
+          for (const q of all) {
+            try { await deleteQuestion(q.id); deleted++; } catch (e) {}
+          }
+          await editMessage(cbChatId, cbMessageId,
+            '\u250C\u2500\u2705 <b>ALL DELETED</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  Successfully deleted <b>' + deleted + '</b> question' + (deleted === 1 ? '' : 's') + '.\n\u2502\n\u2502  \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
+          );
+        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Delete all failed'); }
+      }
+      else if (action === 'canceldeleteall') {
+        await answerCallback(callback.id, 'Cancelled');
+        await editMessage(cbChatId, cbMessageId,
+          '\u250C\u2500\u2705 <b>CANCELLED</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  All questions are safe.\n\u2502  Nothing was deleted.\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
+        );
+      }
       else {
         await answerCallback(callback.id, 'Unknown action');
       }
@@ -802,6 +826,25 @@ module.exports = async function handler(req, res) {
       const { text, pages, page } = buildAllPageText(sorted, 1);
       const buttons = buildAllPageButtons(page, pages);
       await sendTelegram(chatId, text, message.message_id, buttons);
+      return res.status(200).json({ ok: true });
+    }
+
+    /* /deleteall */
+    if (command === '/deleteall') {
+      const all = await listAllQuestions();
+      if (!all.length) {
+        await sendTelegram(chatId, '\u250C\u2500\uD83D\uDCE8 <b>NOTHING TO DELETE</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  No questions in the database.\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518', message.message_id);
+        return res.status(200).json({ ok: true });
+      }
+      const count = all.length;
+      await sendTelegram(chatId,
+        '\u250C\u2500\u26A0\uFE0F <b>CONFIRM DELETE ALL</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  This will permanently delete\n\u2502  <b>ALL ' + count + ' question' + (count === 1 ? '' : 's') + '</b> from the database.\n\u2502\n\u2502  \u26A0\uFE0F This action <b>CANNOT</b> be undone.\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518',
+        message.message_id,
+        { inline_keyboard: [[
+          { text: '\u2705 Confirm Delete All', callback_data: 'confirmdeleteall' },
+          { text: '\u274C Cancel', callback_data: 'canceldeleteall' }
+        ]] }
+      );
       return res.status(200).json({ ok: true });
     }
 
