@@ -293,6 +293,79 @@ async function sendAnsweredCard(chatId, questionId, answerText, replyToId, isUpd
   await sendTelegram(chatId, text, replyToId, replyMarkup);
 }
 
+/* ── Build the correct card (text + buttons) for a question's CURRENT state.
+   Used to restore the exact original message when a Delete action is
+   cancelled — instead of showing a generic "Question Restored" stub. ── */
+function buildCardForQuestion(q) {
+  const state = questionState(q);
+
+  if (state === 'ANSWERED') {
+    const text = [
+      `✅ <b>Answer Published!</b>`,
+      `──────────────────────`,
+      `👤 <b>${esc(q.name)}</b> asked:`,
+      `<blockquote>${esc(q.question)}</blockquote>`,
+      ``,
+      `💬 <b>Your answer:</b>`,
+      `<blockquote>${esc(q.answer)}</blockquote>`,
+      `🆔 <code>${esc(q.id)}</code>`
+    ].join('\n');
+    const replyMarkup = {
+      inline_keyboard: [
+        [{ text: '✏️  Edit Answer', callback_data: `edit:${q.id}` }],
+        [
+          { text: '🙈  Dismiss', callback_data: `dismiss:${q.id}` },
+          { text: '🗑  Delete', callback_data: `delete:${q.id}` }
+        ]
+      ]
+    };
+    return { text, replyMarkup };
+  }
+
+  if (state === 'DISMISSED') {
+    const text = [
+      `🙈 <b>Question Dismissed</b>`,
+      ``,
+      `👤 <b>${esc(q.name)}</b> asked:`,
+      `<blockquote>${esc(q.question)}</blockquote>`,
+      ``,
+      `This question is hidden from your website. Data is preserved.`,
+      `🆔 <code>${esc(q.id)}</code>`
+    ].join('\n');
+    const replyMarkup = {
+      inline_keyboard: [
+        [{ text: '💬  Answer', callback_data: `answer:${q.id}` }],
+        [{ text: '✏️  Edit Answer', callback_data: `edit:${q.id}` }],
+        [
+          { text: '🙈  Dismiss', callback_data: `dismiss:${q.id}` },
+          { text: '🗑  Delete', callback_data: `delete:${q.id}` }
+        ]
+      ]
+    };
+    return { text, replyMarkup };
+  }
+
+  // UNANSWERED — the original "New Question" notification card
+  const text = [
+    `📩 <b>New Question</b>`,
+    ``,
+    `👤 <b>${esc(q.name)}</b> asks:`,
+    `<blockquote>${esc(q.question)}</blockquote>`,
+    `🕐 ${esc(formatTime(q.createdAt))} IST · 🆔 <code>${esc(q.id)}</code>`
+  ].join('\n');
+  const replyMarkup = {
+    inline_keyboard: [
+      [{ text: '💬  Answer', callback_data: `answer:${q.id}` }],
+      [{ text: '✏️  Edit Answer', callback_data: `edit:${q.id}` }],
+      [
+        { text: '🙈  Dismiss', callback_data: `dismiss:${q.id}` },
+        { text: '🗑  Delete', callback_data: `delete:${q.id}` }
+      ]
+    ]
+  };
+  return { text, replyMarkup };
+}
+
 /* ── Command messages ── */
 const HELP_TEXT = [
   `<b>🤖 AMA Bot — Commands</b>`,
@@ -380,16 +453,24 @@ module.exports = async function handler(req, res) {
       }
       else if (action === 'canceldelete') {
         await answerCallback(callback.id, 'Cancelled');
-        // Restore the original buttons
-        await editMessage(cbChatId, cbMessageId,
-          `📩 <b>Question Restored</b>\n\n🆔 <code>${esc(questionId)}</code>`,
-          { inline_keyboard: [
-            [{ text: '💬  Answer', callback_data: `answer:${questionId}` }],
-            [{ text: '✏️  Edit Answer', callback_data: `edit:${questionId}` }],
-            [{ text: '🙈  Dismiss', callback_data: `dismiss:${questionId}` },
-             { text: '🗑  Delete', callback_data: `delete:${questionId}` }]
-          ] }
-        );
+        // Restore the exact original message by re-fetching the question's
+        // current state from Firestore and rebuilding its real card —
+        // instead of overwriting with a generic placeholder.
+        try {
+          const q = await getQuestion(questionId);
+          if (q) {
+            const { text, replyMarkup } = buildCardForQuestion(q);
+            await editMessage(cbChatId, cbMessageId, text, replyMarkup);
+          } else {
+            await editMessage(cbChatId, cbMessageId,
+              `⚠️ <b>Question Not Found</b>\n\nIt may have already been deleted.\n🆔 <code>${esc(questionId)}</code>`
+            );
+          }
+        } catch (e) {
+          await editMessage(cbChatId, cbMessageId,
+            `⚠️ <b>Could Not Restore</b>\n\n🆔 <code>${esc(questionId)}</code>`
+          );
+        }
       }
       else if (action === 'answer') {
         await answerCallback(callback.id, '💬 Reply to the question message above to type your answer.');
