@@ -185,6 +185,45 @@ async function clearLookupSession(chatId) {
   try { await firestore('DELETE', docPath(LOOKUP_SESSION_COLLECTION, String(chatId))); } catch (e) {}
 }
 
+/* ── Build one page of /all list ── */
+const ALL_PER_PAGE = 4;
+function buildAllPageText(sorted, page) {
+  const total = sorted.length;
+  const pages = Math.max(1, Math.ceil(total / ALL_PER_PAGE));
+  if (page > pages) page = pages;
+  if (page < 1) page = 1;
+  const start = (page - 1) * ALL_PER_PAGE;
+  const slice = sorted.slice(start, start + ALL_PER_PAGE);
+  const lines = [
+    '\u250C\u2500\uD83D\uDCCB <b>ALL QUESTIONS</b> (' + total + ') \u2500 Page ' + page + '/' + pages + '\u2500\u2500\u2500\u2500\u2510',
+    '\u2502'
+  ];
+  for (let i = 0; i < slice.length; i++) {
+    const q = slice[i];
+    const state = questionState(q);
+    const stateEmoji = state === 'ANSWERED' ? '\u2705' : state === 'DISMISSED' ? '\uD83D\uDE48' : '\u23F3';
+    const qAge = timeAgo(q.createdAt);
+    lines.push('\u2502  ' + stateEmoji + ' <b>[' + state + ']</b> ' + esc(q.name) + (qAge ? ' \u00B7 ' + esc(qAge) : ''));
+    lines.push('\u2502  \uD83D\uDCAC <blockquote>' + esc(q.question).slice(0, 120) + '</blockquote>');
+    if (state === 'ANSWERED' && q.answer) {
+      lines.push('\u2502  \u2705 <blockquote>' + esc(q.answer).slice(0, 100) + '</blockquote>');
+    }
+    if (q.votes > 0) lines.push('\u2502  \uD83D\uDC4D ' + q.votes + ' votes');
+    lines.push('\u2502  \uD83C\uDD94 <code>' + esc(q.id) + '</code>');
+    lines.push('\u2502');
+  }
+  lines.push('\u2502  <i>Tap ID to copy \u00B7 /get id for actions</i>');
+  lines.push('\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518');
+  return { text: lines.join('\n'), pages, page };
+}
+function buildAllPageButtons(page, pages) {
+  const row = [];
+  if (page > 1) row.push({ text: '\u25C0 Previous', callback_data: 'all:page:' + (page - 1) });
+  row.push({ text: page + ' / ' + pages, callback_data: 'all:noop' });
+  if (page < pages) row.push({ text: 'Next \u25B6', callback_data: 'all:page:' + (page + 1) });
+  return { inline_keyboard: [row] };
+}
+
 /* ── Build full detail card for /get and /lookup ── */
 async function sendFullDetailCard(chatId, questionId, replyToId) {
   const q = await getQuestion(questionId);
@@ -642,6 +681,20 @@ module.exports = async function handler(req, res) {
           );
         } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not start edit'); }
       }
+      else if (action === 'all') {
+        // Pagination for /all command
+        const page = parseInt(questionId, 10) || 1;
+        try {
+          const all = await listAllQuestions();
+          const sorted = all.slice().sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+          const { text, pages } = buildAllPageText(sorted, page);
+          await answerCallback(callback.id, 'Page ' + page + '/' + pages);
+          await editMessage(cbChatId, cbMessageId, text, buildAllPageButtons(page, pages));
+        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Error loading page'); }
+      }
+      else if (action === 'noop') {
+        await answerCallback(callback.id, '');
+      }
       else {
         await answerCallback(callback.id, 'Unknown action');
       }
@@ -735,33 +788,9 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ ok: true });
       }
       const sorted = all.slice().sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-      const total = sorted.length;
-      let chunk = '\u250C\u2500\uD83D\uDCCB <b>ALL QUESTIONS</b> (' + total + ')\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n';
-      let sent = 0;
-      for (let i = 0; i < sorted.length; i++) {
-        const q = sorted[i];
-        const state = questionState(q);
-        const stateEmoji = state === 'ANSWERED' ? '\u2705' : state === 'DISMISSED' ? '\uD83D\uDE48' : '\u23F3';
-        const qAge = timeAgo(q.createdAt);
-        let entry = '\u2502  ' + stateEmoji + ' <b>[' + state + ']</b> ' + esc(q.name) + (qAge ? ' \u00B7 ' + esc(qAge) : '') + '\n';
-        entry += '\u2502  \uD83D\uDCAC <blockquote>' + esc(q.question).slice(0, 120) + '</blockquote>\n';
-        if (state === 'ANSWERED' && q.answer) {
-          entry += '\u2502  \u2705 <blockquote>' + esc(q.answer).slice(0, 100) + '</blockquote>\n';
-        }
-        if (q.votes > 0) entry += '\u2502  \uD83D\uDC4D ' + q.votes + ' votes\n';
-        entry += '\u2502  \uD83C\uDD94 <code>' + esc(q.id) + '</code>\n';
-        entry += '\u2502\n';
-        if ((chunk + entry + '\u2514').length > 3800) {
-          chunk += '\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518';
-          await sendTelegram(chatId, chunk, sent === 0 ? message.message_id : undefined);
-          sent++;
-          chunk = '\u250C\u2500\uD83D\uDCCB <b>ALL QUESTIONS</b> (continued)\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n';
-        }
-        chunk += entry;
-      }
-      chunk += '\u2502  <i>Tap any <code>ID</code> to copy \u00B7 Use /get <code>id</code> for actions</i>\n';
-      chunk += '\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518';
-      await sendTelegram(chatId, chunk, sent === 0 ? message.message_id : undefined);
+      const { text, pages, page } = buildAllPageText(sorted, 1);
+      const buttons = buildAllPageButtons(page, pages);
+      await sendTelegram(chatId, text, message.message_id, buttons);
       return res.status(200).json({ ok: true });
     }
 
