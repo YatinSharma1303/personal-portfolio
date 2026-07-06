@@ -248,6 +248,7 @@ body::before {
   padding: 5px 8px;
   box-shadow: 0 12px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
   max-width: 100%;
+  overflow: visible;
 }
 html.light .topbar-pill {
   background: rgba(255,255,255,0.55);
@@ -293,9 +294,9 @@ html.light .tb-icon-btn.active svg { filter: drop-shadow(0 0 6px rgba(100,80,220
   /* PAUSED: fully inside sleeve — centered on cover */
   left: 50%;
   margin-left: -11px;
-  transition: left 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
-              margin-left 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
-              box-shadow 0.4s ease;
+  transition: left 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+              margin-left 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.5s ease;
   box-shadow: none;
 }
 /* Rainbow streak so spin is visible */
@@ -321,7 +322,7 @@ html.light .tb-icon-btn.active svg { filter: drop-shadow(0 0 6px rgba(100,80,220
   left: 0;
   margin-left: -13px;
   animation: miniSpin 3s linear infinite;
-  box-shadow: -2px 0 6px rgba(0,200,255,0.25);
+  box-shadow: -2px 0 8px rgba(0,200,255,0.3);
 }
 @keyframes miniSpin { to { transform: rotate(360deg); } }
 @keyframes refreshSpin { to { transform: rotate(180deg); } }
@@ -427,9 +428,9 @@ html.light .theme-toggle .icon-sun { display: block; }
   /* PAUSED: fully inside sleeve — centered on cover */
   left: 50%;
   margin-left: -90px;
-  transition: left 0.55s cubic-bezier(0.34, 1.56, 0.64, 1),
-              margin-left 0.55s cubic-bezier(0.34, 1.56, 0.64, 1),
-              box-shadow 0.4s ease;
+  transition: left 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+              margin-left 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.5s ease;
 }
 /* Iridescent rainbow reflection — like light hitting a real spinning CD */
 .sp-cd-disc::before {
