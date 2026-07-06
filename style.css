@@ -265,38 +265,45 @@ html.light .tb-icon-btn.active svg { filter: drop-shadow(0 0 6px rgba(100,80,220
   overflow: visible;
 }
 .tb-cd-cover {
-  position: absolute; inset: 0; border-radius: 4px;
+  position: absolute; inset: 0; border-radius: 5px;
   background: url('assets/cover.jpg') center/cover;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
   z-index: 2;
 }
 .tb-cd-disc {
-  position: absolute; top: 50%; right: 60%; width: 22px; height: 22px;
-  margin-top: -11px; border-radius: 50%;
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 22px; height: 22px;
+  margin-top: -11px; margin-left: -11px;
+  border-radius: 50%;
   background:
     radial-gradient(circle at 50% 50%, var(--accent) 0 22%, transparent 22%),
-    radial-gradient(circle at 50% 50%, #000 0 8%, transparent 8%),
+    radial-gradient(circle at 50% 50%, #111 0 8%, transparent 8%),
     repeating-radial-gradient(circle at 50% 50%, #333 0 1px, #1a1a1a 1px 2px);
   border: 1px solid rgba(0,0,0,0.6);
   z-index: 1;
-  transform: translateX(12px);
-  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Hidden behind cover by default: shift right so it's behind cover */
+  margin-left: 1px;
+  transition: margin-left 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .tb-cd-disc::after {
   content: ''; position: absolute; top: 50%; left: 50%;
   width: 4px; height: 4px; margin: -2px 0 0 -2px;
   border-radius: 50%; background: #0a0a0e;
 }
+/* Playing: disc peeks out left of cover and spins */
 .tb-music-disc.playing .tb-cd-disc {
-  transform: translateX(-4px);
-  animation: spin 4s linear infinite;
+  margin-left: -16px;
+  animation: miniSpin 3s linear infinite;
 }
+@keyframes miniSpin { to { transform: rotate(360deg); } }
+@keyframes refreshSpin { to { transform: rotate(180deg); } }
+
 .topbar-music-widget {
   display: flex; align-items: center; gap: 8px;
   padding: 6px 12px 6px 8px; border-radius: var(--radius-btn);
 }
 .topbar-music-widget:hover { background: rgba(255,255,255,0.06); }
-@keyframes spin { to { transform: rotate(360deg); } }
 
 .tb-eq-bars { display: none; gap: 2px; align-items: flex-end; height: 14px; }
 .tb-eq-bars.playing { display: flex; }
@@ -347,73 +354,85 @@ html.light .theme-toggle .icon-sun { display: block; }
 .sp-close:hover { background: rgba(0, 200, 255, 0.1); border-color: var(--accent); color: #fff; transform: rotate(90deg); }
 
 /* ── Full Player: CD Sleeve Stage ── */
-.sp-art-stage { display: flex; justify-content: center; align-items: center; padding: 20px 0 10px; position: relative; }
+.sp-art-stage { display: flex; justify-content: center; align-items: center; padding: 20px 0 10px; position: relative; overflow: visible; }
 .sp-vinyl-glow {
-  position: absolute; width: 200px; height: 200px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(0,200,255,0.15), transparent 70%);
-  opacity: 0; transition: opacity 0.6s ease; filter: blur(20px); z-index: 0;
-  left: calc(50% - 40px); top: calc(50% - 20px);
+  position: absolute; width: 260px; height: 260px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,200,255,0.12), transparent 65%);
+  opacity: 0; transition: opacity 0.6s ease; filter: blur(25px); z-index: 0;
+  left: 10px; top: 10px;
 }
 .slide-player-panel.playing .sp-vinyl-glow { opacity: 1; animation: glowPulse 3s ease-in-out infinite; }
-@keyframes glowPulse { 0%,100% { opacity: 0.5; transform: scale(1); } 50% { opacity: 1; transform: scale(1.05); } }
+@keyframes glowPulse { 0%,100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.05); } }
 
 .sp-cd-sleeve {
-  position: relative; width: 200px; height: 200px;
-  display: flex; align-items: center; justify-content: flex-start;
-  z-index: 1;
+  position: relative; width: 200px; height: 200px; z-index: 1;
 }
 .sp-cd-cover {
   position: absolute; inset: 0; border-radius: 16px;
   background: url('assets/cover.jpg') center/cover;
   box-shadow:
-    0 4px 20px rgba(0,0,0,0.4),
+    0 8px 32px rgba(0,0,0,0.5),
     inset 0 0 0 1px rgba(255,255,255,0.08);
   z-index: 2;
+  /* Subtle 3D depth on the cover */
+  border: 1px solid rgba(255,255,255,0.05);
 }
+/* Cover slit — a thin dark line on the left edge to look like the opening */
+.sp-cd-cover::after {
+  content: ''; position: absolute;
+  left: 0; top: 15%; bottom: 15%; width: 3px;
+  background: rgba(0,0,0,0.4);
+  border-radius: 2px 0 0 2px;
+}
+
 .sp-cd-disc {
-  position: absolute; top: 50%; left: 50%;
-  width: 180px; height: 180px; margin-top: -90px; margin-left: -90px;
+  position: absolute; top: 50%;
+  width: 180px; height: 180px; margin-top: -90px;
   border-radius: 50%;
   background:
-    radial-gradient(circle at 50% 50%, var(--accent) 0 12%, rgba(0,200,255,0.3) 12.5%, transparent 13%),
-    radial-gradient(circle at 50% 50%, #05050a 0 4%, transparent 4.5%),
-    repeating-radial-gradient(circle at 50% 50%, #1c1c1c 0 1px, #0c0c0c 1px 3px);
-  border: 2px solid rgba(0,0,0,0.8);
+    radial-gradient(circle at 50% 50%, var(--accent) 0 12%, rgba(0,200,255,0.3) 13%, transparent 14%),
+    radial-gradient(circle at 50% 50%, #05050a 0 3.5%, transparent 4%),
+    repeating-radial-gradient(circle at 50% 50%, #1e1e1e 0 1px, #0d0d0d 1px 2.5px);
+  border: 2px solid rgba(0,0,0,0.7);
   box-shadow:
-    0 0 0 1px rgba(0,200,255,0.15),
-    0 0 20px rgba(0,200,255,0.15),
-    inset 0 0 20px rgba(0,0,0,0.8);
+    0 0 0 1px rgba(0,200,255,0.12),
+    0 0 24px rgba(0,200,255,0.12),
+    inset 0 0 25px rgba(0,0,0,0.8);
   z-index: 1;
-  transform: translateX(50px);
-  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Default: hidden behind cover — centered on cover's right edge */
+  left: 100%;
+  margin-left: -90px;
+  transition: left 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), margin-left 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .sp-cd-label {
-  position: absolute; inset: 28%; border-radius: 50%;
-  background: linear-gradient(135deg, rgba(0,200,255,0.25), rgba(120,80,255,0.2));
-  box-shadow: inset 0 0 0 1px rgba(0,200,255,0.2), inset 0 0 10px rgba(0,0,0,0.3);
+  position: absolute; inset: 26%; border-radius: 50%;
+  background: linear-gradient(135deg, rgba(0,200,255,0.3), rgba(120,80,255,0.25));
+  box-shadow: inset 0 0 0 1px rgba(0,200,255,0.25), inset 0 0 12px rgba(0,0,0,0.3);
 }
 .sp-cd-label::after {
   content: ''; position: absolute; top: 50%; left: 50%;
-  width: 14px; height: 14px; margin: -7px 0 0 -7px;
+  width: 12px; height: 12px; margin: -6px 0 0 -6px;
   border-radius: 50%; background: #05050a;
-  box-shadow: inset 0 0 0 2px rgba(0,200,255,0.3), 0 0 4px rgba(0,0,0,0.6);
+  box-shadow: inset 0 0 0 2px rgba(0,200,255,0.4), 0 0 6px rgba(0,0,0,0.6);
 }
 
-/* Playing: CD slides out from left of cover and spins */
+/* Playing: CD slides left — half peeks out from the cover's left edge */
 .sp-cd-disc.playing {
-  transform: translateX(-50px);
-  animation: spin 4s linear infinite;
+  left: 0;
+  margin-left: -50px;
+  animation: cdSpin 4s linear infinite;
 }
+@keyframes cdSpin { to { transform: rotate(360deg); } }
 
-/* Shadow under the CD when it's peeking out */
-.sp-cd-disc::before {
+/* Shadow on cover where the CD emerges */
+.sp-cd-cover::before {
   content: ''; position: absolute;
-  top: 10%; bottom: 10%; right: -8px; width: 16px;
-  background: linear-gradient(90deg, rgba(0,0,0,0.25), transparent);
-  border-radius: 0 50% 50% 0;
-  opacity: 0; transition: opacity 0.4s ease;
+  left: -6px; top: 12%; bottom: 12%; width: 12px;
+  background: linear-gradient(90deg, transparent, rgba(0,0,0,0.15));
+  border-radius: 4px 0 0 4px;
+  opacity: 0; transition: opacity 0.4s ease 0.15s;
 }
-.sp-cd-disc.playing::before { opacity: 1; }
+.slide-player-panel.playing .sp-cd-cover::before { opacity: 1; }
 
 /* Track Info */
 .sp-track-info { text-align: center; margin-top: 10px; }
@@ -627,7 +646,7 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .quote-card { padding: 22px; }
 .quote-label { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 .quote-swap { font-size: 16px; color: var(--gray); }
-.quote-swap:hover { color: var(--white); animation: spin 0.5s linear; }
+.quote-swap:hover { color: var(--white); animation: refreshSpin 0.5s linear; }
 #quote-text { font-size: 18px; font-weight: 600; line-height: 1.4; font-style: italic; }
 #quote-author { display: block; margin-top: 10px; font-size: 13px; color: var(--gray-dim); font-family: var(--mono); }
 
@@ -1454,7 +1473,8 @@ html.light .cursor-glow { background: radial-gradient(circle, rgba(100,80,220,0.
     padding-top: 80px;
   }
   .sp-cd-sleeve { width: 160px; height: 160px; }
-  .sp-cd-disc { width: 140px; height: 140px; margin-top: -70px; margin-left: -70px; }
+  .sp-cd-disc { width: 140px; height: 140px; margin-top: -70px; }
+  .sp-cd-disc.playing { margin-left: -40px; }
   .sp-title { font-size: 20px; }
 }
 
