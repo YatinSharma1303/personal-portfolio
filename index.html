@@ -114,7 +114,10 @@
     <nav class="topbar-pill" aria-label="Primary">
       <!-- Music widget (left) -->
       <button class="topbar-music-widget" id="topbar-music-icon" title="Toggle music player" aria-label="Toggle music player">
-        <span class="tb-music-disc" id="tb-music-disc"></span>
+        <span class="tb-cd-sleeve" id="tb-music-disc">
+          <span class="tb-cd-disc"></span>
+          <span class="tb-cd-cover"></span>
+        </span>
         <span class="tb-eq-bars" id="tb-eq-bars"><i></i><i></i><i></i></span>
         <span class="tb-track-meta">
           <span class="tb-track-title" id="topbar-track-title">FMA Brotherhood OST</span>
@@ -149,12 +152,13 @@
     <button class="sp-close" id="sp-close" aria-label="Close player">✕</button>
 
     <div class="sp-art-stage">
-      <div class="sp-vinyl-wrap">
-        <div class="sp-vinyl" id="sp-vinyl">
-          <div class="sp-vinyl-label"></div>
+      <div class="sp-cd-sleeve">
+        <div class="sp-cd-disc" id="sp-vinyl">
+          <div class="sp-cd-label"></div>
         </div>
-        <div class="sp-vinyl-glow"></div>
+        <div class="sp-cd-cover"></div>
       </div>
+      <div class="sp-vinyl-glow"></div>
     </div>
 
     <div class="sp-track-info">
@@ -625,5 +629,5 @@
 
   <script src="script.js"></script>
   <script src="games.js"></script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a16f5d285aff4478',t:'MTc4MzM0ODgxOQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
