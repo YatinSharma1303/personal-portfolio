@@ -831,7 +831,7 @@
     let isVisible = false;
     let typingTimer = null;
 
-    function typeClick() { try { if (!window.__introDone) return; if (window.sfx && !window.sfx.isMuted()) window.sfx.play(900 + Math.random()*200, 0.01, 'square'); } catch(e){} }
+    function typeClick() {}
     
     function tick() {
       // If the terminal is scrolled out of view, stop looping and wait until it's visible again
