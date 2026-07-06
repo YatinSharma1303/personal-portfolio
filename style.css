@@ -762,8 +762,19 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
   border-radius: var(--radius-card); overflow: hidden; border: 1px solid var(--border);
   background: rgba(12,12,12,0.6); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
   transition: all 0.3s cubic-bezier(0.22,1,0.36,1); display: flex; flex-direction: column;
+  position: relative;
 }
 .project-card:hover { border-color: var(--border-hover); transform: translateY(-5px); box-shadow: 0 16px 50px rgba(0,0,0,0.5); }
+/* Hover preview popup */
+.project-card .project-preview {
+  position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%) translateY(10px);
+  width: 280px; border-radius: 12px; overflow: hidden;
+  border: 1px solid var(--border-hover); box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+  opacity: 0; pointer-events: none; z-index: 100;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.project-card .project-preview img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }
+.project-card:hover .project-preview { opacity: 1; transform: translateX(-50%) translateY(-8px); pointer-events: auto; }
 .project-thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-bottom: 1px solid var(--border); display: block; }
 .project-body { padding: 22px; flex: 1; display: flex; flex-direction: column; }
 .project-cat { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); margin-bottom: 8px; }
@@ -961,6 +972,17 @@ html.light .interest-card { background: rgba(255,255,255,0.5); }
   font-family: var(--mono); font-size: 11px;
   color: var(--gray-dim); letter-spacing: 0.03em;
 }
+.footer-nav {
+  display: flex; gap: 4px; justify-content: center; flex-wrap: wrap;
+}
+.footer-nav a {
+  font-family: var(--mono); font-size: 11px; color: var(--gray-dim);
+  letter-spacing: 0.05em; padding: 4px 10px; border-radius: 6px;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+.footer-nav a:hover {
+  color: var(--accent); background: rgba(0,200,255,0.06);
+}
 .footer-right {
   display: flex; align-items: center; gap: 8px;
 }
@@ -1002,12 +1024,39 @@ html.light .interest-card { background: rgba(255,255,255,0.5); }
 .fade-in { opacity: 0; transform: translateY(24px); transition: opacity 0.7s ease, transform 0.7s ease; }
 .fade-in.visible { opacity: 1; transform: translateY(0); }
 
+/* Staggered card entrance — children slide up one by one */
+.stagger-children.visible > * {
+  animation: staggerUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.stagger-children.visible > *:nth-child(1) { animation-delay: 0s; }
+.stagger-children.visible > *:nth-child(2) { animation-delay: 0.06s; }
+.stagger-children.visible > *:nth-child(3) { animation-delay: 0.12s; }
+.stagger-children.visible > *:nth-child(4) { animation-delay: 0.18s; }
+.stagger-children.visible > *:nth-child(5) { animation-delay: 0.24s; }
+.stagger-children.visible > *:nth-child(6) { animation-delay: 0.30s; }
+@keyframes staggerUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ============ SCROLL PROGRESS BAR ============ */
 .scroll-progress {
   position: fixed; top: 0; left: 0; height: 2px; width: 0%; z-index: 5000;
   background: linear-gradient(90deg, #00c8ff, #7850ff, #00f0b4);
   box-shadow: 0 0 8px rgba(0,200,255,0.5); transition: width 0.08s linear;
 }
+
+/* Section progress indicator — thin bar under topbar */
+.section-progress {
+  position: fixed; top: 58px; left: 0; right: 0; height: 2px; z-index: 999;
+  background: rgba(255,255,255,0.04);
+}
+.section-progress-fill {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  transition: width 0.3s ease;
+}
+html.light .section-progress { background: rgba(0,0,0,0.04); }
 
 /* ============ BACK TO TOP ============ */
 .back-to-top {
@@ -1248,7 +1297,16 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
 }
 .section-divider.visible { opacity: 1; transform: translateX(0); }
 .section-divider-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--border-hover), transparent); }
-.section-divider-label { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); letter-spacing: 0.1em; white-space: nowrap; }
+.section-divider-label {
+  font-family: var(--mono); font-size: 11px; color: var(--gray-dim); letter-spacing: 0.1em; white-space: nowrap;
+  position: relative;
+}
+/* Small accent dot before the label */
+.section-divider-label::before {
+  content: ''; display: inline-block; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--accent); margin-right: 8px; vertical-align: middle;
+  box-shadow: 0 0 6px rgba(0,200,255,0.4);
+}
 
 /* ============ GITHUB CONTRIBUTION GRAPH ============ */
 .contrib-card { padding: 28px; }
@@ -1533,8 +1591,9 @@ html.light .cursor-glow { background: radial-gradient(circle, rgba(100,80,220,0.
 }
 
 /* I. SMOOTH SCROLL SNAP (Optional, subtle) */
-/* html { scroll-snap-type: y proximity; }
-.section { scroll-snap-align: start; } */
+/* Subtle scroll snap — sections land cleanly */
+html { scroll-snap-type: y proximity; }
+.section { scroll-snap-align: start; }
 
 /* ============ COMPREHENSIVE LIGHT MODE FIXES ============ */
 
@@ -1692,3 +1751,4 @@ html.light .skeleton { background: linear-gradient(90deg, rgba(0,0,0,0.04) 25%, 
 html.light .footer-line { background: linear-gradient(90deg, transparent, rgba(80,80,140,0.2), transparent); }
 html.light .footer-link { border-color: rgba(80,80,140,0.15); color: var(--gray-dim); }
 html.light .footer-link:hover { border-color: var(--accent); color: var(--accent); background: rgba(100,80,220,0.06); box-shadow: 0 4px 16px rgba(100,80,220,0.1); }
+html.light .footer-nav a:hover { color: var(--accent); background: rgba(100,80,220,0.06); }

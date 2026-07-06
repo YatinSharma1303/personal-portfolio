@@ -421,7 +421,8 @@
       const thumb = p.img
         ? '<img class="project-thumb-img" src="' + p.img + '" alt="' + esc(p.name) + '" loading="lazy">'
         : '<div class="project-thumb"></div>';
-      return '<article class="project-card">' + thumb +
+      const preview = p.img ? '<div class="project-preview"><img src="' + p.img + '" alt="' + esc(p.name) + ' preview"></div>' : '';
+      return '<article class="project-card">' + preview + thumb +
         '<div class="project-body">' +
         '<div class="project-cat">' + p.cat + '</div>' +
         '<div class="project-name">' + p.name + '</div>' +
@@ -1452,7 +1453,7 @@
      ============================================================ */
   (function sectionDividers() {
     const sections = document.querySelectorAll('.section, .hero');
-    const labels = { hero: '00', about: '01', skills: '02', projects: '03', music: '04', anime: '05', interests: '06', ama: '07', playground: '08', testimonials: '09', presence: '10' };
+    const labels = { hero: '00', about: '01', skills: '02', contributions: '03', coding: '04', projects: '05', music: '06', anime: '07', interests: '08', ama: '09', playground: '10', presence: '11' };
     for (let i = 1; i < sections.length; i++) {
       const prev = sections[i - 1]; const cur = sections[i];
       const lbl = labels[cur.id];
@@ -1554,15 +1555,21 @@
       { icon: '🏠', label: 'Go to Home', hint: 'G', action: () => document.getElementById('hero')?.scrollIntoView({ behavior: 'smooth' }) },
       { icon: '👤', label: 'Go to About', hint: 'A', action: () => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' }) },
       { icon: '⚡', label: 'Go to Skills', hint: 'S', action: () => document.getElementById('skills')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: '📊', label: 'Go to Contributions', hint: '', action: () => document.getElementById('contributions')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: '💻', label: 'Go to Coding Stats', hint: '', action: () => document.getElementById('wakatime')?.scrollIntoView({ behavior: 'smooth' }) },
       { icon: '📁', label: 'Go to Projects', hint: 'P', action: () => document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' }) },
       { icon: '🎵', label: 'Go to Music', hint: '', action: () => document.getElementById('music')?.scrollIntoView({ behavior: 'smooth' }) },
       { icon: '🎬', label: 'Go to Anime', hint: '', action: () => document.getElementById('anime')?.scrollIntoView({ behavior: 'smooth' }) },
-      { icon: '🎮', label: 'Go to Playground', hint: '', action: () => document.getElementById('playground')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: '🎯', label: 'Go to Interests', hint: '', action: () => document.getElementById('interests')?.scrollIntoView({ behavior: 'smooth' }) },
       { icon: '💬', label: 'Go to Ask Me Anything', hint: '', action: () => document.getElementById('ama')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: '🎮', label: 'Go to Playground', hint: '', action: () => document.getElementById('playground')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: '🌐', label: 'Go to Presence', hint: '', action: () => document.getElementById('presence')?.scrollIntoView({ behavior: 'smooth' }) },
       { icon: '🌙', label: 'Toggle Theme', hint: 'T', action: () => document.getElementById('theme-toggle-btn')?.click() },
       { icon: '▶', label: 'Play / Pause Music', hint: 'M', action: () => document.getElementById('sp-play-btn')?.click() },
+      { icon: '⬆', label: 'Scroll to Top', hint: '', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
       { icon: '🔗', label: 'Open GitHub Profile', hint: '', action: () => window.open('https://github.com/YatinSharma1303', '_blank') },
       { icon: '✉', label: 'Copy Email Address', hint: '', action: () => document.getElementById('copy-email')?.click() },
+      { icon: '🕐', label: 'Toggle Intro Overlay', hint: '', action: () => { const o = document.getElementById('intro-overlay'); if (o) { o.style.display = ''; o.classList.remove('hidden'); } } },
     ];
 
     let selectedIndex = 0;
@@ -1644,7 +1651,33 @@
   })();
 
   /* ============================================================
-     28. SERVICE WORKER REGISTRATION
+     28. SECTION PROGRESS BAR
+     Thin bar under topbar showing how far through the current section you are.
+     ============================================================ */
+  (function sectionProgress() {
+    const fill = $('section-progress-fill');
+    if (!fill) return;
+    const sections = document.querySelectorAll('.section');
+    function update() {
+      const viewportH = window.innerHeight;
+      let currentSection = null;
+      sections.forEach(s => {
+        const rect = s.getBoundingClientRect();
+        if (rect.top < viewportH * 0.5 && rect.bottom > viewportH * 0.3) currentSection = s;
+      });
+      if (!currentSection) { fill.style.width = '0%'; return; }
+      const rect = currentSection.getBoundingClientRect();
+      const sectionH = currentSection.scrollHeight;
+      const scrolledInSection = Math.max(0, -rect.top);
+      const progress = Math.min(100, (scrolledInSection / Math.max(1, sectionH - viewportH)) * 100);
+      fill.style.width = progress + '%';
+    }
+    window.addEventListener('scroll', update, { passive: true });
+    update();
+  })();
+
+  /* ============================================================
+     29. SERVICE WORKER REGISTRATION
      ============================================================ */
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

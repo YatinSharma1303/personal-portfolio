@@ -75,6 +75,7 @@
 
   <!-- ============ SCROLL PROGRESS BAR ============ -->
   <div class="scroll-progress" id="scroll-progress"></div>
+  <div class="section-progress"><div class="section-progress-fill" id="section-progress-fill"></div></div>
 
   <!-- ============ BACK TO TOP ============ -->
   <button class="back-to-top" id="back-to-top" aria-label="Back to top">
@@ -349,7 +350,7 @@
   <!-- ============ GITHUB CONTRIBUTIONS ============ -->
   <section class="section" id="contributions">
     <div class="section-head">
-      <span class="section-label">03.5 / contributions</span>
+      <span class="section-label">03 / contributions</span>
       <h2 class="section-title">Commit <em>activity.</em></h2>
     </div>
     <div class="contrib-card glass-card fade-in">
@@ -371,7 +372,7 @@
   <!-- ============ WAKATIME ============ -->
   <section class="section" id="wakatime">
     <div class="section-head">
-      <span class="section-label">03.6 / coding</span>
+      <span class="section-label">04 / coding</span>
       <h2 class="section-title">Coding <em>stats.</em></h2>
     </div>
     <div class="wakatime-card glass-card fade-in" id="wakatime-card">
@@ -394,22 +395,22 @@
   <!-- ============ PROJECTS ============ -->
   <section class="section" id="projects">
     <div class="section-head">
-      <span class="section-label">03 / projects</span>
+      <span class="section-label">05 / projects</span>
       <h2 class="section-title">Things I've <em>built.</em></h2>
     </div>
 
-    <div class="projects-grid" id="projects-grid"><!-- populated by JS --></div>
+    <div class="projects-grid stagger-children fade-in" id="projects-grid"><!-- populated by JS --></div>
 
     <div class="gh-live">
       <div class="gh-live-label">Live from GitHub</div>
-      <div class="gh-live-list" id="gh-repos-list"><!-- populated by JS --></div>
+      <div class="gh-live-list stagger-children fade-in" id="gh-repos-list"><!-- populated by JS --></div>
     </div>
   </section>
 
   <!-- ============ MUSIC (Last.fm) ============ -->
   <section class="section" id="music">
     <div class="section-head">
-      <span class="section-label">04 / music</span>
+      <span class="section-label">06 / music</span>
       <h2 class="section-title">On <em>repeat.</em></h2>
     </div>
 
@@ -461,7 +462,7 @@
   <!-- ============ ANIME (AniList) ============ -->
   <section class="section" id="anime">
     <div class="section-head">
-      <span class="section-label">05 / anime</span>
+      <span class="section-label">07 / anime</span>
       <h2 class="section-title">On my <em>list.</em></h2>
     </div>
 
@@ -495,11 +496,11 @@
   <!-- ============ INTERESTS ============ -->
   <section class="section" id="interests">
     <div class="section-head">
-      <span class="section-label">06 / beyond</span>
+      <span class="section-label">08 / beyond</span>
       <h2 class="section-title">Off the <em>keyboard.</em></h2>
     </div>
 
-    <div class="interests-grid">
+    <div class="interests-grid stagger-children fade-in">
       <div class="interest-card fade-in">
         <span class="interest-icon material-symbols-outlined">movie</span>
         <h3>Movies &amp; Anime</h3>
@@ -521,7 +522,7 @@
   <!-- ============ ASK ME ANYTHING ============ -->
   <section class="section" id="ama">
     <div class="section-head">
-      <span class="section-label">07 / ask</span>
+      <span class="section-label">09 / ask</span>
       <h2 class="section-title">Got a <em>question?</em></h2>
       <p class="section-desc">Drop a question, collab idea, or project request. I read every one.</p>
     </div>
@@ -549,7 +550,7 @@
   <!-- ============ PLAYGROUND (GAMES) ============ -->
   <section class="section" id="playground">
     <div class="section-head">
-      <span class="section-label">08 / playground</span>
+      <span class="section-label">10 / playground</span>
       <h2 class="section-title">A little <em>playground.</em></h2>
       <p class="section-desc">games. roasts. questionable life choices. built in vanilla JS.</p>
     </div>
@@ -559,10 +560,10 @@
   <!-- ============ ONLINE PRESENCE ============ -->
   <footer class="section" id="presence">
     <div class="section-head">
-      <span class="section-label">09 / connect</span>
+      <span class="section-label">11 / connect</span>
       <h2 class="section-title">My online <em>presence.</em></h2>
     </div>
-    <div class="presence-grid" id="presence-grid"><!-- populated by JS --></div>
+    <div class="presence-grid stagger-children fade-in" id="presence-grid"><!-- populated by JS --></div>
 
     <div class="footer-bar">
       <div class="footer-line"></div>
@@ -570,9 +571,17 @@
         <div class="footer-left">
           <span class="footer-logo">Y</span>
           <span class="footer-brand">Yatin Sharma</span>
+          <span class="footer-copy">© <span id="year"></span> All rights reserved.</span>
         </div>
         <div class="footer-center">
-          <span class="footer-copy">© <span id="year"></span> Yatin Sharma. All rights reserved.</span>
+          <nav class="footer-nav">
+            <a href="#about">About</a>
+            <a href="#skills">Skills</a>
+            <a href="#projects">Projects</a>
+            <a href="#music">Music</a>
+            <a href="#ama">Ask</a>
+            <a href="#playground">Playground</a>
+          </nav>
         </div>
         <div class="footer-right">
           <a class="footer-link" href="https://github.com/YatinSharma1303" target="_blank" rel="noopener" aria-label="GitHub">
@@ -629,5 +638,5 @@
 
   <script src="script.js"></script>
   <script src="games.js"></script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a16faeae3cfef806',t:'MTc4MzM1MjE1OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
