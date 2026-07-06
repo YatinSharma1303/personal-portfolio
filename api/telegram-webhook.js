@@ -659,22 +659,51 @@ const HELP_TEXT = [
   '\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
 ].join('\n');
 
-const WELCOME_TEXT = [
-  '\u250C\u2500\uD83E\uDD16 <b>AMA BOT v2.0</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510',
-  '\u2502',
-  '\u2502  <i>welcome back, overlord.</i>',
-  '\u2502',
-  '\u2502  Your AMA command center is online.',
-  '\u2502  Visitor questions get piped here',
-  '\u2502  straight from your portfolio.',
-  '\u2502',
-  '\u2502  <b>Quick Start:</b>',
-  '\u2502  \u2022 <b>/help</b> \u2500 See all commands',
-  '\u2502  \u2022 <b>/stats</b> \u2500 View dashboard',
-  '\u2502  \u2022 <b>/pending</b> \u2500 Check queue',
-  '\u2502',
-  '\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
-].join('\n');
+/* ── Dynamic welcome message (shows live stats) ── */
+async function buildWelcomeText() {
+  let statsLine = '';
+  try {
+    const s = await getStats();
+    const parts = [];
+    if (s.total > 0) parts.push('\uD83D\uDCEC ' + s.total + ' total');
+    if (s.unanswered > 0) parts.push('\u23F3 ' + s.unanswered + ' pending');
+    if (s.answered > 0) parts.push('\u2705 ' + s.answered + ' answered');
+    if (s.dismissed > 0) parts.push('\uD83D\uDE48 ' + s.dismissed + ' dismissed');
+    if (s.totalVotes > 0) parts.push('\uD83D\uDC4D ' + s.totalVotes + ' votes');
+    if (parts.length) statsLine = '\n\u2502  ' + parts.join(' \u00B7 ') + '\n';
+  } catch (e) {}
+  return [
+    '\u250C\u2500\uD83E\uDD16 <b>AMA BOT v3.0</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510',
+    '\u2502',
+    '\u2502  <i>the overlord has logged in.</i>',
+    '\u2502',
+    '\u2502  Your portfolio\'s AMA pipeline is live.',
+    '\u2502  Every visitor question lands here',
+    '\u2502  in real time. You answer on your',
+    '\u2502  terms \u2014 reply, dismiss, or retrieve.',
+    '\u2502', statsLine,
+    '\u2502  <b>\u26A1 Your toolkit:</b>',
+    '\u2502',
+    '\u2502  \uD83D\uDCCB <b>Manage</b>',
+    '\u2502  \u2022 <b>/pending</b> \u2500 Unanswered queue',
+    '\u2502  \u2022 <b>/refresh</b> \u2500 Pending + dismissed',
+    '\u2502  \u2022 <b>/all</b> \u2500 Browse everything',
+    '\u2502',
+    '\u2502  \uD83D\uDE48 <b>Retrieve</b>',
+    '\u2502  \u2022 <b>/dismissed</b> \u2500 See hidden Qs',
+    '\u2502  \u2022 <b>/retrieve id</b> \u2500 Restore one',
+    '\u2502  \u2022 <b>/retrieveall</b> \u2500 Restore all',
+    '\u2502',
+    '\u2502  \uD83D\uDCCA <b>Insights</b>',
+    '\u2502  \u2022 <b>/stats</b> \u2500 Full dashboard',
+    '\u2502  \u2022 <b>/help</b> \u2500 Every command',
+    '\u2502',
+    '\u2502  <i>Or just reply to any question</i>',
+    '\u2502  <i>message to answer it instantly.</i>',
+    '\u2502',
+    '\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
+  ].join('\n');
+}
 
 /* ============================================================
    HANDLER
@@ -904,9 +933,10 @@ module.exports = async function handler(req, res) {
     if (!text) return res.status(200).json({ ok: true, ignored: 'empty' });
     const command = text.split(/\s+/)[0].toLowerCase().replace(/@\w+$/, '');
 
-    /* /start */
+    /* /start — dynamic welcome with live stats */
     if (command === '/start') {
-      await sendTelegram(chatId, WELCOME_TEXT, message.message_id);
+      const welcomeText = await buildWelcomeText();
+      await sendTelegram(chatId, welcomeText, message.message_id);
       return res.status(200).json({ ok: true });
     }
 
