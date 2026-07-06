@@ -17,6 +17,7 @@ const crypto = require('crypto');
 const TELEGRAM_API = 'https://api.telegram.org/bot';
 const COLLECTION = 'amaQuestions';
 const EDIT_SESSION_COLLECTION = 'telegramEditSessions';
+const LOOKUP_SESSION_COLLECTION = 'telegramLookupSessions';
 
 /* ── helpers ── */
 function jsonBody(req) {
@@ -168,6 +169,69 @@ async function getEditSession(chatId) {
 }
 async function clearEditSession(chatId) {
   try { await firestore('DELETE', docPath(EDIT_SESSION_COLLECTION, String(chatId))); } catch (e) {}
+}
+
+/* ── Lookup session (for /lookup interactive flow) ── */
+async function saveLookupSession(chatId) {
+  return firestore('PATCH', docPath(LOOKUP_SESSION_COLLECTION, String(chatId)), {
+    fields: { chatId: { stringValue: String(chatId) }, createdAt: { stringValue: new Date().toISOString() } }
+  });
+}
+async function getLookupSession(chatId) {
+  try { return await firestore('GET', docPath(LOOKUP_SESSION_COLLECTION, String(chatId))); }
+  catch (e) { return null; }
+}
+async function clearLookupSession(chatId) {
+  try { await firestore('DELETE', docPath(LOOKUP_SESSION_COLLECTION, String(chatId))); } catch (e) {}
+}
+
+/* ── Build full detail card for /get and /lookup ── */
+async function sendFullDetailCard(chatId, questionId, replyToId) {
+  const q = await getQuestion(questionId);
+  if (!q) {
+    await sendTelegram(chatId, '\u250C\u2500\u26A0\uFE0F <b>NOT FOUND</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  No question found with that ID.\n\u2502\n\u2502  \uD83C\uDD94 <code>' + esc(questionId) + '</code>\n\u2502\n\u2502  Send /all to browse all IDs.\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518', replyToId);
+    return;
+  }
+  const state = questionState(q);
+  const stateEmoji = state === 'ANSWERED' ? '\u2705' : state === 'DISMISSED' ? '\uD83D\uDE48' : '\u23F3';
+  const rTime = responseTime(q.createdAt, q.answeredAt);
+  const qAge = timeAgo(q.createdAt);
+
+  const lines = [
+    '\u250C\u2500\uD83D\uDCCB <b>QUESTION DETAILS</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510',
+    '\u2502',
+    '\u2502  ' + stateEmoji + ' Status: <b>' + state + '</b>',
+    '\u2502',
+    '\u2502  \uD83D\uDC64 <b>' + esc(q.name) + '</b>',
+    '\u2502  \uD83D\uDCAC <blockquote>' + esc(q.question) + '</blockquote>',
+    '\u2502',
+    '\u2502  \uD83D\uDD50 Asked ' + esc(formatTime(q.createdAt)) + ' IST' + (qAge ? ' \u00B7 ' + esc(qAge) : '')
+  ];
+
+  if (state === 'ANSWERED') {
+    lines.push('\u2502');
+    lines.push('\u2502  \u2705 <b>Answer:</b>');
+    lines.push('\u2502  <blockquote>' + esc(q.answer) + '</blockquote>');
+    lines.push('\u2502  \uD83D\uDD50 Answered ' + esc(formatTime(q.answeredAt)) + ' IST');
+    if (rTime) lines.push('\u2502  \u26A1 Responded in <b>' + esc(rTime) + '</b>');
+  }
+
+  if (q.votes > 0) lines.push('\u2502  \uD83D\uDC4D ' + q.votes + ' votes');
+  lines.push('\u2502');
+  lines.push('\u2502  \uD83C\uDD94 <code>' + esc(q.id) + '</code>');
+  lines.push('\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518');
+
+  const buttons = [];
+  if (state === 'UNANSWERED' || state === 'DISMISSED') {
+    buttons.push([{ text: '\uD83D\uDCAC  Answer', callback_data: 'answer:' + q.id }]);
+  }
+  buttons.push([{ text: '\u270F\uFE0F  Edit Answer', callback_data: 'edit:' + q.id }]);
+  buttons.push([
+    { text: '\uD83D\uDE48  Dismiss', callback_data: 'dismiss:' + q.id },
+    { text: '\uD83D\uDDD1  Delete', callback_data: 'delete:' + q.id }
+  ]);
+
+  await sendTelegram(chatId, lines.join('\n'), replyToId, { inline_keyboard: buttons });
 }
 
 /* ── Parse + transform ── */
@@ -640,6 +704,62 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    /* /get <id> */
+    if (command === '/get') {
+      const qid = text.split(/\s+/)[1];
+      if (!qid) {
+        await sendTelegram(chatId, '\u250C\u2500\uD83D\uDCA1 <b>TIP</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  Send a question ID to look it up.\n\u2502\n\u2502  Example:\n\u2502  <code>/get a1b2c3d4-e5f6-...</code>\n\u2502\n\u2502  Send /all to browse all IDs.\n\u2502  Send /lookup for interactive mode.\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518', message.message_id);
+        return res.status(200).json({ ok: true });
+      }
+      await sendFullDetailCard(chatId, qid, message.message_id);
+      return res.status(200).json({ ok: true });
+    }
+
+    /* /lookup (interactive - waits for next message as ID) */
+    if (command === '/lookup') {
+      await saveLookupSession(chatId);
+      await sendTelegram(chatId, '\u250C\u2500\uD83D\uDD0D <b>LOOKUP MODE</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  Paste a question ID below.\n\u2502\n\u2502  Send /all to browse all IDs\n\u2502  and find the one you need.\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518', message.message_id);
+      return res.status(200).json({ ok: true });
+    }
+
+    /* /all (one big message with all Q&A, copyable IDs) */
+    if (command === '/all') {
+      const all = await listAllQuestions();
+      if (!all.length) {
+        await sendTelegram(chatId, '\u250C\u2500\uD83D\uDCE8 <b>NO QUESTIONS</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  No questions in the database yet.\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518', message.message_id);
+        return res.status(200).json({ ok: true });
+      }
+      const sorted = all.slice().sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      const total = sorted.length;
+      let chunk = '\u250C\u2500\uD83D\uDCCB <b>ALL QUESTIONS</b> (' + total + ')\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n';
+      let sent = 0;
+      for (let i = 0; i < sorted.length; i++) {
+        const q = sorted[i];
+        const state = questionState(q);
+        const stateEmoji = state === 'ANSWERED' ? '\u2705' : state === 'DISMISSED' ? '\uD83D\uDE48' : '\u23F3';
+        const qAge = timeAgo(q.createdAt);
+        let entry = '\u2502  ' + stateEmoji + ' <b>[' + state + ']</b> ' + esc(q.name) + (qAge ? ' \u00B7 ' + esc(qAge) : '') + '\n';
+        entry += '\u2502  \uD83D\uDCAC <blockquote>' + esc(q.question).slice(0, 120) + '</blockquote>\n';
+        if (state === 'ANSWERED' && q.answer) {
+          entry += '\u2502  \u2705 <blockquote>' + esc(q.answer).slice(0, 100) + '</blockquote>\n';
+        }
+        if (q.votes > 0) entry += '\u2502  \uD83D\uDC4D ' + q.votes + ' votes\n';
+        entry += '\u2502  \uD83C\uDD94 <code>' + esc(q.id) + '</code>\n';
+        entry += '\u2502\n';
+        if ((chunk + entry + '\u2514').length > 3800) {
+          chunk += '\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518';
+          await sendTelegram(chatId, chunk, sent === 0 ? message.message_id : undefined);
+          sent++;
+          chunk = '\u250C\u2500\uD83D\uDCCB <b>ALL QUESTIONS</b> (continued)\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n';
+        }
+        chunk += entry;
+      }
+      chunk += '\u2502  <i>Tap any <code>ID</code> to copy \u00B7 Use /get <code>id</code> for actions</i>\n';
+      chunk += '\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518';
+      await sendTelegram(chatId, chunk, sent === 0 ? message.message_id : undefined);
+      return res.status(200).json({ ok: true });
+    }
+
     /* Edit answer session */
     const pending = await getEditSession(chatId);
     const pendingQuestionId = pending?.fields?.questionId?.stringValue;
@@ -648,6 +768,24 @@ module.exports = async function handler(req, res) {
       await clearEditSession(chatId);
       await sendAnsweredCard(chatId, pendingQuestionId, text, message.message_id, true);
       return res.status(200).json({ ok: true, edited: pendingQuestionId });
+    }
+
+    /* Lookup session (interactive /lookup flow) */
+    const lookupSession = await getLookupSession(chatId);
+    if (lookupSession && !text.startsWith('/')) {
+      const pastedId = text.trim();
+      await clearLookupSession(chatId);
+      if (pastedId.length >= 8) {
+        await sendFullDetailCard(chatId, pastedId, message.message_id);
+      } else {
+        await sendTelegram(chatId, '\u250C\u2500\u26A0\uFE0F <b>INVALID ID</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n',
+          '\u2502\n',
+          '\u2502  That ID looks too short.\n',
+          '\u2502  Try again with /lookup.\n',
+          '\u2502\n',
+          '\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518', message.message_id);
+      }
+      return res.status(200).json({ ok: true, lookup: pastedId });
     }
 
     /* Unknown command */
