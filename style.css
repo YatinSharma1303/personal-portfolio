@@ -135,7 +135,14 @@ body::before {
   padding: 28px 32px 40px;
   transition: transform 0.55s cubic-bezier(0.32,0,0.67,0), opacity 0.4s ease;
 }
-.intro-overlay.hidden { transform: translate3d(0,-110vh,0); opacity: 0; pointer-events: none; }
+/* Intentionally NO pointer-events:none here while `.hidden` is animating —
+   the overlay must keep swallowing all clicks/taps for its entire 0.55s
+   slide-away transition, otherwise a tap that dismisses it can "leak
+   through" to whatever button sits behind it (e.g. topbar) the instant
+   the animation starts. Pointer events are only truly cut once the
+   overlay is fully hidden via `display:none` (set in JS after the
+   transition ends), which removes it from hit-testing entirely. */
+.intro-overlay.hidden { transform: translate3d(0,-110vh,0); opacity: 0; }
 
 .intro-topbar {
   display: flex; justify-content: space-between; align-items: center;

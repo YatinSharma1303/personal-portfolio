@@ -55,11 +55,48 @@
     const overlay = $('intro-overlay');
     if (!overlay) return;
     let done = false, dismissed = false;
-    const TOTAL = 4; let finished = 0;
-    const tick = () => { finished++; const percentEl = $('intro-percent'); if (percentEl) percentEl.textContent = Math.min(100, Math.floor((finished / TOTAL) * 100)) + '%'; if (finished >= TOTAL || done) ready(); };
-    const HARD = 5000;
-    setTimeout(() => { if (!done) ready(); }, HARD);
-    function ready() { if (done) return; done = true; overlay.classList.add('hint-ready'); }
+    const percentEl = $('intro-percent');
+
+    // Smooth, time-based progress that always genuinely reaches 100% —
+    // previously this counted only 2 of an expected 4 async steps, so it
+    // permanently froze at 50% and then a separate fallback timer force-
+    // dismissed the intro on its own. Now progress is driven by elapsed
+    // time (so it always completes) gated on fonts actually being ready,
+    // with a hard cutoff as a safety net — and reaching 100% only reveals
+    // the "swipe up to enter" hint. It never dismisses by itself.
+    const DURATION = 1800; // ms — minimum time for the bar to visually fill
+    const HARD = 5000;     // ms — absolute cutoff so we're never stuck loading
+    const startTime = performance.now();
+    let fontsReady = false, rafId = null;
+
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => { fontsReady = true; }).catch(() => { fontsReady = true; });
+    } else {
+      fontsReady = true;
+    }
+
+    function updateProgress(now) {
+      if (done) return;
+      const elapsed = now - startTime;
+      const timePct = Math.min(100, (elapsed / DURATION) * 100);
+      const canFinish = fontsReady || elapsed >= HARD;
+      const pct = canFinish ? timePct : Math.min(99, timePct);
+      if (percentEl) percentEl.textContent = Math.floor(pct) + '%';
+      if (pct >= 100 && canFinish) { ready(); return; }
+      rafId = requestAnimationFrame(updateProgress);
+    }
+    rafId = requestAnimationFrame(updateProgress);
+
+    function ready() {
+      if (done) return;
+      done = true;
+      if (rafId) cancelAnimationFrame(rafId);
+      if (percentEl) percentEl.textContent = '100%';
+      overlay.classList.add('hint-ready');
+      // Loading has visually finished — the site is ready, but the user
+      // must manually swipe / click / press a key / scroll to enter.
+    }
+
     function dismiss() {
       if (dismissed || !done) return; dismissed = true;
       overlay.classList.add('hidden'); setTimeout(() => { overlay.style.display = 'none'; }, 600);
@@ -69,19 +106,27 @@
       try { fetchGitHub().catch(() => {}); } catch (e) {}
       try { fetchLastfm().catch(() => {}); } catch (e) {}
     }
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(tick).catch(tick); else tick();
-    tick(); // yt api
-    // Heavy API calls are now lazy-loaded via IntersectionObserver below
-    setTimeout(() => { if (!dismissed) { ready(); dismiss(); } }, 2500); // Faster intro
-    overlay.addEventListener('click', () => { ready(); dismiss(); });
-    overlay.addEventListener('pointerup', () => { ready(); dismiss(); });
+
+    // No auto-dismiss timer — dismiss() itself is a no-op until `done`
+    // (i.e. until progress actually completes), so these listeners only
+    // ever act as the manual "enter the site" gestures.
+    overlay.addEventListener('click', (e) => { dismiss(); });
+    overlay.addEventListener('pointerup', (e) => { dismiss(); });
     const enterKeys = ['ArrowDown', 'Space', 'Enter', 'PageDown', 'Escape'];
-    window.addEventListener('keydown', (e) => { if (enterKeys.includes(e.code)) { ready(); dismiss(); } }, { once: true });
-    window.addEventListener('wheel', (e) => { if (e.deltaY > 30) { ready(); dismiss(); } }, { once: true, passive: true });
+    window.addEventListener('keydown', (e) => { if (enterKeys.includes(e.code)) dismiss(); }, { once: true });
+    window.addEventListener('wheel', (e) => { if (e.deltaY > 30) dismiss(); }, { once: true, passive: true });
     let sy = 0;
     overlay.addEventListener('touchstart', (e) => { sy = e.touches[0].clientY; }, { passive: true });
-    overlay.addEventListener('touchend', (e) => { if (sy - e.changedTouches[0].clientY > 40) { ready(); dismiss(); } }, { passive: true });
+    overlay.addEventListener('touchend', (e) => {
+      // Prevent the browser's follow-up synthetic click/mouse events from
+      // firing at this same screen position once the overlay is gone —
+      // otherwise a tap here could "leak through" to whatever element sits
+      // behind the intro (e.g. a topbar button) the instant it fades out.
+      e.preventDefault();
+      if (sy - e.changedTouches[0].clientY > 40) dismiss();
+    });
   })();
+
 
   /* ============================================================
      2. CLICK SPLASH
