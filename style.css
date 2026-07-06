@@ -263,6 +263,8 @@ html.light .tb-icon-btn.active svg { filter: drop-shadow(0 0 6px rgba(100,80,220
 .tb-cd-sleeve {
   position: relative; width: 26px; height: 26px; flex-shrink: 0;
   overflow: visible;
+  /* Extra right margin so disc doesn't overlap EQ bars */
+  margin-right: 4px;
 }
 .tb-cd-cover {
   position: absolute; inset: 0; border-radius: 5px;
@@ -270,11 +272,17 @@ html.light .tb-icon-btn.active svg { filter: drop-shadow(0 0 6px rgba(100,80,220
   box-shadow: 0 1px 4px rgba(0,0,0,0.5);
   z-index: 2;
 }
+/* Cover slit on left edge */
+.tb-cd-cover::after {
+  content: ''; position: absolute;
+  left: 0; top: 20%; bottom: 20%; width: 2px;
+  background: rgba(0,0,0,0.3); border-radius: 1px;
+}
 .tb-cd-disc {
   position: absolute;
-  top: 50%; left: 50%;
+  top: 50%;
   width: 22px; height: 22px;
-  margin-top: -11px; margin-left: -11px;
+  margin-top: -11px;
   border-radius: 50%;
   background:
     radial-gradient(circle at 50% 50%, var(--accent) 0 22%, transparent 22%),
@@ -282,10 +290,15 @@ html.light .tb-icon-btn.active svg { filter: drop-shadow(0 0 6px rgba(100,80,220
     repeating-radial-gradient(circle at 50% 50%, #333 0 1px, #1a1a1a 1px 2px);
   border: 1px solid rgba(0,0,0,0.6);
   z-index: 1;
-  margin-left: 1px;
-  transition: margin-left 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* PAUSED: fully inside sleeve — centered on cover */
+  left: 50%;
+  margin-left: -11px;
+  transition: left 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+              margin-left 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.4s ease;
+  box-shadow: none;
 }
-/* Rainbow reflection streak — breaks symmetry so spin is visible */
+/* Rainbow streak so spin is visible */
 .tb-cd-disc::before {
   content: ''; position: absolute; inset: 2px; border-radius: 50%;
   background: conic-gradient(
@@ -303,10 +316,12 @@ html.light .tb-icon-btn.active svg { filter: drop-shadow(0 0 6px rgba(100,80,220
   width: 4px; height: 4px; margin: -2px 0 0 -2px;
   border-radius: 50%; background: #0a0a0e;
 }
-/* Playing: disc peeks out left of cover and spins */
-.tb-music-disc.playing .tb-cd-disc {
-  margin-left: -16px;
+/* PLAYING: disc slides LEFT — peeks out from sleeve's left edge, spins */
+#tb-music-disc.playing .tb-cd-disc {
+  left: 0;
+  margin-left: -13px;
   animation: miniSpin 3s linear infinite;
+  box-shadow: -2px 0 6px rgba(0,200,255,0.25);
 }
 @keyframes miniSpin { to { transform: rotate(360deg); } }
 @keyframes refreshSpin { to { transform: rotate(180deg); } }
@@ -407,13 +422,14 @@ html.light .theme-toggle .icon-sun { display: block; }
     repeating-radial-gradient(circle at 50% 50%, #1e1e1e 0 1px, #0d0d0d 1px 2.5px);
   border: 2px solid rgba(0,0,0,0.7);
   box-shadow:
-    0 0 0 1px rgba(0,200,255,0.12),
-    0 0 24px rgba(0,200,255,0.12),
     inset 0 0 25px rgba(0,0,0,0.8);
   z-index: 1;
-  left: 100%;
+  /* PAUSED: fully inside sleeve — centered on cover */
+  left: 50%;
   margin-left: -90px;
-  transition: left 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), margin-left 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: left 0.55s cubic-bezier(0.34, 1.56, 0.64, 1),
+              margin-left 0.55s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.4s ease;
 }
 /* Iridescent rainbow reflection — like light hitting a real spinning CD */
 .sp-cd-disc::before {
@@ -446,11 +462,14 @@ html.light .theme-toggle .icon-sun { display: block; }
   box-shadow: inset 0 0 0 2px rgba(0,200,255,0.4), 0 0 6px rgba(0,0,0,0.6);
 }
 
-/* Playing: CD slides left — half peeks out from the cover's left edge */
+/* PLAYING: CD slides LEFT — peeks out from cover's left edge, spins */
 .sp-cd-disc.playing {
   left: 0;
   margin-left: -50px;
   animation: cdSpin 4s linear infinite;
+  box-shadow:
+    -4px 0 16px rgba(0,200,255,0.2),
+    inset 0 0 25px rgba(0,0,0,0.8);
 }
 @keyframes cdSpin { to { transform: rotate(360deg); } }
 
@@ -1503,7 +1522,7 @@ html.light .cursor-glow { background: radial-gradient(circle, rgba(100,80,220,0.
     padding-top: 80px;
   }
   .sp-cd-sleeve { width: 160px; height: 160px; }
-  .sp-cd-disc { width: 140px; height: 140px; margin-top: -70px; }
+  .sp-cd-disc { width: 140px; height: 140px; margin-top: -70px; margin-left: -70px; }
   .sp-cd-disc.playing { margin-left: -40px; }
   .sp-title { font-size: 20px; }
 }
@@ -1575,7 +1594,6 @@ html.light .al-page-btn.active { background: var(--white); color: #fff; border-c
 html.light .al-page-btn:hover:not(.active):not(:disabled) { border-color: var(--border-hover); background: rgba(0,0,0,0.03); }
 html.light .al-page-dots { color: var(--gray-dim); }
 
-/* Full Music Player */
 /* Full Music Player */
 html.light .slide-player-panel { background: rgba(245,245,250,0.95); }
 html.light .sp-title { color: var(--white); }
