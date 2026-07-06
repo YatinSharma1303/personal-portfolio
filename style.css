@@ -625,7 +625,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
   padding: 100px 24px 60px; text-align: center;
 }
 .hero-inner { max-width: var(--maxw); }
-.hero-label { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); letter-spacing: 0.12em; margin-bottom: 18px; }
+.hero-label { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); letter-spacing: 0.12em; margin-bottom: 18px; text-transform: uppercase; }
+.hero-label-hash { color: var(--accent); margin-right: 4px; }
+.hero-label-sep { color: var(--border-hover); margin: 0 6px; }
 .hero-eyebrow { font-family: var(--mono); font-size: 13px; color: var(--accent); letter-spacing: 0.1em; margin-bottom: 16px; }
 .hero-h1 {
   font-size: clamp(38px, 8vw, 84px); font-weight: 800; line-height: 1.02;
