@@ -699,7 +699,10 @@ html.light .interest-card { background: rgba(255,255,255,0.5); }
 .ama-q { padding: 16px; border-radius: 14px; border: 1px solid var(--border); }
 .ama-q-text { font-size: 14px; margin-bottom: 8px; }
 .ama-q-ans { font-size: 13px; color: var(--gray); padding-left: 12px; border-left: 2px solid var(--accent); }
-.ama-q-meta { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); margin-top: 8px; }
+.ama-q-meta { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); margin-top: 10px; display: flex; flex-direction: column; gap: 3px; }
+.ama-q-meta-name { color: var(--white); font-weight: 600; font-size: 12px; }
+.ama-q-meta-time { opacity: 0.7; }
+.ama-q-meta-answered { color: #34d399; opacity: 1; }
 
 /* ============ PRESENCE ============ */
 .presence-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }

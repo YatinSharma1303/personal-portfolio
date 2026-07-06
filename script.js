@@ -940,6 +940,15 @@
 
     let answeredDocs = [], activeSort = 'top', page = 1;
 
+    function formatAmaTime(iso) {
+      if (!iso) return '';
+      try {
+        return new Date(iso).toLocaleString('en-IN', {
+          timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short',
+          hour: '2-digit', minute: '2-digit', hour12: true
+        });
+      } catch (e) { return ''; }
+    }
     function fromDoc(doc) {
       const f = doc.fields || {};
       const reactions = {};
@@ -953,6 +962,7 @@
         name: f.name?.stringValue || 'Anonymous',
         question: f.question?.stringValue || '',
         answer: f.answer?.stringValue || '',
+        createdAt: f.createdAt?.stringValue || '',
         answeredAt: f.answeredAt?.stringValue || '',
         votes: Number(f.votes?.integerValue || f.votes?.doubleValue || 0),
         reactions: reactions
@@ -983,7 +993,11 @@
         return '<div class="ama-q">' +
           '<div class="ama-q-text">' + esc(q.question) + '</div>' +
           '<div class="ama-q-ans">' + esc(q.answer) + '</div>' +
-          '<div class="ama-q-meta">' + esc(q.name || 'Anonymous') + ' - ' + esc((q.answeredAt || '').slice(0, 10)) + '</div>' +
+          '<div class="ama-q-meta">' +
+            '<span class="ama-q-meta-name">👤 ' + esc(q.name || 'Anonymous') + '</span>' +
+            '<span class="ama-q-meta-time">🕐 Asked ' + esc(formatAmaTime(q.createdAt)) + '</span>' +
+            '<span class="ama-q-meta-time ama-q-meta-answered">✅ Answered ' + esc(formatAmaTime(q.answeredAt)) + '</span>' +
+          '</div>' +
           '<div class="ama-q-vote">' +
           '<button class="ama-vote-btn ' + (up ? 'voted' : '') + '" data-id="' + q.id + '" data-dir="1" title="Helpful">\u25B2</button>' +
           '<span class="ama-vote-count" data-count="' + q.id + '">' + q.votes + '</span>' +
