@@ -218,9 +218,9 @@ function buildAllPageText(sorted, page) {
 }
 function buildAllPageButtons(page, pages) {
   const row = [];
-  if (page > 1) row.push({ text: '\u25C0 Previous', callback_data: 'all:page:' + (page - 1) });
+  if (page > 1) row.push({ text: '\u25C0 Previous', callback_data: 'all:' + (page - 1) });
   row.push({ text: page + ' / ' + pages, callback_data: 'all:noop' });
-  if (page < pages) row.push({ text: 'Next \u25B6', callback_data: 'all:page:' + (page + 1) });
+  if (page < pages) row.push({ text: 'Next \u25B6', callback_data: 'all:' + (page + 1) });
   return { inline_keyboard: [row] };
 }
 
@@ -683,6 +683,7 @@ module.exports = async function handler(req, res) {
       }
       else if (action === 'all') {
         // Pagination for /all command
+        if (questionId === 'noop') { await answerCallback(callback.id, ''); return res.status(200).json({ ok: true, callback: action }); }
         const page = parseInt(questionId, 10) || 1;
         try {
           const all = await listAllQuestions();
@@ -691,9 +692,6 @@ module.exports = async function handler(req, res) {
           await answerCallback(callback.id, 'Page ' + page + '/' + pages);
           await editMessage(cbChatId, cbMessageId, text, buildAllPageButtons(page, pages));
         } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Error loading page'); }
-      }
-      else if (action === 'noop') {
-        await answerCallback(callback.id, '');
       }
       else {
         await answerCallback(callback.id, 'Unknown action');
