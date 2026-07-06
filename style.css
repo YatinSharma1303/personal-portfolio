@@ -785,9 +785,9 @@ html.light .interest-card { background: rgba(255,255,255,0.5); }
   stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
 }
 .footer-link[href*="github"] svg { fill: currentColor; stroke: none; }
-#footer-copy-email { cursor: pointer; }
-#footer-copy-email.copied { border-color: #34d399; color: #34d399; }
-#footer-copy-email.copied svg { stroke: #34d399; }
+/* Envelope icon: body filled, flap stroked */
+.footer-mailto .envelope-body { fill: none; stroke: currentColor; }
+.footer-mailto .envelope-flap { fill: none; stroke: currentColor; }
 
 @media (max-width: 600px) {
   .footer-content {
@@ -848,7 +848,7 @@ html.light .back-to-top { background: rgba(255,255,255,0.6); }
 .topbar-music-widget:hover .tb-music-tooltip { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* ============ COPY EMAIL BUTTON ============ */
-.email-wrap { display: flex; align-items: center; gap: 6px; }
+.email-wrap { display: flex; align-items: center; gap: 6px; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; user-select: text; }
 .email-wrap b { user-select: text; -webkit-user-select: text; }
 .copy-btn { font-size: 14px; color: var(--gray-dim); padding: 2px; border-radius: 6px; transition: all 0.15s ease; font-family: 'Material Symbols Outlined'; }
 .copy-btn:hover { color: var(--accent); background: rgba(0,200,255,0.1); }
