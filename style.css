@@ -452,6 +452,7 @@ html.light .site-particles { opacity: 0.8; }
 .al-banner-label[data-status="watching"] { color: #3b82f6; }
 .al-banner-label[data-status="completed"] { color: #34d399; }
 .al-banner-label[data-status="rewatching"] { color: #a78bfa; }
+.al-banner-label[data-status="repeating"] { color: #a78bfa; }
 .al-banner-label[data-status="planning"] { color: #f59e0b; }
 .al-banner-label[data-status="paused"] { color: #fb923c; }
 .al-banner-label[data-status="dropped"] { color: #f87171; }

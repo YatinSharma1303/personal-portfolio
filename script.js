@@ -682,13 +682,14 @@
         CURRENT: 'CURRENTLY WATCHING',
         WATCHING: 'CURRENTLY WATCHING',
         COMPLETED: 'COMPLETED',
+        REPEATING: 'REWATCHING',
         REWATCHING: 'REWATCHING',
         PLANNING: 'PLAN TO WATCH',
         PAUSED: 'ON HOLD',
         DROPPED: 'DROPPED'
       };
       const label = STATUS_LABELS[statusRaw] || 'LATEST UPDATE';
-      const isOngoing = statusRaw === 'CURRENT' || statusRaw === 'WATCHING' || statusRaw === 'REWATCHING';
+      const isOngoing = statusRaw === 'CURRENT' || statusRaw === 'WATCHING' || statusRaw === 'REPEATING' || statusRaw === 'REWATCHING';
       const progress = item.progress ? item.progress + (item.media.episodes ? '/' + item.media.episodes : '') + ' eps' + (isOngoing ? ' watched' : '') : (statusRaw === 'COMPLETED' ? 'completed' : '');
       const score = item.score ? ' · ★ ' + item.score : '';
       banner.innerHTML = (img ? '<img class="al-banner-img" alt="' + esc(t) + '" src="' + img + '">' : '') + '<div class="al-banner-info"><div class="al-banner-label" data-status="' + statusRaw.toLowerCase() + '">' + label + '</div><div class="al-banner-title">' + esc(t) + '</div><div class="al-banner-progress">' + esc(progress + score) + '</div></div>';
