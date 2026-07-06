@@ -1610,24 +1610,27 @@ html.light .sp-close { color: rgba(0,0,0,0.5); border-color: rgba(0,0,0,0.12); }
 html.light .sp-yt-link { color: var(--gray); }
 html.light .sp-cd-disc {
   background:
-    radial-gradient(circle at 50% 50%, var(--accent) 0 12%, rgba(100,80,220,0.2) 12.5%, transparent 13%),
-    radial-gradient(circle at 50% 50%, #ddd 0 4%, transparent 4.5%),
-    repeating-radial-gradient(circle at 50% 50%, #e0e0e0 0 1px, #d0d0d0 1px 3px);
+    radial-gradient(circle at 50% 50%, var(--accent) 0 12%, rgba(100,80,220,0.3) 13%, transparent 14%),
+    radial-gradient(circle at 50% 50%, #aaa 0 4%, transparent 4.5%),
+    repeating-radial-gradient(circle at 50% 50%, #bbb 0 1px, #999 1px 3px);
+  border-color: rgba(0,0,0,0.4);
 }
 html.light .sp-cd-disc::before {
   background: conic-gradient(
     from 0deg,
     transparent 0deg,
-    rgba(100,80,220,0.15) 20deg,
-    rgba(60,120,255,0.18) 50deg,
-    rgba(120,80,220,0.15) 80deg,
-    rgba(200,60,220,0.12) 110deg,
-    rgba(220,80,160,0.10) 140deg,
+    rgba(59,130,246,0.35) 20deg,
+    rgba(80,160,255,0.4) 50deg,
+    rgba(120,80,255,0.35) 80deg,
+    rgba(200,60,255,0.3) 110deg,
+    rgba(240,80,180,0.25) 140deg,
     transparent 170deg,
     transparent 240deg,
-    rgba(100,80,220,0.08) 280deg,
+    rgba(59,130,246,0.2) 280deg,
+    rgba(120,80,255,0.15) 320deg,
     transparent 360deg
   );
+  mix-blend-mode: multiply;
 }
 html.light .sp-cd-label { background: linear-gradient(135deg, rgba(100,80,220,0.2), rgba(0,150,220,0.15)); }
 html.light .sp-cd-cover { box-shadow: 0 4px 20px rgba(0,0,0,0.1), inset 0 0 0 1px rgba(0,0,0,0.06); }
