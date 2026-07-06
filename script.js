@@ -207,6 +207,8 @@
         setTimeout(() => { overlay.style.display = 'none'; }, 600);
       }, 200);
       window.__introDone = true;
+      // Auto-play music on enter
+      try { doPlay(); } catch (e) {}
       // Fetch heavy API data
       try { fetchGitHub().catch(() => {}); } catch (e) {}
       try { fetchLastfm().catch(() => {}); } catch (e) {}
