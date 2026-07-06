@@ -30,6 +30,23 @@ async function getToken() {
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 'no-cache');
+
+  // GET = just read the count (no increment)
+  if (req.method === 'GET') {
+    try {
+      const token = await getToken();
+      const docUrl = 'https://firestore.googleapis.com/v1/projects/' + projectId() + '/databases/(default)/documents/' + COLLECTION + '/' + DOC;
+      const readRes = await fetch(docUrl, { headers: { Authorization: 'Bearer ' + token } });
+      if (readRes.status === 404) return res.status(200).json({ ok: true, total: 0 });
+      const doc = await readRes.json().catch(() => null);
+      const current = doc && doc.fields ? Number(doc.fields.total && (doc.fields.total.integerValue || doc.fields.total.doubleValue) || 0) : 0;
+      return res.status(200).json({ ok: true, total: current });
+    } catch (e) {
+      return res.status(200).json({ ok: true, total: 0 });
+    }
+  }
+
+  // POST = increment (only called on first visit)
   try {
     const token = await getToken();
     const docUrl = 'https://firestore.googleapis.com/v1/projects/' + projectId() + '/databases/(default)/documents/' + COLLECTION + '/' + DOC;

@@ -1366,10 +1366,12 @@
      27. VISITOR COUNTER
      ============================================================ */
   (function visitorCount() {
-    fetch('/api/visitor', { method: 'POST' })
+    const alreadyVisited = localStorage.getItem('yatin_visited');
+    const method = alreadyVisited ? 'GET' : 'POST';
+    fetch('/api/visitor', { method })
       .then(r => r.json())
       .then(d => {
-        sessionStorage.setItem('visited', '1');
+        if (!alreadyVisited) localStorage.setItem('yatin_visited', '1');
         let badge = document.querySelector('.visitor-badge');
         if (!badge) { badge = document.createElement('div'); badge.className = 'visitor-badge'; document.body.appendChild(badge); }
         badge.textContent = (d.total || 0).toLocaleString() + ' visits';
