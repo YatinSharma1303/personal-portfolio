@@ -1552,24 +1552,24 @@
     if (!overlay || !input || !results) return;
 
     const COMMANDS = [
-      { icon: '🏠', label: 'Go to Home', hint: 'G', action: () => document.getElementById('hero')?.scrollIntoView({ behavior: 'smooth' }) },
-      { icon: '👤', label: 'Go to About', hint: 'A', action: () => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' }) },
-      { icon: '⚡', label: 'Go to Skills', hint: 'S', action: () => document.getElementById('skills')?.scrollIntoView({ behavior: 'smooth' }) },
-      { icon: '📊', label: 'Go to Contributions', hint: '', action: () => document.getElementById('contributions')?.scrollIntoView({ behavior: 'smooth' }) },
-      { icon: '💻', label: 'Go to Coding Stats', hint: '', action: () => document.getElementById('wakatime')?.scrollIntoView({ behavior: 'smooth' }) },
-      { icon: '📁', label: 'Go to Projects', hint: 'P', action: () => document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' }) },
-      { icon: '🎵', label: 'Go to Music', hint: '', action: () => document.getElementById('music')?.scrollIntoView({ behavior: 'smooth' }) },
-      { icon: '🎬', label: 'Go to Anime', hint: '', action: () => document.getElementById('anime')?.scrollIntoView({ behavior: 'smooth' }) },
-      { icon: '🎯', label: 'Go to Interests', hint: '', action: () => document.getElementById('interests')?.scrollIntoView({ behavior: 'smooth' }) },
-      { icon: '💬', label: 'Go to Ask Me Anything', hint: '', action: () => document.getElementById('ama')?.scrollIntoView({ behavior: 'smooth' }) },
-      { icon: '🎮', label: 'Go to Playground', hint: '', action: () => document.getElementById('playground')?.scrollIntoView({ behavior: 'smooth' }) },
-      { icon: '🌐', label: 'Go to Presence', hint: '', action: () => document.getElementById('presence')?.scrollIntoView({ behavior: 'smooth' }) },
-      { icon: '🌙', label: 'Toggle Theme', hint: 'T', action: () => document.getElementById('theme-toggle-btn')?.click() },
-      { icon: '▶', label: 'Play / Pause Music', hint: 'M', action: () => document.getElementById('sp-play-btn')?.click() },
-      { icon: '⬆', label: 'Scroll to Top', hint: '', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
-      { icon: '🔗', label: 'Open GitHub Profile', hint: '', action: () => window.open('https://github.com/YatinSharma1303', '_blank') },
-      { icon: '✉', label: 'Copy Email Address', hint: '', action: () => document.getElementById('copy-email')?.click() },
-      { icon: '🕐', label: 'Toggle Intro Overlay', hint: '', action: () => { const o = document.getElementById('intro-overlay'); if (o) { o.style.display = ''; o.classList.remove('hidden'); } } },
+      { icon: 'home', label: 'Go to Home', hint: 'G', action: () => document.getElementById('hero')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: 'person', label: 'Go to About', hint: 'A', action: () => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: 'bolt', label: 'Go to Skills', hint: 'S', action: () => document.getElementById('skills')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: 'bar_chart', label: 'Go to Contributions', hint: '', action: () => document.getElementById('contributions')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: 'timer', label: 'Go to Coding Stats', hint: '', action: () => document.getElementById('wakatime')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: 'folder', label: 'Go to Projects', hint: 'P', action: () => document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: 'library_music', label: 'Go to Music', hint: '', action: () => document.getElementById('music')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: 'live_tv', label: 'Go to Anime', hint: '', action: () => document.getElementById('anime')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: 'interests', label: 'Go to Interests', hint: '', action: () => document.getElementById('interests')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: 'question_answer', label: 'Go to Ask Me Anything', hint: '', action: () => document.getElementById('ama')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: 'sports_esports', label: 'Go to Playground', hint: '', action: () => document.getElementById('playground')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: 'public', label: 'Go to Presence', hint: '', action: () => document.getElementById('presence')?.scrollIntoView({ behavior: 'smooth' }) },
+      { icon: 'dark_mode', label: 'Toggle Theme', hint: 'T', action: () => document.getElementById('theme-toggle-btn')?.click() },
+      { icon: 'play_arrow', label: 'Play / Pause Music', hint: 'M', action: () => document.getElementById('sp-play-btn')?.click() },
+      { icon: 'arrow_upward', label: 'Scroll to Top', hint: '', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
+      { icon: 'open_in_new', label: 'Open GitHub Profile', hint: '', action: () => window.open('https://github.com/YatinSharma1303', '_blank') },
+      { icon: 'content_copy', label: 'Copy Email Address', hint: '', action: () => document.getElementById('copy-email')?.click() },
+      { icon: 'replay', label: 'Toggle Intro Overlay', hint: '', action: () => { const o = document.getElementById('intro-overlay'); if (o) { o.style.display = ''; o.classList.remove('hidden'); } } },
     ];
 
     let selectedIndex = 0;
@@ -1588,7 +1588,7 @@
     function render() {
       results.innerHTML = filtered.map((cmd, i) => 
         '<div class="cmd-item ' + (i === selectedIndex ? 'selected' : '') + '" data-index="' + i + '">' +
-        '<span class="cmd-item-icon">' + cmd.icon + '</span>' +
+        '<span class="cmd-item-icon material-symbols-outlined">' + cmd.icon + '</span>' +
         '<span class="cmd-item-label">' + highlightMatch(cmd.label, input.value) + '</span>' +
         (cmd.hint ? '<span class="cmd-item-hint">' + cmd.hint + '</span>' : '') +
         '</div>'
