@@ -785,6 +785,9 @@ html.light .interest-card { background: rgba(255,255,255,0.5); }
   stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
 }
 .footer-link[href*="github"] svg { fill: currentColor; stroke: none; }
+#footer-copy-email { cursor: pointer; }
+#footer-copy-email.copied { border-color: #34d399; color: #34d399; }
+#footer-copy-email.copied svg { stroke: #34d399; }
 
 @media (max-width: 600px) {
   .footer-content {
@@ -846,6 +849,7 @@ html.light .back-to-top { background: rgba(255,255,255,0.6); }
 
 /* ============ COPY EMAIL BUTTON ============ */
 .email-wrap { display: flex; align-items: center; gap: 6px; }
+.email-wrap b { user-select: text; -webkit-user-select: text; }
 .copy-btn { font-size: 14px; color: var(--gray-dim); padding: 2px; border-radius: 6px; transition: all 0.15s ease; font-family: 'Material Symbols Outlined'; }
 .copy-btn:hover { color: var(--accent); background: rgba(0,200,255,0.1); }
 .copy-btn.copied { color: #34d399; }
