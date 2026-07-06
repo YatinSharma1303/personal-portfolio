@@ -54,28 +54,49 @@
   /* ============================================================
      1. INTRO / PRELOADER
      ============================================================ */
+  /* ============================================================
+     1. INTRO OVERLAY — Glitch Name Reveal
+     Scrambled characters lock in one by one, progress bar fills,
+     user dismisses → whoosh sound + name shatters → site revealed.
+     ============================================================ */
+  window.__introDone = false;
   (function intro() {
     const overlay = $('intro-overlay');
     if (!overlay) return;
     let done = false, dismissed = false;
     const percentEl = $('intro-percent');
-
-    // Smooth, time-based progress that always genuinely reaches 100% —
-    // previously this counted only 2 of an expected 4 async steps, so it
-    // permanently froze at 50% and then a separate fallback timer force-
-    // dismissed the intro on its own. Now progress is driven by elapsed
-    // time (so it always completes) gated on fonts actually being ready,
-    // with a hard cutoff as a safety net — and reaching 100% only reveals
-    // the "swipe up to enter" hint. It never dismisses by itself.
-    const DURATION = 1800; // ms — minimum time for the bar to visually fill
-    const HARD = 5000;     // ms — absolute cutoff so we're never stuck loading
+    const fillEl = $('intro-progress-fill');
+    const designedEl = $('intro-designed');
+    const chars = overlay.querySelectorAll('.intro-char');
+    const TARGET = ['Y','A','T','I','N'];
+    const SCRAMBLE = '!@#$%&*?/\\|0123456789▓▒░█▄▀■□◇◆'.split('');
+    const DURATION = 1800;
+    const HARD = 5000;
     const startTime = performance.now();
-    let fontsReady = false, rafId = null;
+    let fontsReady = false, rafId = null, scrambleId = null;
 
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(() => { fontsReady = true; }).catch(() => { fontsReady = true; });
-    } else {
-      fontsReady = true;
+    } else { fontsReady = true; }
+
+    // Scramble all unlocked chars every 60ms
+    function startScramble() {
+      scrambleId = setInterval(() => {
+        chars.forEach((ch, i) => {
+          if (ch.classList.contains('locked')) return;
+          ch.textContent = SCRAMBLE[Math.floor(Math.random() * SCRAMBLE.length)];
+          ch.classList.add('scrambling');
+        });
+      }, 60);
+    }
+
+    // Lock a single char at index
+    function lockChar(i) {
+      if (i >= chars.length) return;
+      const ch = chars[i];
+      ch.textContent = TARGET[i];
+      ch.classList.remove('scrambling');
+      ch.classList.add('locked');
     }
 
     function updateProgress(now) {
@@ -85,46 +106,100 @@
       const canFinish = fontsReady || elapsed >= HARD;
       const pct = canFinish ? timePct : Math.min(99, timePct);
       if (percentEl) percentEl.textContent = Math.floor(pct) + '%';
+      if (fillEl) fillEl.style.width = Math.floor(pct) + '%';
       if (pct >= 100 && canFinish) { ready(); return; }
       rafId = requestAnimationFrame(updateProgress);
     }
-    rafId = requestAnimationFrame(updateProgress);
 
     function ready() {
       if (done) return;
       done = true;
       if (rafId) cancelAnimationFrame(rafId);
       if (percentEl) percentEl.textContent = '100%';
-      overlay.classList.add('hint-ready');
-      // Loading has visually finished — the site is ready, but the user
-      // must manually swipe / click / press a key / scroll to enter.
+      if (fillEl) fillEl.style.width = '100%';
+
+      // Lock remaining chars in sequence
+      if (scrambleId) clearInterval(scrambleId);
+      const alreadyLocked = overlay.querySelectorAll('.intro-char.locked').length;
+      let next = alreadyLocked;
+      function lockNext() {
+        if (next >= chars.length) {
+          // All locked — show designed-by text
+          if (designedEl) designedEl.classList.add('visible');
+          overlay.classList.add('hint-ready');
+          return;
+        }
+        lockChar(next);
+        next++;
+        setTimeout(lockNext, 280);
+      }
+      lockNext();
+    }
+
+    // Whoosh sound via Web Audio
+    function playWhoosh() {
+      try {
+        const ac = new (window.AudioContext || window.webkitAudioContext)();
+        // White noise burst
+        const len = ac.sampleRate * 0.2; // 200ms
+        const buf = ac.createBuffer(1, len, ac.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len); // fade out
+        const src = ac.createBufferSource();
+        src.buffer = buf;
+        // Bandpass filter for whoosh character
+        const bp = ac.createBiquadFilter();
+        bp.type = 'bandpass'; bp.frequency.value = 1200; bp.Q.value = 0.7;
+        const gain = ac.createGain();
+        gain.gain.setValueAtTime(0.25, ac.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.2);
+        src.connect(bp); bp.connect(gain); gain.connect(ac.destination);
+        src.start(); src.stop(ac.currentTime + 0.25);
+      } catch (e) {}
+    }
+
+    // Shatter animation
+    function shatter() {
+      chars.forEach((ch, i) => {
+        const tx = (Math.random() - 0.5) * 600;
+        const ty = -(Math.random() * 400 + 100);
+        const rot = (Math.random() - 0.5) * 720;
+        ch.style.transform = `translate(${tx}px, ${ty}px) rotate(${rot}deg)`;
+        ch.classList.add('shattered');
+      });
     }
 
     function dismiss() {
-      if (dismissed || !done) return; dismissed = true;
-      overlay.classList.add('hidden'); setTimeout(() => { overlay.style.display = 'none'; }, 600);
-      try { doPlay(); } catch (e) {}
-      // Start fetching heavy API data in the background immediately after entering the site.
-      // This makes the preloader instant, but ensures data loads without relying on scroll observers.
+      if (dismissed || !done) return;
+      dismissed = true;
+      playWhoosh();
+      shatter();
+      // Delay the slide-up slightly so shatter is visible
+      setTimeout(() => {
+        overlay.classList.add('hidden');
+        setTimeout(() => { overlay.style.display = 'none'; }, 600);
+      }, 200);
+      window.__introDone = true;
+      // Fetch heavy API data
       try { fetchGitHub().catch(() => {}); } catch (e) {}
       try { fetchLastfm().catch(() => {}); } catch (e) {}
     }
 
-    // No auto-dismiss timer — dismiss() itself is a no-op until `done`
-    // (i.e. until progress actually completes), so these listeners only
-    // ever act as the manual "enter the site" gestures.
-    overlay.addEventListener('click', (e) => { dismiss(); });
-    overlay.addEventListener('pointerup', (e) => { dismiss(); });
+    // Start scramble immediately
+    startScramble();
+
+    // Start progress
+    rafId = requestAnimationFrame(updateProgress);
+
+    // Dismiss listeners — same as before
+    overlay.addEventListener('click', () => { dismiss(); });
+    overlay.addEventListener('pointerup', () => { dismiss(); });
     const enterKeys = ['ArrowDown', 'Space', 'Enter', 'PageDown', 'Escape'];
     window.addEventListener('keydown', (e) => { if (enterKeys.includes(e.code)) dismiss(); }, { once: true });
     window.addEventListener('wheel', (e) => { if (e.deltaY > 30) dismiss(); }, { once: true, passive: true });
     let sy = 0;
     overlay.addEventListener('touchstart', (e) => { sy = e.touches[0].clientY; }, { passive: true });
     overlay.addEventListener('touchend', (e) => {
-      // Prevent the browser's follow-up synthetic click/mouse events from
-      // firing at this same screen position once the overlay is gone —
-      // otherwise a tap here could "leak through" to whatever element sits
-      // behind the intro (e.g. a topbar button) the instant it fades out.
       e.preventDefault();
       if (sy - e.changedTouches[0].clientY > 40) dismiss();
     });
@@ -729,7 +804,7 @@
     let isVisible = false;
     let typingTimer = null;
 
-    function typeClick() { try { if (window.sfx && !window.sfx.isMuted()) window.sfx.play(900 + Math.random()*200, 0.01, 'square'); } catch(e){} }
+    function typeClick() { try { if (!window.__introDone) return; if (window.sfx && !window.sfx.isMuted()) window.sfx.play(900 + Math.random()*200, 0.01, 'square'); } catch(e){} }
     
     function tick() {
       // If the terminal is scrolled out of view, stop looping and wait until it's visible again
