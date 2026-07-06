@@ -672,24 +672,31 @@
       const banner = $('al-banner'); if (!banner) return;
       // Sort all entries by updatedAt (most recent first)
       const sorted = entries.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-      // Check if any are currently being watched
-      const watching = sorted.filter(e => {
-        const s = (e._status || '').toUpperCase();
-        return s === 'CURRENT' || s === 'WATCHING' || s === 'REWATCHING';
-      });
-      const item = watching.length ? watching[0] : sorted[0];
+      if (!sorted.length) { banner.style.display = 'none'; return; }
+      const item = sorted[0];
       if (!item || !item.media) { banner.style.display = 'none'; return; }
       const t = (item.media.title && (item.media.title.romaji || item.media.title.english)) || '\u2014';
       const img = (item.media.coverImage && item.media.coverImage.large) || '';
-      const isWatching = watching.length > 0;
-      const label = isWatching ? 'CURRENTLY WATCHING' : 'LATEST WATCHED';
-      const progress = item.progress ? item.progress + ' eps' + (isWatching ? ' watched' : '') : 'completed';
-      banner.innerHTML = (img ? '<img class="al-banner-img" alt="' + esc(t) + '" src="' + img + '">' : '') + '<div class="al-banner-info"><div class="al-banner-label">' + label + '</div><div class="al-banner-title">' + esc(t) + '</div><div class="al-banner-progress">' + esc(progress) + '</div></div>';
+      const statusRaw = (item._status || '').toUpperCase();
+      const STATUS_LABELS = {
+        CURRENT: 'CURRENTLY WATCHING',
+        WATCHING: 'CURRENTLY WATCHING',
+        COMPLETED: 'COMPLETED',
+        REWATCHING: 'REWATCHING',
+        PLANNING: 'PLAN TO WATCH',
+        PAUSED: 'ON HOLD',
+        DROPPED: 'DROPPED'
+      };
+      const label = STATUS_LABELS[statusRaw] || 'LATEST UPDATE';
+      const isOngoing = statusRaw === 'CURRENT' || statusRaw === 'WATCHING' || statusRaw === 'REWATCHING';
+      const progress = item.progress ? item.progress + (item.media.episodes ? '/' + item.media.episodes : '') + ' eps' + (isOngoing ? ' watched' : '') : (statusRaw === 'COMPLETED' ? 'completed' : '');
+      const score = item.score ? ' · ★ ' + item.score : '';
+      banner.innerHTML = (img ? '<img class="al-banner-img" alt="' + esc(t) + '" src="' + img + '">' : '') + '<div class="al-banner-info"><div class="al-banner-label" data-status="' + statusRaw.toLowerCase() + '">' + label + '</div><div class="al-banner-title">' + esc(t) + '</div><div class="al-banner-progress">' + esc(progress + score) + '</div></div>';
       banner.style.display = 'flex';
     }
     function render() {
       ensureChrome();
-      const items = activeStatus === 'ALL' ? allEntries : allEntries.filter(e => (e._status || '').toUpperCase().includes(activeStatus));
+      const items = activeStatus === 'ALL' ? allEntries : allEntries.filter(e => (e._status || '').toUpperCase() === activeStatus);
       const pages = Math.max(1, Math.ceil(items.length / PER_PAGE));
       if (page > pages) page = pages;
       const slice = items.slice((page - 1) * PER_PAGE, page * PER_PAGE);

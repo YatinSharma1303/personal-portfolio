@@ -448,6 +448,13 @@ html.light .site-particles { opacity: 0.8; }
 .al-banner-img { width: 60px; height: 84px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
 .al-banner-info { flex: 1; min-width: 0; }
 .al-banner-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; color: #34d399; margin-bottom: 4px; }
+.al-banner-label[data-status="current"] { color: #3b82f6; }
+.al-banner-label[data-status="watching"] { color: #3b82f6; }
+.al-banner-label[data-status="completed"] { color: #34d399; }
+.al-banner-label[data-status="rewatching"] { color: #a78bfa; }
+.al-banner-label[data-status="planning"] { color: #f59e0b; }
+.al-banner-label[data-status="paused"] { color: #fb923c; }
+.al-banner-label[data-status="dropped"] { color: #f87171; }
 .al-banner-title { font-size: 16px; font-weight: 700; }
 .al-banner-progress { font-family: var(--mono); font-size: 11px; color: var(--gray); margin-top: 4px; }
 /* ============ 3D CARD TILT ============ */
