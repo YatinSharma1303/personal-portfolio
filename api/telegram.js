@@ -49,13 +49,18 @@ module.exports = async function handler(req, res) {
       });
     } catch (e) {}
 
-    // 1. BLOCKQUOTE QUESTION CARD — visually separates the question from metadata
+    // 1. PREMIUM CARD — bordered Unicode box with status header
     const text = [
-      `📩 <b>New Question</b>`,
-      ``,
-      `👤 <b>${escapeHtml(name)}</b> asks:`,
-      `<blockquote>${escapeHtml(question)}</blockquote>`,
-      `🕐 ${escapeHtml(timeStr)} IST · 🆔 <code>${escapeHtml(questionId)}</code>`
+      `┌─📩 <b>INCOMING QUESTION</b>──────────────┐`,
+      `│`,
+      `│  👤  <b>${escapeHtml(name)}</b>`,
+      `│`,
+      `│  💬  <blockquote>${escapeHtml(question)}</blockquote>`,
+      `│`,
+      `│  🕐  ${escapeHtml(timeStr)} IST`,
+      `│  🆔  <code>${escapeHtml(questionId)}</code>`,
+      `│`,
+      `└─⚡ <i>reply below to answer</i>──────────┘`
     ].join('\n');
 
     // 3. BUTTON LAYOUT REDESIGN — 3-row hierarchy

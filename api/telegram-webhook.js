@@ -211,7 +211,6 @@ async function getStats() {
   const answered = all.filter(q => questionState(q) === 'ANSWERED').length;
   const dismissed = all.filter(q => questionState(q) === 'DISMISSED').length;
   const totalVotes = all.reduce((s, q) => s + (q.votes || 0), 0);
-  // Find most voted question
   const answeredQs = all.filter(q => questionState(q) === 'ANSWERED');
   const mostVoted = answeredQs.length > 0 ? answeredQs.reduce((max, q) => (q.votes || 0) > (max.votes || 0) ? q : max) : null;
   return { total: all.length, unanswered, answered, dismissed, totalVotes, mostVoted };
@@ -227,30 +226,75 @@ function formatTime(iso) {
   } catch (e) { return ''; }
 }
 
+/* ── Relative time (e.g. "2h 15m ago", "3d ago") ── */
+function timeAgo(iso) {
+  if (!iso) return '';
+  const ms = Date.now() - new Date(iso).getTime();
+  if (ms < 0) return 'just now';
+  const secs = Math.floor(ms / 1000);
+  if (secs < 60) return 'just now';
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ' + (mins % 60) + 'm ago';
+  const days = Math.floor(hrs / 24);
+  return days + 'd ' + (hrs % 24) + 'h ago';
+}
+
+/* ── Response time between question creation and answer ── */
+function responseTime(createdAt, answeredAt) {
+  if (!createdAt || !answeredAt) return '';
+  const ms = new Date(answeredAt).getTime() - new Date(createdAt).getTime();
+  if (ms < 0) return 'instantly';
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return 'under 1 min';
+  if (mins < 60) return mins + ' min';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ' + (mins % 60) + 'm';
+  const days = Math.floor(hrs / 24);
+  return days + 'd ' + (hrs % 24) + 'h';
+}
+
+/* ── Unicode progress bar ── */
+function progressBar(value, max, width) {
+  width = width || 10;
+  if (max === 0) return '\u2591'.repeat(width);
+  const filled = Math.round((value / max) * width);
+  return '\u2588'.repeat(filled) + '\u2591'.repeat(width - filled);
+}
+
 /* ── 4. POLISHED STATS DASHBOARD ── */
 async function sendStats(chatId, replyToId) {
   try {
     const s = await getStats();
+    const maxStat = Math.max(s.total, 1);
+
     let mv = '';
     if (s.mostVoted) {
-      const qText = esc(s.mostVoted.question).slice(0, 60);
-      mv = `\n🔥 <b>Most voted:</b> "${qText}" (${s.mostVoted.votes || 0} votes)`;
+      const qText = esc(s.mostVoted.question).slice(0, 45);
+      mv = '\n\u2502\n\u2502  \uD83D\uDD25 <b>Top Question</b>\n\u2502  "' + qText + '"\n\u2502  with ' + (s.mostVoted.votes || 0) + ' \uD83D\uDC4D votes';
     }
+
     const statsText = [
-      `📊 <b>AMA Statistics</b>`,
-      `──────────────────────`,
-      `📥 Total         ${s.total}`,
-      `⏳ Unanswered    ${s.unanswered}`,
-      `✅ Answered      ${s.answered}`,
-      `🙈 Dismissed     ${s.dismissed}`,
-      `👍 Total votes   ${s.totalVotes}${mv}`
+      '\u250C\u2500\uD83D\uDCCA <b>AMA DASHBOARD</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510',
+      '\u2502',
+      '\u2502  \uD83D\uDCEC Total \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 <b>' + s.total + '</b>',
+      '\u2502',
+      '\u2502  \u23F3 Pending \u2500\u2500\u2500\u2500\u2500\u2500 ' + progressBar(s.unanswered, maxStat) + ' <b>' + s.unanswered + '</b>',
+      '\u2502  \u2705 Answered \u2500\u2500\u2500\u2500\u2500\u2500 ' + progressBar(s.answered, maxStat) + ' <b>' + s.answered + '</b>',
+      '\u2502  \uD83D\uDE48 Dismissed \u2500\u2500\u2500\u2500\u2500 ' + progressBar(s.dismissed, maxStat) + ' <b>' + s.dismissed + '</b>',
+      '\u2502',
+      '\u2502  \uD83D\uDC4D Total votes \u2500\u2500\u2500 <b>' + s.totalVotes + '</b>' + mv,
+      '\u2502',
+      '\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
     ].join('\n');
     await sendTelegram(chatId, statsText, replyToId);
   } catch (e) {
-    await sendTelegram(chatId, '⚠️ Could not load stats.', replyToId);
+    await sendTelegram(chatId,
+      '\u250C\u2500\u26A0\uFE0F <b>ERROR</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  Could not load statistics.\n\u2502  Try again in a moment.\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518',
+      replyToId);
   }
 }
-
 
 /* ── Fetch a single question ── */
 async function getQuestion(id) {
@@ -263,29 +307,42 @@ async function getQuestion(id) {
 }
 
 /* ── Build and send the rich "Answered" card with buttons ── */
-async function sendAnsweredCard(chatId, questionId, answerText, replyToId, isUpdate = false) {
+async function sendAnsweredCard(chatId, questionId, answerText, replyToId, isUpdate) {
+  isUpdate = isUpdate || false;
   const q = await getQuestion(questionId);
   const qName = q ? q.name : 'Anonymous';
   const qText = q ? q.question : 'Question text unavailable';
-  const headerText = isUpdate ? '✅ <b>Answer Updated</b>' : '✅ <b>Answer Published!</b>';
+  const qVotes = q ? q.votes : 0;
+  const rTime = q ? responseTime(q.createdAt, q.answeredAt) : '';
+  const qAge = q ? timeAgo(q.createdAt) : '';
+
+  const headerText = isUpdate ? '\u2705 <b>ANSWER UPDATED</b>' : '\u2705 <b>ANSWER PUBLISHED</b>';
+
+  let metaLine = '';
+  if (rTime) metaLine += '\n\u2502  \u26A1 Responded in <b>' + esc(rTime) + '</b>';
+  if (qAge) metaLine += '\n\u2502  \uD83D\uDD50 Question was ' + esc(qAge);
+  if (qVotes > 0) metaLine += '\n\u2502  \uD83D\uDC4D ' + qVotes + ' votes';
 
   const text = [
-    headerText,
-    `──────────────────────`,
-    `👤 <b>${esc(qName)}</b> asked:`,
-    `<blockquote>${esc(qText)}</blockquote>`,
-    ``,
-    `💬 <b>Your answer:</b>`,
-    `<blockquote>${esc(answerText)}</blockquote>`,
-    `🆔 <code>${esc(questionId)}</code>`
+    '\u250C\u2500' + headerText + '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510',
+    '\u2502',
+    '\u2502  \uD83D\uDC64 <b>' + esc(qName) + '</b> asked:',
+    '\u2502  <blockquote>' + esc(qText) + '</blockquote>',
+    '\u2502',
+    '\u2502  \uD83D\uDCAC <b>Your answer:</b>',
+    '\u2502  <blockquote>' + esc(answerText) + '</blockquote>',
+    '\u2502' + metaLine,
+    '\u2502',
+    '\u2502  \uD83C\uDD94 <code>' + esc(questionId) + '</code>',
+    '\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
   ].join('\n');
 
   const replyMarkup = {
     inline_keyboard: [
-      [{ text: '✏️  Edit Answer', callback_data: `edit:${questionId}` }],
+      [{ text: '\u270F\uFE0F  Edit Answer', callback_data: 'edit:' + questionId }],
       [
-        { text: '🙈  Dismiss', callback_data: `dismiss:${questionId}` },
-        { text: '🗑  Delete', callback_data: `delete:${questionId}` }
+        { text: '\uD83D\uDE48  Dismiss', callback_data: 'dismiss:' + questionId },
+        { text: '\uD83D\uDDD1  Delete', callback_data: 'delete:' + questionId }
       ]
     ]
   };
@@ -300,22 +357,32 @@ function buildCardForQuestion(q) {
   const state = questionState(q);
 
   if (state === 'ANSWERED') {
+    const rTime = responseTime(q.createdAt, q.answeredAt);
+    const qAge = timeAgo(q.createdAt);
+    let metaLine = '';
+    if (rTime) metaLine += '\n\u2502  \u26A1 Responded in <b>' + esc(rTime) + '</b>';
+    if (qAge) metaLine += '\n\u2502  \uD83D\uDD50 Question was ' + esc(qAge);
+    if (q.votes > 0) metaLine += '\n\u2502  \uD83D\uDC4D ' + q.votes + ' votes';
+
     const text = [
-      `✅ <b>Answer Published!</b>`,
-      `──────────────────────`,
-      `👤 <b>${esc(q.name)}</b> asked:`,
-      `<blockquote>${esc(q.question)}</blockquote>`,
-      ``,
-      `💬 <b>Your answer:</b>`,
-      `<blockquote>${esc(q.answer)}</blockquote>`,
-      `🆔 <code>${esc(q.id)}</code>`
+      '\u250C\u2500\u2705 <b>ANSWER PUBLISHED</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510',
+      '\u2502',
+      '\u2502  \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:',
+      '\u2502  <blockquote>' + esc(q.question) + '</blockquote>',
+      '\u2502',
+      '\u2502  \uD83D\uDCAC <b>Your answer:</b>',
+      '\u2502  <blockquote>' + esc(q.answer) + '</blockquote>',
+      '\u2502' + metaLine,
+      '\u2502',
+      '\u2502  \uD83C\uDD94 <code>' + esc(q.id) + '</code>',
+      '\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
     ].join('\n');
     const replyMarkup = {
       inline_keyboard: [
-        [{ text: '✏️  Edit Answer', callback_data: `edit:${q.id}` }],
+        [{ text: '\u270F\uFE0F  Edit Answer', callback_data: 'edit:' + q.id }],
         [
-          { text: '🙈  Dismiss', callback_data: `dismiss:${q.id}` },
-          { text: '🗑  Delete', callback_data: `delete:${q.id}` }
+          { text: '\uD83D\uDE48  Dismiss', callback_data: 'dismiss:' + q.id },
+          { text: '\uD83D\uDDD1  Delete', callback_data: 'delete:' + q.id }
         ]
       ]
     };
@@ -324,21 +391,24 @@ function buildCardForQuestion(q) {
 
   if (state === 'DISMISSED') {
     const text = [
-      `🙈 <b>Question Dismissed</b>`,
-      ``,
-      `👤 <b>${esc(q.name)}</b> asked:`,
-      `<blockquote>${esc(q.question)}</blockquote>`,
-      ``,
-      `This question is hidden from your website. Data is preserved.`,
-      `🆔 <code>${esc(q.id)}</code>`
+      '\u250C\u2500\uD83D\uDE48 <b>QUESTION DISMISSED</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510',
+      '\u2502',
+      '\u2502  \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:',
+      '\u2502  <blockquote>' + esc(q.question) + '</blockquote>',
+      '\u2502',
+      '\u2502  This question is hidden from your site.',
+      '\u2502  Data is safely preserved.',
+      '\u2502',
+      '\u2502  \uD83C\uDD94 <code>' + esc(q.id) + '</code>',
+      '\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
     ].join('\n');
     const replyMarkup = {
       inline_keyboard: [
-        [{ text: '💬  Answer', callback_data: `answer:${q.id}` }],
-        [{ text: '✏️  Edit Answer', callback_data: `edit:${q.id}` }],
+        [{ text: '\uD83D\uDCAC  Answer', callback_data: 'answer:' + q.id }],
+        [{ text: '\u270F\uFE0F  Edit Answer', callback_data: 'edit:' + q.id }],
         [
-          { text: '🙈  Dismiss', callback_data: `dismiss:${q.id}` },
-          { text: '🗑  Delete', callback_data: `delete:${q.id}` }
+          { text: '\uD83D\uDE48  Dismiss', callback_data: 'dismiss:' + q.id },
+          { text: '\uD83D\uDDD1  Delete', callback_data: 'delete:' + q.id }
         ]
       ]
     };
@@ -346,20 +416,26 @@ function buildCardForQuestion(q) {
   }
 
   // UNANSWERED — the original "New Question" notification card
+  const qAge = timeAgo(q.createdAt);
   const text = [
-    `📩 <b>New Question</b>`,
-    ``,
-    `👤 <b>${esc(q.name)}</b> asks:`,
-    `<blockquote>${esc(q.question)}</blockquote>`,
-    `🕐 ${esc(formatTime(q.createdAt))} IST · 🆔 <code>${esc(q.id)}</code>`
+    '\u250C\u2500\uD83D\uDCE8 <b>INCOMING QUESTION</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510',
+    '\u2502',
+    '\u2502  \uD83D\uDC64  <b>' + esc(q.name) + '</b>',
+    '\u2502',
+    '\u2502  \uD83D\uDCAC  <blockquote>' + esc(q.question) + '</blockquote>',
+    '\u2502',
+    '\u2502  \uD83D\uDD50  ' + esc(formatTime(q.createdAt)) + ' IST' + (qAge ? ' \u00B7 ' + esc(qAge) : ''),
+    '\u2502  \uD83C\uDD94  <code>' + esc(q.id) + '</code>',
+    '\u2502',
+    '\u2514\u2500\u26A1 <i>reply below to answer</i>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
   ].join('\n');
   const replyMarkup = {
     inline_keyboard: [
-      [{ text: '💬  Answer', callback_data: `answer:${q.id}` }],
-      [{ text: '✏️  Edit Answer', callback_data: `edit:${q.id}` }],
+      [{ text: '\uD83D\uDCAC  Answer', callback_data: 'answer:' + q.id }],
+      [{ text: '\u270F\uFE0F  Edit Answer', callback_data: 'edit:' + q.id }],
       [
-        { text: '🙈  Dismiss', callback_data: `dismiss:${q.id}` },
-        { text: '🗑  Delete', callback_data: `delete:${q.id}` }
+        { text: '\uD83D\uDE48  Dismiss', callback_data: 'dismiss:' + q.id },
+        { text: '\uD83D\uDDD1  Delete', callback_data: 'delete:' + q.id }
       ]
     ]
   };
@@ -368,31 +444,39 @@ function buildCardForQuestion(q) {
 
 /* ── Command messages ── */
 const HELP_TEXT = [
-  `<b>🤖 AMA Bot — Commands</b>`,
-  ``,
-  `<b>📋 Commands:</b>`,
-  `• <b>/help</b> — Show this menu`,
-  `• <b>/stats</b> — Question statistics dashboard`,
-  `• <b>/pending</b> — List unanswered questions`,
-  `• <b>/refresh</b> — List unanswered + dismissed`,
-  ``,
-  `<b>⚡ Quick actions (via buttons):</b>`,
-  `• <b>💬 Answer</b> — Reply to any question message`,
-  `• <b>✏️ Edit Answer</b> — Change your reply`,
-  `• <b>🙈 Dismiss</b> — Hide a question (keeps data)`,
-  `• <b>🗑 Delete</b> — Permanently remove (with confirmation)`,
-  ``,
-  `<i>Every new question from your site appears here automatically.</i>`
+  '\u250C\u2500\uD83D\uDD16 <b>AMA BOT \u00B7 COMMANDS</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510',
+  '\u2502',
+  '\u2502  <b>\uD83D\uDCCB Commands</b>',
+  '\u2502  \u2022 <b>/help</b> \u2500 Show this menu',
+  '\u2502  \u2022 <b>/stats</b> \u2500 Statistics dashboard',
+  '\u2502  \u2022 <b>/pending</b> \u2500 Unanswered questions',
+  '\u2502  \u2022 <b>/refresh</b> \u2500 Unanswered + dismissed',
+  '\u2502',
+  '\u2502  <b>\u26A1 Quick Actions (via buttons)</b>',
+  '\u2502  \u2022 <b>\uD83D\uDCAC Answer</b> \u2500 Reply to a question msg',
+  '\u2502  \u2022 <b>\u270F\uFE0F Edit</b> \u2500 Change your reply',
+  '\u2502  \u2022 <b>\uD83D\uDE48 Dismiss</b> \u2500 Hide (keeps data)',
+  '\u2502  \u2022 <b>\uD83D\uDDD1 Delete</b> \u2500 Remove permanently',
+  '\u2502',
+  '\u2502  <i>New questions arrive here automatically.</i>',
+  '\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
 ].join('\n');
 
 const WELCOME_TEXT = [
-  `<b>👋 Welcome, Yatin!</b>`,
-  ``,
-  `This bot manages the <b>Ask Me Anything</b> box on your portfolio.`,
-  ``,
-  `When someone asks a question, it appears here with action buttons.`,
-  ``,
-  `Type <b>/help</b> to see all commands.`
+  '\u250C\u2500\uD83E\uDD16 <b>AMA BOT v2.0</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510',
+  '\u2502',
+  '\u2502  <i>welcome back, overlord.</i>',
+  '\u2502',
+  '\u2502  Your AMA command center is online.',
+  '\u2502  Visitor questions get piped here',
+  '\u2502  straight from your portfolio.',
+  '\u2502',
+  '\u2502  <b>Quick Start:</b>',
+  '\u2502  \u2022 <b>/help</b> \u2500 See all commands',
+  '\u2502  \u2022 <b>/stats</b> \u2500 View dashboard',
+  '\u2502  \u2022 <b>/pending</b> \u2500 Check queue',
+  '\u2502',
+  '\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
 ].join('\n');
 
 /* ============================================================
@@ -403,7 +487,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ ok: true, message: 'Telegram webhook endpoint is live.' });
   }
 
-  // ✅ FAIL-CLOSED webhook secret
+  // FAIL-CLOSED webhook secret
   const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
   if (!expectedSecret) {
     console.error('TELEGRAM_WEBHOOK_SECRET is not set — refusing to process webhook.');
@@ -430,32 +514,28 @@ module.exports = async function handler(req, res) {
       const [action, ...rest] = data.split(':');
       const questionId = rest.join(':');
 
-      // 2. DELETE CONFIRMATION FLOW
+      // DELETE CONFIRMATION FLOW
       if (action === 'delete') {
-        await answerCallback(callback.id, '⚠️ Confirm deletion?');
+        await answerCallback(callback.id, '\u26A0\uFE0F Confirm deletion?');
         await editMessage(cbChatId, cbMessageId,
-          `⚠️ <b>Confirm Delete</b>\n\nAre you sure you want to permanently delete this question?\n🆔 <code>${esc(questionId)}</code>`,
+          '\u250C\u2500\u26A0\uFE0F <b>CONFIRM DELETE</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  Are you sure you want to\n\u2502  <b>permanently delete</b> this question?\n\u2502\n\u2502  \uD83C\uDD94 <code>' + esc(questionId) + '</code>\n\u2502\n\u2502  <i>This cannot be undone.</i>\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518',
           { inline_keyboard: [[
-            { text: '✅ Confirm Delete', callback_data: `confirmdelete:${questionId}` },
-            { text: '❌ Cancel', callback_data: `canceldelete:${questionId}` }
+            { text: '\u2705 Confirm Delete', callback_data: 'confirmdelete:' + questionId },
+            { text: '\u274C Cancel', callback_data: 'canceldelete:' + questionId }
           ]] }
         );
       }
       else if (action === 'confirmdelete') {
         try {
           await deleteQuestion(questionId);
-          await answerCallback(callback.id, '✅ Deleted permanently');
-          // 5. AFTER-ACTION STATUS CARD
+          await answerCallback(callback.id, '\u2705 Deleted permanently');
           await editMessage(cbChatId, cbMessageId,
-            `🗑 <b>Question Deleted</b>\n\nThe question and all its data have been permanently removed.\n\n🕐 ${formatTime(new Date().toISOString())} IST`
+            '\u250C\u2500\uD83D\uDDD1 <b>QUESTION DELETED</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  This question and all its data have\n\u2502  been permanently removed.\n\u2502\n\u2502  \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n\u2502  \u26A0\uFE0F <i>This action cannot be undone</i>\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
           );
-        } catch (e) { await answerCallback(callback.id, '⚠️ Could not delete'); }
+        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not delete'); }
       }
       else if (action === 'canceldelete') {
         await answerCallback(callback.id, 'Cancelled');
-        // Restore the exact original message by re-fetching the question's
-        // current state from Firestore and rebuilding its real card —
-        // instead of overwriting with a generic placeholder.
         try {
           const q = await getQuestion(questionId);
           if (q) {
@@ -463,36 +543,35 @@ module.exports = async function handler(req, res) {
             await editMessage(cbChatId, cbMessageId, text, replyMarkup);
           } else {
             await editMessage(cbChatId, cbMessageId,
-              `⚠️ <b>Question Not Found</b>\n\nIt may have already been deleted.\n🆔 <code>${esc(questionId)}</code>`
+              '\u250C\u2500\u26A0\uFE0F <b>QUESTION NOT FOUND</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  It may have already been deleted.\n\u2502\n\u2502  \uD83C\uDD94 <code>' + esc(questionId) + '</code>\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
             );
           }
         } catch (e) {
           await editMessage(cbChatId, cbMessageId,
-            `⚠️ <b>Could Not Restore</b>\n\n🆔 <code>${esc(questionId)}</code>`
+            '\u250C\u2500\u26A0\uFE0F <b>RESTORE FAILED</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  Could not restore the question.\n\u2502  Try <b>/refresh</b> to see current state.\n\u2502\n\u2502  \uD83C\uDD94 <code>' + esc(questionId) + '</code>\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
           );
         }
       }
       else if (action === 'answer') {
-        await answerCallback(callback.id, '💬 Reply to the question message above to type your answer.');
+        await answerCallback(callback.id, '\uD83D\uDCAC Reply to the question message above to type your answer.');
       }
       else if (action === 'dismiss') {
         try {
           await dismissQuestion(questionId);
-          await answerCallback(callback.id, '🙈 Dismissed');
-          // 5. AFTER-ACTION STATUS CARD
+          await answerCallback(callback.id, '\uD83D\uDE48 Dismissed');
           await editMessage(cbChatId, cbMessageId,
-            `🙈 <b>Question Dismissed</b>\n\nThis question has been hidden from your website.\nData is preserved.\n\n🆔 <code>${esc(questionId)}</code>\n🕐 ${formatTime(new Date().toISOString())} IST`
+            '\u250C\u2500\uD83D\uDE48 <b>QUESTION DISMISSED</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  This question has been hidden\n\u2502  from your website.\n\u2502\n\u2502  Data is safely preserved.\n\u2502\n\u2502  \uD83C\uDD94 <code>' + esc(questionId) + '</code>\n\u2502  \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
           );
-        } catch (e) { await answerCallback(callback.id, '⚠️ Could not dismiss'); }
+        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not dismiss'); }
       }
       else if (action === 'edit') {
         try {
           await saveEditSession(cbChatId, questionId);
-          await answerCallback(callback.id, '✏️ Send the new answer now');
+          await answerCallback(callback.id, '\u270F\uFE0F Send the new answer now');
           await sendTelegram(cbChatId,
-            `✏️ <b>Edit Answer Mode</b>\n\nSend the new answer text for:\n🆔 <code>${esc(questionId)}</code>\n\n<i>Type the new answer as your next message.</i>`
+            '\u250C\u2500\u270F\uFE0F <b>EDIT MODE</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  Send the new answer text for:\n\u2502  \uD83C\uDD94 <code>' + esc(questionId) + '</code>\n\u2502\n\u2502  <i>Type your new answer as\n\u2502  your next message.</i>\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
           );
-        } catch (e) { await answerCallback(callback.id, '⚠️ Could not start edit'); }
+        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not start edit'); }
       }
       else {
         await answerCallback(callback.id, 'Unknown action');
@@ -536,8 +615,13 @@ module.exports = async function handler(req, res) {
       const all = await listAllQuestions();
       const items = all.filter(q => questionState(q) === 'UNANSWERED')
                        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-      if (!items.length) { await sendTelegram(chatId, '✅ <b>No unanswered questions.</b>\nAll caught up!', message.message_id); return res.status(200).json({ ok: true }); }
-      await sendQuestionsList(chatId, '⏳ <b>Unanswered Questions</b>', items, message.message_id);
+      if (!items.length) {
+        await sendTelegram(chatId,
+          '\u250C\u2500\u2705 <b>ALL CLEAR</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  No unanswered questions.\n\u2502  <i>You\u2019re all caught up. Go touch grass.</i>\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518',
+          message.message_id);
+        return res.status(200).json({ ok: true });
+      }
+      await sendQuestionsList(chatId, '\u23F3 <b>UNANSWERED QUESTIONS</b>', items, message.message_id);
       return res.status(200).json({ ok: true });
     }
 
@@ -546,8 +630,13 @@ module.exports = async function handler(req, res) {
       const all = await listAllQuestions();
       const items = all.filter(q => questionState(q) === 'UNANSWERED' || questionState(q) === 'DISMISSED')
                        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-      if (!items.length) { await sendTelegram(chatId, '✅ <b>No pending or dismissed questions.</b>', message.message_id); return res.status(200).json({ ok: true }); }
-      await sendQuestionsList(chatId, '📋 <b>Pending & Dismissed Questions</b>', items, message.message_id);
+      if (!items.length) {
+        await sendTelegram(chatId,
+          '\u250C\u2500\u2705 <b>QUEUE EMPTY</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  No pending or dismissed questions.\n\u2502  <i>Nothing in the queue right now.</i>\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518',
+          message.message_id);
+        return res.status(200).json({ ok: true });
+      }
+      await sendQuestionsList(chatId, '\uD83D\uDCCB <b>PENDING & DISMISSED</b>', items, message.message_id);
       return res.status(200).json({ ok: true });
     }
 
@@ -563,7 +652,9 @@ module.exports = async function handler(req, res) {
 
     /* Unknown command */
     if (text.startsWith('/')) {
-      await sendTelegram(chatId, `❓ Unknown command.\n\nType <b>/help</b> to see available commands.`, message.message_id);
+      await sendTelegram(chatId,
+        '\u250C\u2500\u2753 <b>UNKNOWN COMMAND</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  That command doesn\u2019t exist.\n\u2502\n\u2502  Type <b>/help</b> to see\n\u2502  available commands.\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518',
+        message.message_id);
       return res.status(200).json({ ok: true });
     }
 
@@ -572,7 +663,9 @@ module.exports = async function handler(req, res) {
     const questionId = extractQuestionId(originalText);
 
     if (!questionId) {
-      await sendTelegram(chatId, `💡 <i>To answer a question, reply to the bot message that contains it. Or type</i> /help <i>for commands.</i>`, message.message_id);
+      await sendTelegram(chatId,
+        '\u250C\u2500\uD83D\uDCA1 <b>TIP</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502\n\u2502  To answer a question, reply to\n\u2502  the bot message that contains it.\n\u2502\n\u2502  Or type <b>/help</b> for commands.\n\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518',
+        message.message_id);
       return res.status(200).json({ ok: true, ignored: 'no question id' });
     }
 
@@ -593,8 +686,10 @@ async function sendQuestionsList(chatId, title, items, replyToId) {
   for (let i = 0; i < items.length; i++) {
     const q = items[i];
     const tag = questionState(q);
-    const tagEmoji = tag === 'UNANSWERED' ? '⏳' : '🙈';
-    const line = `${i + 1}. ${tagEmoji} <b>[${tag}]</b> ${esc(q.name)}\n   <blockquote>${esc(q.question).slice(0, 120)}</blockquote>\n   🆔 <code>${esc(q.id)}</code>\n`;
+    const tagEmoji = tag === 'UNANSWERED' ? '\u23F3' : '\uD83D\uDE48';
+    const qAge = timeAgo(q.createdAt);
+    const ageStr = qAge ? ' \u00B7 ' + esc(qAge) : '';
+    const line = '\u250C\u2500' + tagEmoji + ' <b>[' + tag + ']</b> ' + esc(q.name) + ageStr + '\n\u2502  <blockquote>' + esc(q.question).slice(0, 120) + '</blockquote>\n\u2502  \uD83C\uDD94 <code>' + esc(q.id) + '</code>\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n';
     if ((chunk + line + '\n').length > 3500) {
       await sendTelegram(chatId, chunk.trim(), sent === 0 ? replyToId : undefined);
       sent++; chunk = '';
@@ -602,5 +697,5 @@ async function sendQuestionsList(chatId, title, items, replyToId) {
     chunk += line + '\n';
   }
   if (chunk.trim()) { await sendTelegram(chatId, chunk.trim(), sent === 0 ? replyToId : undefined); sent++; }
-  await sendTelegram(chatId, `<i>${items.length} question${items.length === 1 ? '' : 's'} listed.\nReply to any question message to answer it, or use its buttons.</i>`);
+  await sendTelegram(chatId, '<i>' + items.length + ' question' + (items.length === 1 ? '' : 's') + ' listed.\nReply to any question message to answer it, or use its buttons.</i>');
 }
