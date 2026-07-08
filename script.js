@@ -1476,6 +1476,37 @@
   (function contributions() {
     const grid = $('contrib-grid'); if (!grid) return;
     const totalEl = $('contrib-total');
+    const tip = $('contrib-tip');
+
+    // Custom tooltip handlers
+    function showTip(e) {
+      const day = e.target.closest('.contrib-day');
+      if (!day || !tip) return;
+      const date = day.dataset.date;
+      const level = day.dataset.level;
+      const count = level === '0' ? 'No' : level;
+      tip.innerHTML = '<span class="contrib-tip-date">' + esc(date) + '</span> · <span class="contrib-tip-count">' + count + ' contribution' + (level === '1' ? '' : 's') + '</span>';
+      tip.classList.add('visible');
+      positionTip(e);
+    }
+    function moveTip(e) {
+      positionTip(e);
+    }
+    function hideTip() {
+      if (tip) tip.classList.remove('visible');
+    }
+    function positionTip(e) {
+      if (!tip) return;
+      const x = e.clientX;
+      const y = e.clientY;
+      const tw = tip.offsetWidth;
+      const th = tip.offsetHeight;
+      const left = Math.min(x + 12, window.innerWidth - tw - 12);
+      const top = y - th - 12;
+      tip.style.left = left + 'px';
+      tip.style.top = Math.max(4, top) + 'px';
+    }
+
     fetch('/api/contributions?user=' + CONFIG.githubUser)
       .then(r => r.json())
       .then(d => {
@@ -1486,7 +1517,13 @@
         let week = [];
         d.days.forEach(day => { week.push(day); if (week.length === 7) { weeks.push(week); week = []; } });
         if (week.length) weeks.push(week);
-        grid.innerHTML = weeks.map(w => '<div class="contrib-week">' + w.map(day => '<div class="contrib-day" data-level="' + day.level + '" title="' + day.date + ': ' + day.level + '"></div>').join('') + '</div>').join('');
+        grid.innerHTML = weeks.map(w => '<div class="contrib-week">' + w.map(day => '<div class="contrib-day" data-level="' + day.level + '" data-date="' + day.date + '"></div>').join('') + '</div>').join('');
+        // Wire custom tooltip (no native title)
+        grid.querySelectorAll('.contrib-day').forEach(day => {
+          day.addEventListener('mouseenter', showTip);
+          day.addEventListener('mousemove', moveTip);
+          day.addEventListener('mouseleave', hideTip);
+        });
       })
       .catch(() => { grid.innerHTML = '<div class="contrib-loading">Contribution data unavailable.</div>'; });
   })();

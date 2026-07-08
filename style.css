@@ -794,7 +794,7 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
   padding: 16px; border-radius: 16px; border: 1px solid var(--border);
   background: rgba(255,255,255,0.02); transition: all 0.2s ease;
 }
-.gh-repo:hover { border-color: var(--border-hover); background: rgba(255,255,255,0.05); }
+.gh-repo:hover { border-color: var(--border-hover); background: rgba(255,255,255,0.05); transform: translateY(-3px); box-shadow: 0 8px 28px rgba(0,0,0,0.3), 0 0 20px rgba(0,200,255,0.06); }
 .gh-repo-name { font-weight: 700; font-size: 14px; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gh-repo-desc { font-size: 12px; color: var(--gray); line-height: 1.5; margin-bottom: 8px; min-height: 32px; }
 .gh-repo-meta { display: flex; align-items: center; gap: 14px; font-family: var(--mono); font-size: 11px; color: var(--gray-dim); }
@@ -1069,7 +1069,8 @@ html.light .interest-icon { background: rgba(100,80,220,0.08); border-color: rgb
 }
 html.light .back-to-top { background: rgba(255,255,255,0.6); }
 .back-to-top.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
-.back-to-top:hover { color: var(--white); border-color: var(--border-hover); transform: translateY(-2px); }
+.back-to-top:hover { color: var(--white); border-color: rgba(0,200,255,0.3); transform: translateY(-2px); box-shadow: 0 0 20px rgba(0,200,255,0.12), 0 6px 20px rgba(0,0,0,0.3); }
+html.light .back-to-top:hover { border-color: rgba(100,80,220,0.3); box-shadow: 0 0 20px rgba(100,80,220,0.08), 0 6px 20px rgba(0,0,0,0.06); }
 .back-to-top svg { width: 20px; height: 20px; fill: currentColor; }
 
 /* ============ ACTIVE NAV HIGHLIGHT ============ */
@@ -1317,11 +1318,24 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
 .contrib-grid::-webkit-scrollbar { height: 4px; }
 .contrib-grid::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 2px; }
 .contrib-week { display: flex; flex-direction: column; gap: 3px; }
-.contrib-day { width: 11px; height: 11px; border-radius: 2px; background: rgba(0,200,255,0.1); }
+.contrib-day { width: 11px; height: 11px; border-radius: 2px; background: rgba(0,200,255,0.1); position: relative; cursor: pointer; }
 .contrib-day[data-level="1"] { background: rgba(0,200,255,0.25); }
 .contrib-day[data-level="2"] { background: rgba(0,200,255,0.45); }
 .contrib-day[data-level="3"] { background: rgba(0,200,255,0.7); }
 .contrib-day[data-level="4"] { background: rgba(0,200,255,1); }
+/* Custom glass tooltip */
+.contrib-tip {
+  position: fixed; z-index: 9000; pointer-events: none;
+  background: rgba(12,12,16,0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 12px; font-family: var(--mono); font-size: 11px; color: var(--gray);
+  white-space: nowrap; opacity: 0; transition: opacity 0.15s ease;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+}
+html.light .contrib-tip { background: rgba(255,255,255,0.95); border-color: rgba(0,0,0,0.1); color: #555; box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+.contrib-tip.visible { opacity: 1; }
+.contrib-tip-date { color: var(--white); font-weight: 600; }
+.contrib-tip-count { color: var(--accent); }
 .contrib-loading { color: var(--gray-dim); font-family: var(--mono); font-size: 12px; }
 .contrib-legend { display: flex; align-items: center; gap: 6px; margin-top: 12px; font-family: var(--mono); font-size: 10px; color: var(--gray-dim); }
 .contrib-legend-boxes { display: flex; gap: 3px; }
