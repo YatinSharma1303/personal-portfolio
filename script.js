@@ -606,10 +606,12 @@
               npArtEl.style.cssText = 'background:#141414 url(\'' + validUrl + '\') center/cover no-repeat';
               npArtEl.style.visibility = 'visible';
               npArtEl.classList.remove('lfm-noart');
+              npArtEl.textContent = '';
             } else {
               npArtEl.style.cssText = 'background:#141414';
               npArtEl.style.visibility = 'visible';
               npArtEl.classList.add('lfm-noart');
+              npArtEl.textContent = '♪';
             }
           }
         });
