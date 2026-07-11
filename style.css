@@ -1423,10 +1423,14 @@ html.light .visitor-badge { background: rgba(255,255,255,0.6); }
 .ama-pin-badge {
   display: inline-flex; align-items: center; gap: 4px;
   font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em;
-  padding: 3px 10px; border-radius: 999px;
+  padding: 3px 10px 3px 8px; border-radius: 999px;
   background: rgba(0,200,255,0.12); color: var(--accent);
   border: 1px solid rgba(0,200,255,0.25);
   margin-bottom: 8px;
+}
+.ama-pin-icon {
+  font-size: 13px !important; font-variation-settings: 'FILL' 1, 'wght' 500, 'opsz' 20;
+  line-height: 1; flex-shrink: 0;
 }
 .ama-q-pinned {
   border-color: rgba(0,200,255,0.2) !important;
@@ -1435,6 +1439,9 @@ html.light .visitor-badge { background: rgba(255,255,255,0.6); }
 html.light .ama-pin-badge {
   background: rgba(100,80,220,0.1); color: var(--accent);
   border-color: rgba(100,80,220,0.2);
+}
+html.light .ama-pin-icon {
+  color: var(--accent);
 }
 html.light .ama-q-pinned {
   border-color: rgba(100,80,220,0.15) !important;

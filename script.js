@@ -1135,7 +1135,7 @@
           return '<button class="ama-react-btn ' + (reacted ? 'react-active' : '') + '" data-id="' + q.id + '" data-emoji="' + emoji + '">' + emoji + '<span>' + count + '</span></button>';
         }).join('');
         // Pin badge
-        const pinBadge = q.pinned ? '<span class="ama-pin-badge">📌 Pinned</span>' : '';
+        const pinBadge = q.pinned ? '<span class="ama-pin-badge"><span class="material-symbols-outlined ama-pin-icon">push_pin</span>Pinned</span>' : '';
         // Reaction summary line for cards with reactions
         const reactionEntries = Object.entries(q.reactions || {}).filter(([, v]) => v > 0);
         const reactionSummary = reactionEntries.length ? '<div class="ama-reaction-summary">' + reactionEntries.map(([e, c]) => '<span>' + e + ' ' + c + '</span>').join(' ') + '</div>' : '';
