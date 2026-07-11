@@ -124,6 +124,7 @@ async function sendTelegram(chatId, text, replyToMessageId, replyMarkup) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       chat_id: chatId, text: text, parse_mode: 'HTML',
+      disable_web_page_preview: true,
       reply_to_message_id: replyToMessageId,
       allow_sending_without_reply: true,
       reply_markup: replyMarkup
@@ -195,6 +196,9 @@ async function dismissQuestion(id) {
 async function retrieveQuestion(id) {
   var doc = await firestore('GET', docPath(COLLECTION, id));
   var q = fromFirestoreDoc(doc);
+  if (!q.dismissed) {
+    return { restoredAs: 'not_dismissed', question: q };
+  }
   var hasAnswer = q.answer && String(q.answer).trim().length > 0;
   if (hasAnswer) {
     await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['dismissed', 'answered']), {
@@ -444,7 +448,7 @@ async function buildWelcomeText() {
   } catch (e) {}
 
   return [
-    cardTop('\uD83E\uDD16 <b>AMA BOT v4.0</b>'),
+    cardTop('\uD83E\uDD16 <b>AMA BOT v4.1</b>'),
     BOX_V,
     BOX_V + ' Your portfolio AMA is live.',
     BOX_V + ' Every visitor question arrives here',
@@ -542,9 +546,10 @@ var HELP_TEXT = [
   BOX_V + ' Full dashboard: totals, pinned count,',
   BOX_V + ' avg response time &amp; top question.',
   BOX_V,
-  BOX_V + ' <b>\uD83D\uDCAC Reply to a message</b>',
-  BOX_V + ' Easiest way to answer: reply to any bot',
-  BOX_V + ' question message. Preview before publish.',
+  BOX_V + ' <b>\uD83D\uDCAC Answer a question</b>',
+  BOX_V + ' Tap the Answer button on any card,',
+  BOX_V + ' reply to a bot message, or use',
+  BOX_V + ' /answer &lt;id&gt; &lt;text&gt;. Preview first.',
   BOX_V,
   cardBottom
 ].join('\n');
@@ -557,7 +562,7 @@ var REPLY_KEYBOARD = {
   ],
   resize_keyboard: true,
   one_time_keyboard: false,
-  input_field_placeholder: 'Type a command or reply to answer\u2026'
+  input_field_placeholder: 'Type a command, tap Answer, or reply\u2026'
 };
 
 /* -- Stats dashboard -- */
@@ -713,10 +718,7 @@ function buildCardForQuestion(q) {
       inline_keyboard: [
         [{ text: '\u21A9\uFE0F Retrieve', callback_data: 'retrieve:' + q.id }],
         [{ text: '\uD83D\uDCAC Answer', callback_data: 'answer:' + q.id }],
-        [
-          { text: '\uD83D\uDE48 Dismiss', callback_data: 'dismiss:' + q.id },
-          { text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + q.id }
-        ]
+        [{ text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + q.id }]
       ]
     };
     return { text: text, replyMarkup: replyMarkup };
@@ -733,7 +735,7 @@ function buildCardForQuestion(q) {
     BOX_V + ' \uD83D\uDD50 ' + esc(formatTime(q.createdAt)) + ' IST' + (qAge ? ' \u00B7 ' + esc(qAge) : ''),
     BOX_V + ' \uD83C\uDD94 <code>' + esc(q.id) + '</code>',
     BOX_V,
-    BOX_BL + BOX_H + '\u26A1 <i>reply to answer</i>' + BOX_H.repeat(14) + BOX_BR
+    BOX_BL + BOX_H + '\u26A1 <i>tap Answer or reply</i>' + BOX_H.repeat(10) + BOX_BR
   ].join('\n');
   var replyMarkup = {
     inline_keyboard: [
@@ -788,7 +790,10 @@ async function sendFullDetailCard(chatId, questionId, replyToId) {
   lines.push(cardBottom);
 
   var buttons = [];
-  if (state === 'UNANSWERED' || state === 'DISMISSED') {
+  if (state === 'DISMISSED') {
+    buttons.push([{ text: '\u21A9\uFE0F Retrieve', callback_data: 'retrieve:' + q.id }]);
+    buttons.push([{ text: '\uD83D\uDCAC Answer', callback_data: 'answer:' + q.id }]);
+  } else if (state === 'UNANSWERED') {
     buttons.push([{ text: '\uD83D\uDCAC Answer', callback_data: 'answer:' + q.id }]);
   }
   if (state === 'ANSWERED') {
@@ -1140,10 +1145,7 @@ module.exports = async function handler(req, res) {
             { inline_keyboard: [
               [{ text: '\u21A9\uFE0F Retrieve', callback_data: 'retrieve:' + questionId }],
               [{ text: '\uD83D\uDCAC Answer', callback_data: 'answer:' + questionId }],
-              [
-                { text: '\uD83D\uDE48 Dismiss', callback_data: 'dismiss:' + questionId },
-                { text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + questionId }
-              ]
+              [{ text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + questionId }]
             ] }
           );
         } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not dismiss - try again'); }
@@ -1159,18 +1161,22 @@ module.exports = async function handler(req, res) {
       }
       else if (action === 'pin') {
         try {
+          var q = await getQuestion(questionId);
+          if (!q) { await answerCallback(callback.id, '\u26A0\uFE0F Question not found'); return res.status(200).json({ ok: true }); }
+          if (q.pinned) { await answerCallback(callback.id, '\uD83D\uDCCD Already pinned'); return res.status(200).json({ ok: true }); }
           await pinQuestion(questionId);
           await answerCallback(callback.id, '\uD83D\uDCCD Pinned to top on site');
-          var q = await getQuestion(questionId);
-          if (q) { q.pinned = true; var card = buildCardForQuestion(q); await editMessage(cbChatId, cbMessageId, card.text, card.replyMarkup); }
+          q.pinned = true; var card = buildCardForQuestion(q); await editMessage(cbChatId, cbMessageId, card.text, card.replyMarkup);
         } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not pin - try again'); }
       }
       else if (action === 'unpin') {
         try {
+          var q = await getQuestion(questionId);
+          if (!q) { await answerCallback(callback.id, '\u26A0\uFE0F Question not found'); return res.status(200).json({ ok: true }); }
+          if (!q.pinned) { await answerCallback(callback.id, '\uD83D\uDCCD Not pinned'); return res.status(200).json({ ok: true }); }
           await unpinQuestion(questionId);
           await answerCallback(callback.id, '\uD83D\uDCCD Unpinned');
-          var q = await getQuestion(questionId);
-          if (q) { q.pinned = false; var card = buildCardForQuestion(q); await editMessage(cbChatId, cbMessageId, card.text, card.replyMarkup); }
+          q.pinned = false; var card = buildCardForQuestion(q); await editMessage(cbChatId, cbMessageId, card.text, card.replyMarkup);
         } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not unpin - try again'); }
       }
       // PREVIEW CONFIRM (answer preview -> confirm flow)
@@ -1210,21 +1216,27 @@ module.exports = async function handler(req, res) {
       else if (action === 'retrieve') {
         try {
           var result = await retrieveQuestion(questionId);
-          var q = result.question;
-          q.dismissed = false;
-          if (result.restoredAs === 'answered') q.answered = true;
-
-          if (result.restoredAs === 'answered') {
-            await answerCallback(callback.id, '\u21A9\uFE0F Restored &amp; published to site');
+          if (result.restoredAs === 'not_dismissed') {
+            await answerCallback(callback.id, '\u26A0\uFE0F Already active');
+            var q = result.question;
             var card = buildCardForQuestion(q);
             await editMessage(cbChatId, cbMessageId, card.text, card.replyMarkup);
           } else {
-            await answerCallback(callback.id, '\u21A9\uFE0F Restored to pending queue');
-            q.answered = false;
-            var card = buildCardForQuestion(q);
-            await editMessage(cbChatId, cbMessageId, card.text, card.replyMarkup);
+            var q = result.question;
+            q.dismissed = false;
+            if (result.restoredAs === 'answered') {
+              q.answered = true;
+              await answerCallback(callback.id, '\u21A9\uFE0F Restored &amp; published to site');
+              var card = buildCardForQuestion(q);
+              await editMessage(cbChatId, cbMessageId, card.text, card.replyMarkup);
+            } else {
+              q.answered = false;
+              await answerCallback(callback.id, '\u21A9\uFE0F Restored to pending queue');
+              var card = buildCardForQuestion(q);
+              await editMessage(cbChatId, cbMessageId, card.text, card.replyMarkup);
+            }
           }
-        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not retrieve - is it dismissed?'); }
+        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not retrieve - try /get id'); }
       }
       // /all pagination
       else if (action === 'all') {

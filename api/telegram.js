@@ -63,7 +63,7 @@ module.exports = async function handler(req, res) {
       '\u2502 \uD83D\uDD50 ' + escapeHtml(timeStr) + ' IST',
       '\u2502 \uD83C\uDD94 <code>' + escapeHtml(questionId) + '</code>',
       '\u2502',
-      '\u2514\u2500\u26A1 <i>reply to answer</i>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
+      '\u2514\u2500\u26A1 <i>tap Answer or reply</i>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
     ].join('\n');
 
     // Action buttons - clean 2-row layout
