@@ -1095,14 +1095,28 @@
         answeredAt: f.answeredAt?.stringValue || '',
         editedAt: f.editedAt?.stringValue || '',
         votes: Number(f.votes?.integerValue || f.votes?.doubleValue || 0),
-        reactions: reactions
+        reactions: reactions,
+        pinned: !!f.pinned?.booleanValue
       };
     }
     function sorted() {
       const arr = answeredDocs.slice();
-      if (activeSort === 'top') arr.sort((a, b) => (b.votes - a.votes) || (new Date(b.answeredAt||0) - new Date(a.answeredAt||0)));
-      else if (activeSort === 'recent') arr.sort((a, b) => new Date(b.answeredAt||0) - new Date(a.answeredAt||0));
-      else arr.sort((a, b) => new Date(a.answeredAt||0) - new Date(b.answeredAt||0));
+      // Pinned questions always float to the top
+      if (activeSort === 'top') arr.sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return (b.votes - a.votes) || (new Date(b.answeredAt||0) - new Date(a.answeredAt||0));
+      });
+      else if (activeSort === 'recent') arr.sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return new Date(b.answeredAt||0) - new Date(a.answeredAt||0);
+      });
+      else arr.sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return new Date(a.answeredAt||0) - new Date(b.answeredAt||0);
+      });
       return arr;
     }
     function render() {
@@ -1120,7 +1134,13 @@
           const reacted = reactedSet.has(q.id + ':' + emoji);
           return '<button class="ama-react-btn ' + (reacted ? 'react-active' : '') + '" data-id="' + q.id + '" data-emoji="' + emoji + '">' + emoji + '<span>' + count + '</span></button>';
         }).join('');
-        return '<div class="ama-q">' +
+        // Pin badge
+        const pinBadge = q.pinned ? '<span class="ama-pin-badge">📌 Pinned</span>' : '';
+        // Reaction summary line for cards with reactions
+        const reactionEntries = Object.entries(q.reactions || {}).filter(([, v]) => v > 0);
+        const reactionSummary = reactionEntries.length ? '<div class="ama-reaction-summary">' + reactionEntries.map(([e, c]) => '<span>' + e + ' ' + c + '</span>').join(' ') + '</div>' : '';
+        return '<div class="ama-q' + (q.pinned ? ' ama-q-pinned' : '') + '">' +
+          pinBadge +
           '<div class="ama-q-text">' + esc(q.question) + '</div>' +
           '<div class="ama-q-ans">' + esc(q.answer) + '</div>' +
           '<div class="ama-q-meta">' +
@@ -1135,6 +1155,7 @@
           '<button class="ama-vote-btn ' + (up ? 'voted' : '') + '" data-id="' + q.id + '" data-dir="-1" title="Undo">\u25BC</button>' +
           '</div>' +
           '<div class="ama-q-reactions">' + reactionHTML + '</div>' +
+          reactionSummary +
           '</div>';
       }).join('');
       renderPager(pages);
@@ -1216,7 +1237,8 @@
       const question = {
         id: { stringValue: id }, name: { stringValue: name }, question: { stringValue: text },
         answer: { stringValue: '' }, answered: { booleanValue: false },
-        createdAt: { stringValue: createdAt }, answeredAt: { nullValue: null }, votes: { integerValue: 0 }
+        createdAt: { stringValue: createdAt }, answeredAt: { nullValue: null }, votes: { integerValue: 0 },
+        pinned: { booleanValue: false }
       };
       status.textContent = 'Sending…'; status.className = 'ama-status';
       const notify = () => fetch('/api/telegram', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, question: text, id, createdAt }) }).catch(() => {});

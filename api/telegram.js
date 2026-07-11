@@ -1,16 +1,20 @@
 /* ============================================================
-   api/telegram.js  —  Vercel serverless function
-   Called by the website when a visitor submits a question.
-   Sends a beautifully formatted notification with blockquote
-   cards and a 3-row button hierarchy.
-   ============================================================ */
+ api/telegram.js - Vercel serverless function
+ Called by the website when a visitor submits a question.
+ Sends a clean, well-formatted notification card with
+ clear action buttons.
+ ============================================================ */
 
 const TELEGRAM_API = 'https://api.telegram.org/bot';
 
-function escapeHtml(value = '') {
-  return String(value).replace(/[&<>"']/g, (char) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[char]));
+function escapeHtml(value) {
+  value = value || '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 module.exports = async function handler(req, res) {
@@ -21,8 +25,8 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Method not allowed' });
 
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
+  var botToken = process.env.TELEGRAM_BOT_TOKEN;
+  var chatId = process.env.TELEGRAM_CHAT_ID;
 
   if (!botToken || !chatId) {
     return res.status(500).json({
@@ -32,16 +36,16 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
-    const name = String(body.name || 'Anonymous').trim().slice(0, 60) || 'Anonymous';
-    const question = String(body.question || '').trim().slice(0, 280);
-    const questionId = String(body.id || '').trim().slice(0, 80);
-    const createdAt = String(body.createdAt || new Date().toISOString()).trim().slice(0, 80);
+    var body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+    var name = String(body.name || 'Anonymous').trim().slice(0, 60) || 'Anonymous';
+    var question = String(body.question || '').trim().slice(0, 280);
+    var questionId = String(body.id || '').trim().slice(0, 80);
+    var createdAt = String(body.createdAt || new Date().toISOString()).trim().slice(0, 80);
 
     if (!question) return res.status(400).json({ ok: false, error: 'Question is required' });
 
-    // Format the timestamp nicely (IST).
-    let timeStr = createdAt;
+    // Format timestamp in IST
+    var timeStr = createdAt;
     try {
       timeStr = new Date(createdAt).toLocaleString('en-IN', {
         timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short',
@@ -49,50 +53,48 @@ module.exports = async function handler(req, res) {
       });
     } catch (e) {}
 
-    // 1. PREMIUM CARD — bordered Unicode box with status header
-    const text = [
-      `┌─📩 <b>INCOMING QUESTION</b>──────────────┐`,
-      `│`,
-      `│  👤  <b>${escapeHtml(name)}</b>`,
-      `│`,
-      `│  💬  <blockquote>${escapeHtml(question)}</blockquote>`,
-      `│`,
-      `│  🕐  ${escapeHtml(timeStr)} IST`,
-      `│  🆔  <code>${escapeHtml(questionId)}</code>`,
-      `│`,
-      `└─⚡ <i>reply below to answer</i>──────────┘`
+    // Clean notification card
+    var text = [
+      '\u250C\u2500\uD83D\uDCD8 <b>NEW QUESTION</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510',
+      '\u2502',
+      '\u2502 \uD83D\uDC64 <b>' + escapeHtml(name) + '</b>',
+      '\u2502',
+      '\u2502 \uD83D\uDCAC',
+      '> ' + escapeHtml(question),
+      '',
+      '\u2502',
+      '\u2502 \uD83D\uDD50 ' + escapeHtml(timeStr) + ' IST',
+      '\u2502 \uD83C\uDD94 <code>' + escapeHtml(questionId) + '</code>',
+      '\u2502',
+      '\u2514\u2500\u26A1 <i>reply to answer</i>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
     ].join('\n');
 
-    // 3. BUTTON LAYOUT REDESIGN — 3-row hierarchy
-    // Row 1: Answer (primary, alone)
-    // Row 2: Edit Answer (secondary, alone)
-    // Row 3: Dismiss + Delete (danger zone, grouped)
-    const replyMarkup = {
+    // Action buttons - clean 2-row layout
+    var replyMarkup = {
       inline_keyboard: [
-        [{ text: '💬  Answer', callback_data: `answer:${questionId}` }],
-        [{ text: '✏️  Edit Answer', callback_data: `edit:${questionId}` }],
+        [{ text: '\uD83D\uDCAC Answer', callback_data: 'answer:' + questionId }],
         [
-          { text: '🙈  Dismiss', callback_data: `dismiss:${questionId}` },
-          { text: '🗑  Delete', callback_data: `delete:${questionId}` }
+          { text: '\uD83D\uDE48 Dismiss', callback_data: 'dismiss:' + questionId },
+          { text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + questionId }
         ]
       ]
     };
 
-    const tgRes = await fetch(`${TELEGRAM_API}${botToken}/sendMessage`, {
+    var tgRes = await fetch(TELEGRAM_API + botToken + '/sendMessage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
-        text,
+        text: text,
         parse_mode: 'HTML',
         disable_web_page_preview: true,
         reply_markup: replyMarkup
       })
     });
 
-    const data = await tgRes.json().catch(() => null);
-    if (!tgRes.ok || !data?.ok) {
-      return res.status(502).json({ ok: false, error: data?.description || `Telegram API error ${tgRes.status}` });
+    var data = await tgRes.json().catch(function() { return null; });
+    if (!tgRes.ok || !data || !data.ok) {
+      return res.status(502).json({ ok: false, error: (data && data.description) || 'Telegram API error ' + tgRes.status });
     }
 
     return res.status(200).json({ ok: true });
