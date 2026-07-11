@@ -5,7 +5,7 @@
  clear action buttons.
  ============================================================ */
 
-const TELEGRAM_API = 'https://api.telegram.org/bot';
+var TELEGRAM_API = 'https://api.telegram.org/bot';
 
 function escapeHtml(value) {
   value = value || '';
@@ -59,10 +59,7 @@ module.exports = async function handler(req, res) {
       '\u2502',
       '\u2502 \uD83D\uDC64 <b>' + escapeHtml(name) + '</b>',
       '\u2502',
-      '\u2502 \uD83D\uDCAC',
-      '> ' + escapeHtml(question),
-      '',
-      '\u2502',
+      '\u2502 \uD83D\uDCAC\n> ' + escapeHtml(question) + '\n\u2502',
       '\u2502 \uD83D\uDD50 ' + escapeHtml(timeStr) + ' IST',
       '\u2502 \uD83C\uDD94 <code>' + escapeHtml(questionId) + '</code>',
       '\u2502',

@@ -23,6 +23,15 @@ var COLLECTION = 'amaQuestions';
 var EDIT_SESSION_COLLECTION = 'telegramEditSessions';
 var LOOKUP_SESSION_COLLECTION = 'telegramLookupSessions';
 var PREVIEW_SESSION_COLLECTION = 'telegramPreviewSessions';
+var ANSWER_SESSION_COLLECTION = 'telegramAnswerSessions';
+var SESSION_TTL_MS = 10 * 60 * 1000;
+
+function isSessionExpired(sessionDoc) {
+  if (!sessionDoc || !sessionDoc.fields) return true;
+  var createdAt = sessionDoc.fields.createdAt && sessionDoc.fields.createdAt.stringValue;
+  if (!createdAt) return true;
+  return (Date.now() - new Date(createdAt).getTime()) > SESSION_TTL_MS;
+}
 
 /* -- helpers -- */
 function jsonBody(req) {
@@ -110,7 +119,7 @@ function mask(fields) {
 async function sendTelegram(chatId, text, replyToMessageId, replyMarkup) {
   var botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken || !chatId) return;
-  await fetch(TELEGRAM_API + botToken + '/sendMessage', {
+  var result = await fetch(TELEGRAM_API + botToken + '/sendMessage', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -119,25 +128,31 @@ async function sendTelegram(chatId, text, replyToMessageId, replyMarkup) {
       allow_sending_without_reply: true,
       reply_markup: replyMarkup
     })
-  }).catch(function() {});
+  });
+  var data = await result.json().catch(function() { return null; });
+  if (!result.ok || !data || !data.ok) {
+    console.error('sendTelegram failed:', (data && data.description) || result.status);
+  }
 }
 
 /* -- Answer callback query -- */
 async function answerCallback(callbackId, text) {
   var botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken) return;
-  await fetch(TELEGRAM_API + botToken + '/answerCallbackQuery', {
+  var result = await fetch(TELEGRAM_API + botToken + '/answerCallbackQuery', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ callback_query_id: callbackId, text: text, show_alert: false })
-  }).catch(function() {});
+  });
+  var data = await result.json().catch(function() { return null; });
+  if (!result.ok) console.error('answerCallback failed:', (data && data.description) || result.status);
 }
 
 /* -- Edit the original message -- */
 async function editMessage(chatId, messageId, text, replyMarkup) {
   var botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken) return;
-  await fetch(TELEGRAM_API + botToken + '/editMessageText', {
+  var result = await fetch(TELEGRAM_API + botToken + '/editMessageText', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -145,7 +160,9 @@ async function editMessage(chatId, messageId, text, replyMarkup) {
       text: text, parse_mode: 'HTML',
       reply_markup: replyMarkup
     })
-  }).catch(function() {});
+  });
+  var data = await result.json().catch(function() { return null; });
+  if (!result.ok) console.error('editMessage failed:', (data && data.description) || result.status);
 }
 
 /* -- Question CRUD -- */
@@ -170,8 +187,8 @@ async function editAnswer(id, answer) {
 }
 
 async function dismissQuestion(id) {
-  return firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['dismissed', 'answered']), {
-    fields: { dismissed: { booleanValue: true }, answered: { booleanValue: false } }
+  return firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['dismissed']), {
+    fields: { dismissed: { booleanValue: true } }
   });
 }
 
@@ -255,6 +272,22 @@ async function getPreviewSession(chatId) {
 
 async function clearPreviewSession(chatId) {
   try { await firestore('DELETE', docPath(PREVIEW_SESSION_COLLECTION, String(chatId))); } catch (e) {}
+}
+
+/* -- Answer session (Answer button -> type answer -> preview flow) -- */
+async function saveAnswerSession(chatId, questionId) {
+  return firestore('PATCH', docPath(ANSWER_SESSION_COLLECTION, String(chatId)), {
+    fields: { chatId: { stringValue: String(chatId) }, questionId: { stringValue: questionId }, createdAt: { stringValue: new Date().toISOString() } }
+  });
+}
+
+async function getAnswerSession(chatId) {
+  try { return await firestore('GET', docPath(ANSWER_SESSION_COLLECTION, String(chatId))); }
+  catch (e) { return null; }
+}
+
+async function clearAnswerSession(chatId) {
+  try { await firestore('DELETE', docPath(ANSWER_SESSION_COLLECTION, String(chatId))); } catch (e) {}
 }
 
 /* -- Parse Firestore doc -- */
@@ -391,7 +424,7 @@ var BOX_TL = '\u250C', BOX_TR = '\u2510', BOX_BL = '\u2514', BOX_BR = '\u2518';
 var BOX_H = '\u2500', BOX_V = '\u2502';
 
 function cardTop(title) {
-  return BOX_TL + BOX_H + title + BOX_H.repeat(Math.max(1, 28 - title.length)) + BOX_TR;
+  return BOX_TL + BOX_H + title + BOX_H.repeat(5) + BOX_TR;
 }
 var cardBottom = BOX_BL + BOX_H.repeat(30) + BOX_BR;
 
@@ -1014,7 +1047,7 @@ async function sendQuestionsList(chatId, title, items, replyToId) {
     chunk += line + '\n';
   }
   if (chunk.trim()) { await sendTelegram(chatId, chunk.trim(), sent === 0 ? replyToId : undefined); sent++; }
-  await sendTelegram(chatId, ' <i>' + items.length + ' question' + (items.length === 1 ? '' : 's') + ' listed.\nReply to any question message to answer it.</i>');
+  await sendTelegram(chatId, ' <i>' + items.length + ' question' + (items.length === 1 ? '' : 's') + ' listed.\nReply to any question message to answer it.</i>', undefined, REPLY_KEYBOARD);
 }
 
 /* ============================================================
@@ -1092,7 +1125,11 @@ module.exports = async function handler(req, res) {
         }
       }
       else if (action === 'answer') {
-        await answerCallback(callback.id, '\uD83D\uDCAC Reply to the question message above to type your answer.');
+        await saveAnswerSession(cbChatId, questionId);
+        await answerCallback(callback.id, '');
+        await sendTelegram(cbChatId,
+          cardTop('\uD83D\uDCAC <b>ANSWER MODE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Send your answer for:\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(questionId) + '</code>\n' + BOX_V + '\n' + BOX_V + ' <i>Type your answer as your\n' + BOX_V + ' next message.</i>\n' + BOX_V + '\n' + BOX_V + ' Send /cancel to abort.\n' + BOX_V + '\n' + cardBottom
+        );
       }
       else if (action === 'dismiss') {
         try {
@@ -1308,12 +1345,28 @@ module.exports = async function handler(req, res) {
 
     /* /cancel - abort edit or lookup sessions */
     if (command === '/cancel') {
+      var editSess = await getEditSession(chatId);
+      var lookupSess = await getLookupSession(chatId);
+      var previewSess = await getPreviewSession(chatId);
+      var answerSess = await getAnswerSession(chatId);
+      var sessions = [];
+      if (editSess && !isSessionExpired(editSess)) sessions.push('edit');
+      if (lookupSess && !isSessionExpired(lookupSess)) sessions.push('lookup');
+      if (previewSess && !isSessionExpired(previewSess)) sessions.push('preview');
+      if (answerSess && !isSessionExpired(answerSess)) sessions.push('answer');
       await clearEditSession(chatId);
       await clearLookupSession(chatId);
       await clearPreviewSession(chatId);
-      await sendTelegram(chatId,
-        cardTop('\u2705 <b>CANCELLED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Any active session has been cleared.\n' + BOX_V + ' You\'re back to normal mode.\n' + BOX_V + '\n' + cardBottom,
-        message.message_id);
+      await clearAnswerSession(chatId);
+      if (sessions.length === 0) {
+        await sendTelegram(chatId,
+          cardTop('\u2705 <b>NO ACTIVE SESSION</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No session was running.\n' + BOX_V + ' You are already in normal mode.\n' + BOX_V + '\n' + cardBottom,
+          message.message_id);
+      } else {
+        await sendTelegram(chatId,
+          cardTop('\u2705 <b>CANCELLED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Cleared: <b>' + sessions.join(', ') + '</b>\n' + BOX_V + ' session' + (sessions.length > 1 ? 's' : '') + '. You are back\n' + BOX_V + ' to normal mode.\n' + BOX_V + '\n' + cardBottom,
+          message.message_id);
+      }
       return res.status(200).json({ ok: true });
     }
 
@@ -1384,8 +1437,14 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ ok: true });
       }
       try {
-        await savePreviewSession(chatId, qid, answerText);
         var q = await getQuestion(qid);
+        if (!q) {
+          await sendTelegram(chatId,
+            cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question with that ID exists.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /pending or /all to find IDs.\n' + BOX_V + '\n' + cardBottom,
+            message.message_id);
+          return res.status(200).json({ ok: true });
+        }
+        await savePreviewSession(chatId, qid, answerText);
         var qName = q ? q.name : 'Anonymous';
         var qText = q ? q.question : 'Question unavailable';
 
@@ -1415,6 +1474,19 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ ok: true });
       }
       try {
+        var q = await getQuestion(qid);
+        if (!q) {
+          await sendTelegram(chatId,
+            cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question with that ID exists.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all to browse IDs.\n' + BOX_V + '\n' + cardBottom,
+            message.message_id);
+          return res.status(200).json({ ok: true });
+        }
+        if (q.pinned) {
+          await sendTelegram(chatId,
+            cardTop('\uD83D\uDCCD <b>ALREADY PINNED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This question is already pinned\n' + BOX_V + ' to the top of your site.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /unpin ' + esc(qid) + ' to remove.\n' + BOX_V + '\n' + cardBottom,
+            message.message_id);
+          return res.status(200).json({ ok: true });
+        }
         await pinQuestion(qid);
         await sendTelegram(chatId,
           cardTop('\uD83D\uDCCD <b>PINNED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This question is now pinned to\n' + BOX_V + ' the top of your site\'s AMA section.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /unpin ' + esc(qid) + ' to remove.\n' + BOX_V + '\n' + cardBottom,
@@ -1432,11 +1504,24 @@ module.exports = async function handler(req, res) {
       var qid = text.split(/\s+/)[1];
       if (!qid) {
         await sendTelegram(chatId,
-          cardTop('\uD83D\uDCCD <b>UNPIN</b>') + '\n' + BOX_V + '\n' + BOX_V + ' <code>/unpin &lt;id&gt;</code>\n' + BOX_V + '\n' + cardBottom,
+          cardTop('\uD83D\uDCCD <b>UNPIN</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Remove pin from a question.\n' + BOX_V + ' It returns to normal sort order.\n' + BOX_V + '\n' + BOX_V + ' <code>/unpin &lt;id&gt;</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all to find IDs.\n' + BOX_V + '\n' + cardBottom,
           message.message_id);
         return res.status(200).json({ ok: true });
       }
       try {
+        var q = await getQuestion(qid);
+        if (!q) {
+          await sendTelegram(chatId,
+            cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question with that ID exists.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all to browse IDs.\n' + BOX_V + '\n' + cardBottom,
+            message.message_id);
+          return res.status(200).json({ ok: true });
+        }
+        if (!q.pinned) {
+          await sendTelegram(chatId,
+            cardTop('\uD83D\uDCCD <b>NOT PINNED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This question is not pinned.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
+            message.message_id);
+          return res.status(200).json({ ok: true });
+        }
         await unpinQuestion(qid);
         await sendTelegram(chatId,
           cardTop('\uD83D\uDCCD <b>UNPINNED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Pin removed. Question is back\n' + BOX_V + ' in normal order on your site.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
@@ -1610,9 +1695,41 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    /* Answer session (from Answer button) */
+    var answerSess = await getAnswerSession(chatId);
+    if (answerSess && !text.startsWith('/')) {
+      if (isSessionExpired(answerSess)) {
+        await clearAnswerSession(chatId);
+      } else {
+        var answerQid = answerSess.fields && answerSess.fields.questionId && answerSess.fields.questionId.stringValue;
+        await clearAnswerSession(chatId);
+        if (answerQid) {
+          await savePreviewSession(chatId, answerQid, text);
+          var q = await getQuestion(answerQid);
+          var qName = q ? q.name : 'Anonymous';
+          var qText = q ? q.question : 'Question unavailable';
+
+          await sendTelegram(chatId,
+            cardTop('\uD83D\uDC41 <b>ANSWER PREVIEW</b>') + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(qName) + '</b> asked:\n' + BOX_V + ' ' + esc(qText).slice(0, 100) + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDCAC <b>Your answer:</b>\n' + BOX_V + ' ' + esc(text) + '\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(answerQid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' <i>Review before publishing.</i>\n' + BOX_V + '\n' + cardBottom,
+            message.message_id,
+            { inline_keyboard: [
+              [{ text: '\u2705 Publish', callback_data: 'previewconfirm' }, { text: '\u270F\uFE0F Revise', callback_data: 'previewedit' }],
+              [{ text: '\u274C Cancel', callback_data: 'previewcancel' }]
+            ] }
+          );
+          return res.status(200).json({ ok: true, preview: answerQid });
+        }
+      }
+    }
+
     /* Edit answer session */
     var pending = await getEditSession(chatId);
-    var pendingQuestionId = pending && pending.fields && pending.fields.questionId && pending.fields.questionId.stringValue;
+    var pendingQuestionId = null;
+    if (pending && !isSessionExpired(pending)) {
+      pendingQuestionId = pending.fields && pending.fields.questionId && pending.fields.questionId.stringValue;
+    } else if (pending) {
+      await clearEditSession(chatId);
+    }
     if (pendingQuestionId && !text.startsWith('/')) {
       await editAnswer(pendingQuestionId, text);
       await clearEditSession(chatId);
@@ -1623,16 +1740,20 @@ module.exports = async function handler(req, res) {
     /* Lookup session */
     var lookupSession = await getLookupSession(chatId);
     if (lookupSession && !text.startsWith('/')) {
-      var pastedId = text.trim();
-      await clearLookupSession(chatId);
-      if (pastedId.length >= 8) {
-        await sendFullDetailCard(chatId, pastedId, message.message_id);
+      if (isSessionExpired(lookupSession)) {
+        await clearLookupSession(chatId);
       } else {
-        await sendTelegram(chatId,
-          cardTop('\u26A0\uFE0F <b>INVALID ID</b>') + '\n' + BOX_V + '\n' + BOX_V + ' That ID looks too short.\n' + BOX_V + ' Try /lookup again with a full ID.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+        var pastedId = text.trim();
+        await clearLookupSession(chatId);
+        if (pastedId.length >= 8) {
+          await sendFullDetailCard(chatId, pastedId, message.message_id);
+        } else {
+          await sendTelegram(chatId,
+            cardTop('\u26A0\uFE0F <b>INVALID ID</b>') + '\n' + BOX_V + '\n' + BOX_V + ' That ID looks too short.\n' + BOX_V + ' Try /lookup again with a full ID.\n' + BOX_V + '\n' + cardBottom,
+            message.message_id);
+        }
+        return res.status(200).json({ ok: true, lookup: pastedId });
       }
-      return res.status(200).json({ ok: true, lookup: pastedId });
     }
 
     /* Unknown command */
