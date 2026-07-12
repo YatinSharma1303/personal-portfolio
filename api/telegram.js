@@ -2,7 +2,7 @@
  api/telegram.js - Vercel serverless function
  Called by the website when a visitor submits a question.
  Sends a clean, well-formatted notification card with
- clear action buttons.
+ clear action buttons. Card format matches webhook.
  ============================================================ */
 
 var TELEGRAM_API = 'https://api.telegram.org/bot';
@@ -53,17 +53,22 @@ module.exports = async function handler(req, res) {
       });
     } catch (e) {}
 
-    // Clean notification card
+    // Card format matches webhook's cardTop/cardBottom helpers
+    var BOX_TL = '\u250C', BOX_TR = '\u2510', BOX_BL = '\u2514', BOX_BR = '\u2518';
+    var BOX_H = '\u2500', BOX_V = '\u2502';
+    function cardTop(title) { return BOX_TL + BOX_H + title + BOX_H.repeat(5) + BOX_TR; }
+    var cardBottom = BOX_BL + BOX_H.repeat(30) + BOX_BR;
+
     var text = [
-      '\u250C\u2500\uD83D\uDCD8 <b>NEW QUESTION</b>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510',
-      '\u2502',
-      '\u2502 \uD83D\uDC64 <b>' + escapeHtml(name) + '</b>',
-      '\u2502',
-      '\u2502 \uD83D\uDCAC\n> ' + escapeHtml(question) + '\n\u2502',
-      '\u2502 \uD83D\uDD50 ' + escapeHtml(timeStr) + ' IST',
-      '\u2502 \uD83C\uDD94 <code>' + escapeHtml(questionId) + '</code>',
-      '\u2502',
-      '\u2514\u2500\u26A1 <i>tap Answer or reply</i>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518'
+      cardTop('\uD83D\uDCD8 <b>NEW QUESTION</b>'),
+      BOX_V,
+      BOX_V + ' \uD83D\uDC64 <b>' + escapeHtml(name) + '</b>',
+      BOX_V,
+      BOX_V + ' \uD83D\uDCAC\n> ' + escapeHtml(question) + '\n' + BOX_V,
+      BOX_V + ' \uD83D\uDD50 ' + escapeHtml(timeStr) + ' IST',
+      BOX_V + ' \uD83C\uDD94 <code>' + escapeHtml(questionId) + '</code>',
+      BOX_V,
+      BOX_BL + BOX_H + '\u26A1 <i>tap Answer or reply</i>' + BOX_H.repeat(10) + BOX_BR
     ].join('\n');
 
     // Action buttons - clean 2-row layout

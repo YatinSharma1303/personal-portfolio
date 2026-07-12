@@ -460,8 +460,9 @@ async function buildWelcomeText() {
     BOX_V,
     BOX_V + ' \uD83D\uDCCB /pending  \u00B7 Unanswered queue',
     BOX_V + ' \uD83D\uDCCA /stats    \u00B7 Full dashboard',
+    BOX_V + ' \uD83D\uDD50 /recent   \u00B7 Latest answers',
     BOX_V + ' \uD83D\uDD0D /search   \u00B7 Find by keyword',
-    BOX_V + ' \uD83D\uDCE4 /export   \u00B7 Download all Q&amp;A',
+    BOX_V + ' \uD83D\uDCD6 /help     \u00B7 All commands',
     BOX_V,
     BOX_V + ' \uD83D\uDCA1 Reply to any question message',
     BOX_V + ' to answer it directly.',
@@ -600,7 +601,7 @@ async function sendStats(chatId, replyToId) {
   } catch (e) {
     await sendTelegram(chatId,
       cardTop('\u26A0\uFE0F <b>STATS ERROR</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not load statistics.\n' + BOX_V + ' Please try again in a moment.\n' + BOX_V + '\n' + cardBottom,
-      replyToId);
+      replyToId, REPLY_KEYBOARD);
   }
 }
 
@@ -1807,7 +1808,7 @@ module.exports = async function handler(req, res) {
 
     if (!questionId) {
       await sendTelegram(chatId,
-        cardTop('\uD83D\uDCA1 <b>TIP</b>') + '\n' + BOX_V + '\n' + BOX_V + ' To answer a question, reply to\n' + BOX_V + ' the bot message that contains it.\n' + BOX_V + '\n' + BOX_V + ' Or type /help for all commands.\n' + BOX_V + '\n' + cardBottom,
+        cardTop('\uD83D\uDCA1 <b>TIP</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Tap Answer or reply to a bot\n' + BOX_V + ' message to answer a question.\n' + BOX_V + '\n' + BOX_V + ' Or type /help for all commands.\n' + BOX_V + '\n' + cardBottom,
         message.message_id);
       return res.status(200).json({ ok: true, ignored: 'no question id' });
     }
