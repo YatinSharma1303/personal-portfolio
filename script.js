@@ -1244,8 +1244,13 @@
       if (!text) { status.textContent = 'Please type a question first.'; status.className = 'ama-status err'; return; }
       if (todayCount >= CONFIG.amaLimit) { status.textContent = 'Daily limit reached.'; status.className = 'ama-status err'; return; }
       const nameInput = $('ama-name-input');
-      const name = ((nameInput && nameInput.value.trim()) || localStorage.getItem('yatin_ama_name') || 'Anonymous').slice(0, 60);
-      if (nameInput && nameInput.value.trim()) localStorage.setItem('yatin_ama_name', nameInput.value.trim());
+      const typedName = nameInput ? nameInput.value.trim() : '';
+      // Empty name should always be anonymous. Do not reuse an old saved name
+      // from localStorage, otherwise a previous visitor/name can leak into
+      // new anonymous submissions on the same browser.
+      const name = (typedName || 'Anonymous').slice(0, 60);
+      if (typedName) localStorage.setItem('yatin_ama_name', typedName);
+      else localStorage.removeItem('yatin_ama_name');
       const id = uuid(), createdAt = new Date().toISOString();
       const question = {
         id: { stringValue: id }, name: { stringValue: name }, question: { stringValue: text },
