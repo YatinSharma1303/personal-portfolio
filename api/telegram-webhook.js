@@ -622,7 +622,7 @@ var HELP_TEXT = [
   BOX_V + ' to reopen the AMA command reference.',
   BOX_V,
   cardBottom
-].join('\\n');
+].join('\n');
 
 /* -- Reply Keyboard (always visible quick actions) -- */
 var REPLY_KEYBOARD = {
