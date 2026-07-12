@@ -150,7 +150,9 @@ async function sendTelegram(chatId, text, replyToMessageId, replyMarkup) {
   var data = await result.json().catch(function() { return null; });
   if (!result.ok || !data || !data.ok) {
     console.error('sendTelegram failed:', (data && data.description) || result.status);
+    return null;
   }
+  return data.result || null;
 }
 
 /* -- Answer callback query -- */
@@ -180,7 +182,11 @@ async function editMessage(chatId, messageId, text, replyMarkup) {
     })
   });
   var data = await result.json().catch(function() { return null; });
-  if (!result.ok) console.error('editMessage failed:', (data && data.description) || result.status);
+  if (!result.ok) {
+    console.error('editMessage failed:', (data && data.description) || result.status);
+    return null;
+  }
+  return data && data.result ? data.result : null;
 }
 
 /* -- Question CRUD -- */
@@ -468,6 +474,20 @@ function cardTop(title) {
 }
 var cardBottom = BOX_BL + BOX_H.repeat(30) + BOX_BR;
 
+function loadingCard(title, line) {
+  return cardTop(title) + '\n' + BOX_V + '\n' + BOX_V + ' ' + line + '\n' + BOX_V + '\n' + cardBottom;
+}
+
+async function sendLoadingCard(chatId, title, line, replyToId) {
+  var msg = await sendTelegram(chatId, loadingCard(title, line), replyToId);
+  return msg && msg.message_id ? msg.message_id : null;
+}
+
+async function respondTelegram(chatId, text, replyToId, replyMarkup, editMessageId) {
+  if (editMessageId) return editMessage(chatId, editMessageId, text, replyMarkup);
+  return sendTelegram(chatId, text, replyToId, replyMarkup);
+}
+
 /* -- /start -- Dynamic welcome with live stats -- */
 async function buildWelcomeText() {
   var statsBlock = '';
@@ -623,7 +643,7 @@ var REPLY_KEYBOARD = {
 };
 
 /* -- Stats dashboard -- */
-async function sendStats(chatId, replyToId) {
+async function sendStats(chatId, replyToId, editMessageId) {
   try {
     var s = await getStats();
     var maxStat = Math.max(s.total, 1);
@@ -653,11 +673,11 @@ async function sendStats(chatId, replyToId) {
       BOX_V,
       cardBottom
     ].join('\n');
-    await sendTelegram(chatId, statsText, replyToId, REPLY_KEYBOARD);
+    await respondTelegram(chatId, statsText, replyToId, REPLY_KEYBOARD, editMessageId);
   } catch (e) {
-    await sendTelegram(chatId,
+    await respondTelegram(chatId,
       cardTop('\u26A0\uFE0F <b>STATS ERROR</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not load statistics.\n' + BOX_V + ' Please try again in a moment.\n' + BOX_V + '\n' + cardBottom,
-      replyToId, REPLY_KEYBOARD);
+      replyToId, REPLY_KEYBOARD, editMessageId);
   }
 }
 
@@ -811,12 +831,12 @@ function buildCardForQuestion(q) {
 }
 
 /* -- Full detail card for /get -- */
-async function sendFullDetailCard(chatId, questionId, replyToId) {
+async function sendFullDetailCard(chatId, questionId, replyToId, editMessageId) {
   var q = await getQuestion(questionId);
   if (!q) {
-    await sendTelegram(chatId,
+    await respondTelegram(chatId,
       cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question with that ID exists.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(questionId) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Try /all to browse all IDs.\n' + BOX_V + '\n' + cardBottom,
-      replyToId, REPLY_KEYBOARD);
+      replyToId, REPLY_KEYBOARD, editMessageId);
     return;
   }
   var state = questionState(q);
@@ -868,11 +888,11 @@ async function sendFullDetailCard(chatId, questionId, replyToId) {
     { text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + q.id }
   ]);
 
-  await sendTelegram(chatId, lines.join('\n'), replyToId, { inline_keyboard: buttons });
+  await respondTelegram(chatId, lines.join('\n'), replyToId, { inline_keyboard: buttons }, editMessageId);
 }
 
 /* -- /recent -- Last 5 answered -- */
-async function sendRecent(chatId, replyToId) {
+async function sendRecent(chatId, replyToId, editMessageId) {
   var all = await listAllQuestions();
   var answered = all
     .filter(function(q) { return questionState(q) === 'ANSWERED'; })
@@ -880,9 +900,9 @@ async function sendRecent(chatId, replyToId) {
     .slice(0, 5);
 
   if (!answered.length) {
-    await sendTelegram(chatId,
+    await respondTelegram(chatId,
       cardTop('\uD83D\uDCCB <b>NO ANSWERED QUESTIONS</b>') + '\n' + BOX_V + '\n' + BOX_V + ' You haven\'t answered anything yet.\n' + BOX_V + ' When you do, they\'ll show up here.\n' + BOX_V + '\n' + cardBottom,
-      replyToId, REPLY_KEYBOARD);
+      replyToId, REPLY_KEYBOARD, editMessageId);
     return;
   }
 
@@ -906,15 +926,15 @@ async function sendRecent(chatId, replyToId) {
   lines.push(BOX_V + ' \uD83C\uDD94 Use /get id for full details + actions');
   lines.push(cardBottom);
 
-  await sendTelegram(chatId, lines.join('\n'), replyToId, REPLY_KEYBOARD);
+  await respondTelegram(chatId, lines.join('\n'), replyToId, REPLY_KEYBOARD, editMessageId);
 }
 
 /* -- /search <text> -- */
-async function searchQuestions(chatId, searchText, replyToId) {
+async function searchQuestions(chatId, searchText, replyToId, editMessageId) {
   if (!searchText || searchText.length < 2) {
-    await sendTelegram(chatId,
+    await respondTelegram(chatId,
       cardTop('\uD83D\uDD0D <b>SEARCH</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Type at least 2 characters.\n' + BOX_V + '\n' + BOX_V + ' Example:\n' + BOX_V + ' /search react\n' + BOX_V + ' /search healthcare\n' + BOX_V + '\n' + cardBottom,
-      replyToId, REPLY_KEYBOARD);
+      replyToId, REPLY_KEYBOARD, editMessageId);
     return;
   }
 
@@ -927,9 +947,9 @@ async function searchQuestions(chatId, searchText, replyToId) {
   }).sort(function(a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); }).slice(0, 8);
 
   if (!results.length) {
-    await sendTelegram(chatId,
+    await respondTelegram(chatId,
       cardTop('\uD83D\uDD0D <b>NO RESULTS</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Nothing found for "' + esc(searchText) + '".\n' + BOX_V + '\n' + BOX_V + ' Try different keywords, or\n' + BOX_V + ' use /all to browse everything.\n' + BOX_V + '\n' + cardBottom,
-      replyToId, REPLY_KEYBOARD);
+      replyToId, REPLY_KEYBOARD, editMessageId);
     return;
   }
 
@@ -954,16 +974,16 @@ async function searchQuestions(chatId, searchText, replyToId) {
   lines.push(BOX_V + ' Use /get id for full details + actions');
   lines.push(cardBottom);
 
-  await sendTelegram(chatId, lines.join('\n'), replyToId);
+  await respondTelegram(chatId, lines.join('\n'), replyToId, REPLY_KEYBOARD, editMessageId);
 }
 
 /* -- /export -- */
-async function exportQuestions(chatId, replyToId) {
+async function exportQuestions(chatId, replyToId, editMessageId) {
   var all = await listAllQuestions();
   if (!all.length) {
-        await sendTelegram(chatId,
+        await respondTelegram(chatId,
           cardTop('\uD83D\uDCE4 <b>EXPORT</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No questions to export.\n' + BOX_V + '\n' + cardBottom,
-          replyToId, REPLY_KEYBOARD);
+          replyToId, REPLY_KEYBOARD, editMessageId);
     return;
   }
 
@@ -1004,7 +1024,11 @@ async function exportQuestions(chatId, replyToId) {
   if (current.trim()) chunks.push(current.trim());
 
   for (var ci = 0; ci < chunks.length; ci++) {
-    await sendTelegram(chatId, '<pre>' + esc(chunks[ci]) + '</pre>', undefined);
+    if (ci === 0 && editMessageId) {
+      await editMessage(chatId, editMessageId, '<pre>' + esc(chunks[ci]) + '</pre>');
+    } else {
+      await sendTelegram(chatId, '<pre>' + esc(chunks[ci]) + '</pre>', ci === 0 ? replyToId : undefined);
+    }
   }
 }
 
@@ -1098,7 +1122,7 @@ function extractQuestionId(replyText) {
 }
 
 /* -- Send a list of questions (for /pending, /refresh) -- */
-async function sendQuestionsList(chatId, title, items, replyToId) {
+async function sendQuestionsList(chatId, title, items, replyToId, editMessageId) {
   var chunk = title + '\n\n';
   var sent = 0;
   for (var i = 0; i < items.length; i++) {
@@ -1109,13 +1133,18 @@ async function sendQuestionsList(chatId, title, items, replyToId) {
     var ageStr = qAge ? ' \u00B7 ' + esc(qAge) : '';
     var line = cardTop(tagEmoji + ' <b>[' + tag + ']</b> ' + esc(q.name) + ageStr) + '\n' + BOX_V + ' \uD83D\uDCAC\n&gt; ' + esc(q.question).slice(0, 120) + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(q.id) + '</code>\n' + cardBottom + '\n';
     if ((chunk + line + '\n').length > 3500) {
-      await sendTelegram(chatId, chunk.trim(), sent === 0 ? replyToId : undefined);
+      if (sent === 0 && editMessageId) await editMessage(chatId, editMessageId, chunk.trim());
+      else await sendTelegram(chatId, chunk.trim(), sent === 0 ? replyToId : undefined);
       sent++;
       chunk = '';
     }
     chunk += line + '\n';
   }
-  if (chunk.trim()) { await sendTelegram(chatId, chunk.trim(), sent === 0 ? replyToId : undefined); sent++; }
+  if (chunk.trim()) {
+    if (sent === 0 && editMessageId) await editMessage(chatId, editMessageId, chunk.trim());
+    else await sendTelegram(chatId, chunk.trim(), sent === 0 ? replyToId : undefined);
+    sent++;
+  }
   await sendTelegram(chatId, ' <i>' + items.length + ' question' + (items.length === 1 ? '' : 's') + ' listed.\nTap Answer or reply to answer one.</i>', undefined, REPLY_KEYBOARD);
 }
 
@@ -1357,6 +1386,10 @@ module.exports = async function handler(req, res) {
       }
       else if (action === 'confirmretrieveall') {
         try {
+          await answerCallback(callback.id, '\u21A9\uFE0F Retrieving all\u2026');
+          await editMessage(cbChatId, cbMessageId,
+            loadingCard('\u21A9\uFE0F <b>RETRIEVING ALL\u2026</b>', 'Restoring dismissed questions...')
+          );
           var all = await listAllQuestions();
           var dismissed = all.filter(function(q) { return questionState(q) === 'DISMISSED'; });
           var toPending = 0, toSite = 0;
@@ -1507,56 +1540,64 @@ module.exports = async function handler(req, res) {
 
     /* /stats */
     if (command === '/stats' || text === '\uD83D\uDCCA Stats') {
-      await sendStats(chatId, message.message_id);
+      var loadingId = await sendLoadingCard(chatId, '\uD83D\uDCCA <b>LOADING STATS\u2026</b>', 'Crunching your AMA dashboard...', message.message_id);
+      await sendStats(chatId, message.message_id, loadingId);
       return res.status(200).json({ ok: true });
     }
 
     /* /pending */
     if (command === '/pending' || text === '\uD83D\uDCCB Pending') {
+      var loadingId = await sendLoadingCard(chatId, '\uD83D\uDCCB <b>LOADING PENDING\u2026</b>', 'Checking your unanswered queue...', message.message_id);
       var all = await listAllQuestions();
       var items = all.filter(function(q) { return questionState(q) === 'UNANSWERED'; })
         .sort(function(a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
       if (!items.length) {
-        await sendTelegram(chatId,
+        await respondTelegram(chatId,
           cardTop('\u2705 <b>ALL CAUGHT UP</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No unanswered questions right now.\n' + BOX_V + ' Enjoy the peace while it lasts.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id, REPLY_KEYBOARD);
+          message.message_id, REPLY_KEYBOARD, loadingId);
         return res.status(200).json({ ok: true });
       }
-      await sendQuestionsList(chatId, '\u23F3 <b>UNANSWERED QUESTIONS</b>', items, message.message_id);
+      await sendQuestionsList(chatId, '\u23F3 <b>UNANSWERED QUESTIONS</b>', items, message.message_id, loadingId);
       return res.status(200).json({ ok: true });
     }
 
     /* /refresh */
     if (command === '/refresh') {
+      var loadingId = await sendLoadingCard(chatId, '\uD83D\uDD04 <b>REFRESHING QUEUE\u2026</b>', 'Reloading pending and dismissed questions...', message.message_id);
       var all = await listAllQuestions();
       var items = all.filter(function(q) { return questionState(q) === 'UNANSWERED' || questionState(q) === 'DISMISSED'; })
         .sort(function(a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
       if (!items.length) {
-        await sendTelegram(chatId,
+        await respondTelegram(chatId,
           cardTop('\u2705 <b>QUEUE EMPTY</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No pending or dismissed questions.\n' + BOX_V + ' Everything is handled.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id, REPLY_KEYBOARD);
+          message.message_id, REPLY_KEYBOARD, loadingId);
         return res.status(200).json({ ok: true });
       }
-      await sendQuestionsList(chatId, '\uD83D\uDCCB <b>PENDING &amp; DISMISSED</b>', items, message.message_id);
+      await sendQuestionsList(chatId, '\uD83D\uDCCB <b>PENDING &amp; DISMISSED</b>', items, message.message_id, loadingId);
       return res.status(200).json({ ok: true });
     }
 
     /* /recent */
     if (command === '/recent' || text === '\uD83D\uDD50 Recent') {
-      await sendRecent(chatId, message.message_id);
+      var loadingId = await sendLoadingCard(chatId, '\uD83D\uDD50 <b>LOADING RECENT\u2026</b>', 'Finding your latest answers...', message.message_id);
+      await sendRecent(chatId, message.message_id, loadingId);
       return res.status(200).json({ ok: true });
     }
 
     /* /search <text> */
     if (command === '/search') {
       var searchTerm = text.split(/\s+/).slice(1).join(' ');
-      await searchQuestions(chatId, searchTerm, message.message_id);
+      var loadingId = searchTerm && searchTerm.trim().length >= 2
+        ? await sendLoadingCard(chatId, '\uD83D\uDD0D <b>SEARCHING\u2026</b>', 'Scanning questions, answers, and names...', message.message_id)
+        : null;
+      await searchQuestions(chatId, searchTerm, message.message_id, loadingId);
       return res.status(200).json({ ok: true });
     }
 
     /* /export */
     if (command === '/export') {
-      await exportQuestions(chatId, message.message_id);
+      var loadingId = await sendLoadingCard(chatId, '\uD83D\uDCE6 <b>EXPORTING\u2026</b>', 'Preparing your AMA export...', message.message_id);
+      await exportQuestions(chatId, message.message_id, loadingId);
       return res.status(200).json({ ok: true });
     }
 
@@ -1570,30 +1611,31 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ ok: true });
       }
       try {
+        var loadingId = await sendLoadingCard(chatId, '\u270F\uFE0F <b>LOADING EDIT MODE\u2026</b>', 'Checking the answer before edit mode...', message.message_id);
         var q = await getQuestion(qid);
         if (!q) {
-          await sendTelegram(chatId,
+          await respondTelegram(chatId,
             cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question with that ID exists.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all to browse IDs.\n' + BOX_V + '\n' + cardBottom,
-            message.message_id, REPLY_KEYBOARD);
+            message.message_id, REPLY_KEYBOARD, loadingId);
           return res.status(200).json({ ok: true });
         }
         if (questionState(q) !== 'ANSWERED') {
-          await sendTelegram(chatId,
+          await respondTelegram(chatId,
             cardTop('\u26A0\uFE0F <b>CANNOT EDIT</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This question is <b>' + questionState(q) + '</b>.\n' + BOX_V + ' Only answered questions can be edited.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /answer ' + esc(qid) + ' to answer it first.\n' + BOX_V + '\n' + cardBottom,
-            message.message_id, REPLY_KEYBOARD);
+            message.message_id, REPLY_KEYBOARD, loadingId);
           return res.status(200).json({ ok: true });
         }
         await clearAnswerSession(chatId);
         await clearLookupSession(chatId);
         await clearPreviewSession(chatId);
         await saveEditSession(chatId, qid);
-        await sendTelegram(chatId,
+        await respondTelegram(chatId,
           cardTop('\u270F\uFE0F <b>EDIT MODE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Send the new answer text for:\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:\n' + BOX_V + ' ' + esc(q.question).slice(0, 120) + '\n' + BOX_V + '\n' + BOX_V + ' <i>Type your new answer as\n' + BOX_V + ' your next message.</i>\n' + BOX_V + '\n' + BOX_V + ' Send /cancel to abort.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id, REPLY_KEYBOARD);
+          message.message_id, REPLY_KEYBOARD, loadingId);
       } catch (e) {
-        await sendTelegram(chatId,
+        await respondTelegram(chatId,
           cardTop('\u26A0\uFE0F <b>EDIT FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not start edit. Check the ID.\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
-          message.message_id, REPLY_KEYBOARD);
+          message.message_id, REPLY_KEYBOARD, loadingId);
       }
       return res.status(200).json({ ok: true });
     }
@@ -1653,33 +1695,34 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ ok: true });
       }
       try {
+        var loadingId = await sendLoadingCard(chatId, '\uD83D\uDCCD <b>PINNING\u2026</b>', 'Checking the question before pinning...', message.message_id);
         var q = await getQuestion(qid);
         if (!q) {
-          await sendTelegram(chatId,
+          await respondTelegram(chatId,
             cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question with that ID exists.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all to browse IDs.\n' + BOX_V + '\n' + cardBottom,
-            message.message_id, REPLY_KEYBOARD);
+            message.message_id, REPLY_KEYBOARD, loadingId);
           return res.status(200).json({ ok: true });
         }
         if (q.dismissed) {
-          await sendTelegram(chatId,
+          await respondTelegram(chatId,
             cardTop('\u26A0\uFE0F <b>CANNOT PIN</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Dismissed questions are hidden\n' + BOX_V + ' from your site. Retrieve it first.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /retrieve ' + esc(qid) + ' first.\n' + BOX_V + '\n' + cardBottom,
-            message.message_id, REPLY_KEYBOARD);
+            message.message_id, REPLY_KEYBOARD, loadingId);
           return res.status(200).json({ ok: true });
         }
         if (q.pinned) {
-          await sendTelegram(chatId,
+          await respondTelegram(chatId,
             cardTop('\uD83D\uDCCD <b>ALREADY PINNED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This question is already pinned\n' + BOX_V + ' to the top of your site.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /unpin ' + esc(qid) + ' to remove.\n' + BOX_V + '\n' + cardBottom,
-            message.message_id, REPLY_KEYBOARD);
+            message.message_id, REPLY_KEYBOARD, loadingId);
           return res.status(200).json({ ok: true });
         }
         await pinQuestion(qid);
-        await sendTelegram(chatId,
+        await respondTelegram(chatId,
           cardTop('\uD83D\uDCCD <b>PINNED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This question is now pinned to\n' + BOX_V + ' the top of your site\'s AMA section.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /unpin ' + esc(qid) + ' to remove.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id, REPLY_KEYBOARD);
+          message.message_id, REPLY_KEYBOARD, loadingId);
       } catch (e) {
-        await sendTelegram(chatId,
+        await respondTelegram(chatId,
           cardTop('\u26A0\uFE0F <b>PIN FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not pin. Check the ID.\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
-          message.message_id, REPLY_KEYBOARD);
+          message.message_id, REPLY_KEYBOARD, loadingId);
       }
       return res.status(200).json({ ok: true });
     }
@@ -1694,46 +1737,48 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ ok: true });
       }
       try {
+        var loadingId = await sendLoadingCard(chatId, '\uD83D\uDCCD <b>UNPINNING\u2026</b>', 'Checking the question before removing the pin...', message.message_id);
         var q = await getQuestion(qid);
         if (!q) {
-          await sendTelegram(chatId,
+          await respondTelegram(chatId,
             cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question with that ID exists.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all to browse IDs.\n' + BOX_V + '\n' + cardBottom,
-            message.message_id, REPLY_KEYBOARD);
+            message.message_id, REPLY_KEYBOARD, loadingId);
           return res.status(200).json({ ok: true });
         }
         if (q.dismissed) {
-          await sendTelegram(chatId,
+          await respondTelegram(chatId,
             cardTop('\u26A0\uFE0F <b>CANNOT UNPIN</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Dismissed questions are hidden\n' + BOX_V + ' from your site. Retrieve it first.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /retrieve ' + esc(qid) + ' first.\n' + BOX_V + '\n' + cardBottom,
-            message.message_id, REPLY_KEYBOARD);
+            message.message_id, REPLY_KEYBOARD, loadingId);
           return res.status(200).json({ ok: true });
         }
         if (!q.pinned) {
-          await sendTelegram(chatId,
+          await respondTelegram(chatId,
             cardTop('\uD83D\uDCCD <b>NOT PINNED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This question is not pinned.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
-            message.message_id, REPLY_KEYBOARD);
+            message.message_id, REPLY_KEYBOARD, loadingId);
           return res.status(200).json({ ok: true });
         }
         await unpinQuestion(qid);
-        await sendTelegram(chatId,
+        await respondTelegram(chatId,
           cardTop('\uD83D\uDCCD <b>UNPINNED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Pin removed. Question is back\n' + BOX_V + ' in normal order on your site.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
-          message.message_id, REPLY_KEYBOARD);
+          message.message_id, REPLY_KEYBOARD, loadingId);
       } catch (e) {
-        await sendTelegram(chatId,
+        await respondTelegram(chatId,
           cardTop('\u26A0\uFE0F <b>UNPIN FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not unpin. Check the ID.\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
-          message.message_id, REPLY_KEYBOARD);
+          message.message_id, REPLY_KEYBOARD, loadingId);
       }
       return res.status(200).json({ ok: true });
     }
 
     /* /pinned - list all pinned questions */
     if (command === '/pinned') {
+      var loadingId = await sendLoadingCard(chatId, '\uD83D\uDCCD <b>LOADING PINNED\u2026</b>', 'Finding questions pinned to the site...', message.message_id);
       var all = await listAllQuestions();
       var pinned = all.filter(function(q) { return q.pinned && questionState(q) !== 'DISMISSED'; })
         .sort(function(a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
       if (!pinned.length) {
-        await sendTelegram(chatId,
+        await respondTelegram(chatId,
           cardTop('\uD83D\uDCCD <b>NO PINNED QUESTIONS</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Nothing is pinned right now.\n' + BOX_V + '\n' + BOX_V + ' Use /pin &lt;id&gt; to pin a question\n' + BOX_V + ' to the top of your site.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id, REPLY_KEYBOARD);
+          message.message_id, REPLY_KEYBOARD, loadingId);
         return res.status(200).json({ ok: true });
       }
       var lines = [
@@ -1756,7 +1801,7 @@ module.exports = async function handler(req, res) {
       }
       lines.push(BOX_V + ' /unpin &lt;id&gt; to remove a pin');
       lines.push(cardBottom);
-      await sendTelegram(chatId, lines.join('\n'), message.message_id, REPLY_KEYBOARD);
+      await respondTelegram(chatId, lines.join('\n'), message.message_id, REPLY_KEYBOARD, loadingId);
       return res.status(200).json({ ok: true });
     }
 
@@ -1769,7 +1814,8 @@ module.exports = async function handler(req, res) {
           message.message_id, REPLY_KEYBOARD);
         return res.status(200).json({ ok: true });
       }
-      await sendFullDetailCard(chatId, qid, message.message_id);
+      var loadingId = await sendLoadingCard(chatId, '\uD83D\uDCCB <b>LOADING DETAILS\u2026</b>', 'Fetching the full question card...', message.message_id);
+      await sendFullDetailCard(chatId, qid, message.message_id, loadingId);
       return res.status(200).json({ ok: true });
     }
 
@@ -1784,37 +1830,40 @@ module.exports = async function handler(req, res) {
 
     /* /all */
     if (command === '/all') {
+      var loadingId = await sendLoadingCard(chatId, '\uD83D\uDCCB <b>LOADING ALL\u2026</b>', 'Browsing the full AMA database...', message.message_id);
       var all = await listAllQuestions();
       if (!all.length) {
-        await sendTelegram(chatId,
+        await respondTelegram(chatId,
           cardTop('\uD83D\uDCEC <b>NO QUESTIONS YET</b>') + '\n' + BOX_V + '\n' + BOX_V + ' The database is empty.\n' + BOX_V + ' Questions will appear here when\n' + BOX_V + ' visitors submit them.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id, REPLY_KEYBOARD);
+          message.message_id, REPLY_KEYBOARD, loadingId);
         return res.status(200).json({ ok: true });
       }
       var sorted = all.slice().sort(function(a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
       var result = buildAllPageText(sorted, 1);
       var buttons = buildAllPageButtons(result.page, result.pages);
-      await sendTelegram(chatId, result.text, message.message_id, buttons);
+      await respondTelegram(chatId, result.text, message.message_id, buttons, loadingId);
       return res.status(200).json({ ok: true });
     }
 
     /* /deleteall */
     if (command === '/deleteall') {
+      var loadingId = await sendLoadingCard(chatId, '\uD83D\uDDD1 <b>CHECKING DELETE ALL\u2026</b>', 'Counting questions before confirmation...', message.message_id);
       var all = await listAllQuestions();
       if (!all.length) {
-        await sendTelegram(chatId,
+        await respondTelegram(chatId,
           cardTop('\uD83D\uDCEC <b>NOTHING TO DELETE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No questions in the database.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id, REPLY_KEYBOARD);
+          message.message_id, REPLY_KEYBOARD, loadingId);
         return res.status(200).json({ ok: true });
       }
       var count = all.length;
-      await sendTelegram(chatId,
+      await respondTelegram(chatId,
         cardTop('\u26A0\uFE0F <b>CONFIRM DELETE ALL</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This will permanently delete\n' + BOX_V + ' <b>all ' + count + ' question' + (count === 1 ? '' : 's') + '</b> from the database.\n' + BOX_V + '\n' + BOX_V + ' \u26A0\uFE0F <i>This cannot be undone.</i>\n' + BOX_V + '\n' + cardBottom,
         message.message_id,
         { inline_keyboard: [[
           { text: '\u2705 Yes, Delete All', callback_data: 'confirmdeleteall' },
           { text: '\u274C Cancel', callback_data: 'canceldeleteall' }
-        ]] }
+        ]] },
+        loadingId
       );
       return res.status(200).json({ ok: true });
     }
@@ -1834,25 +1883,27 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ ok: true });
       }
       try {
+        var loadingId = await sendLoadingCard(chatId, '\uD83D\uDDD1 <b>CHECKING DELETE\u2026</b>', 'Looking up the question before confirmation...', message.message_id);
         var q = await getQuestion(qid);
         if (!q) {
-          await sendTelegram(chatId,
+          await respondTelegram(chatId,
             cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question with that ID exists.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all to browse IDs.\n' + BOX_V + '\n' + cardBottom,
-            message.message_id, REPLY_KEYBOARD);
+            message.message_id, REPLY_KEYBOARD, loadingId);
           return res.status(200).json({ ok: true });
         }
-        await sendTelegram(chatId,
+        await respondTelegram(chatId,
           cardTop('\u26A0\uFE0F <b>CONFIRM DELETE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Permanently delete this question?\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:\n' + BOX_V + ' ' + esc(q.question).slice(0, 120) + '\n' + BOX_V + '\n' + BOX_V + ' \u26A0\uFE0F <i>This cannot be undone.</i>\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
           message.message_id,
           { inline_keyboard: [[
             { text: '\u2705 Yes, Delete', callback_data: 'confirmdelete:' + qid },
             { text: '\u274C Cancel', callback_data: 'canceldelete:' + qid }
-          ]] }
+          ]] },
+          loadingId
         );
       } catch (e) {
-        await sendTelegram(chatId,
+        await respondTelegram(chatId,
           cardTop('\u26A0\uFE0F <b>DELETE FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not look up the question.\n' + BOX_V + ' Check the ID and try again.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
-          message.message_id, REPLY_KEYBOARD);
+          message.message_id, REPLY_KEYBOARD, loadingId);
       }
       return res.status(200).json({ ok: true });
     }
@@ -1861,12 +1912,13 @@ module.exports = async function handler(req, res) {
     /* /dismissall - dismiss all active (non-dismissed) questions with confirmation */
     if (command === '/dismissall') {
       try {
+        var loadingId = await sendLoadingCard(chatId, '\uD83D\uDE48 <b>CHECKING DISMISS ALL\u2026</b>', 'Counting active questions before confirmation...', message.message_id);
         var all = await listAllQuestions();
         var active = all.filter(function(q) { return questionState(q) !== 'DISMISSED'; });
         if (!active.length) {
-          await sendTelegram(chatId,
+          await respondTelegram(chatId,
             cardTop('\u2705 <b>NOTHING TO DISMISS</b>') + '\n' + BOX_V + '\n' + BOX_V + ' All questions are already dismissed.\n' + BOX_V + '\n' + BOX_V + ' Use /retrieveall to restore them.\n' + BOX_V + '\n' + cardBottom,
-            message.message_id, REPLY_KEYBOARD);
+            message.message_id, REPLY_KEYBOARD, loadingId);
           return res.status(200).json({ ok: true });
         }
         var answeredCount = active.filter(function(q) { return questionState(q) === 'ANSWERED'; }).length;
@@ -1875,20 +1927,21 @@ module.exports = async function handler(req, res) {
         if (answeredCount > 0) detailLine += '\n' + BOX_V + ' \u2705 ' + answeredCount + ' answered \u2192 retrieve restores to site';
         if (unansweredCount > 0) detailLine += '\n' + BOX_V + ' \u23F3 ' + unansweredCount + ' unanswered \u2192 retrieve restores to pending';
 
-        await sendTelegram(chatId,
+        await respondTelegram(chatId,
           cardTop('\uD83D\uDE48 <b>CONFIRM DISMISS ALL</b>') + '\n' + BOX_V + '\n' + detailLine + '\n' + BOX_V + '\n' + BOX_V + ' Data is preserved safely.\n' + BOX_V + ' Retrieve any question later with\n' + BOX_V + ' /retrieveall or /retrieve &lt;id&gt;.\n' + BOX_V + '\n' + cardBottom,
           message.message_id,
           { inline_keyboard: [[
             { text: '\uD83D\uDE48 Yes, Dismiss All', callback_data: 'confirmdismissall' },
             { text: '\u274C Cancel', callback_data: 'canceldismissall' }
-          ]] }
+          ]] },
+          loadingId
         );
         return res.status(200).json({ ok: true });
       } catch (e) {
         console.error('/dismissall error:', e);
-        await sendTelegram(chatId,
+        await respondTelegram(chatId,
           cardTop('\u26A0\uFE0F <b>DISMISS ALL FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not load questions.\n' + BOX_V + ' Please try again in a moment.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id, REPLY_KEYBOARD);
+          message.message_id, REPLY_KEYBOARD, loadingId);
         return res.status(200).json({ ok: true, error: e.message });
       }
     }
@@ -1909,11 +1962,12 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ ok: true });
       }
       try {
+        var loadingId = await sendLoadingCard(chatId, '\uD83D\uDE48 <b>DISMISSING\u2026</b>', 'Checking the question before hiding it...', message.message_id);
         var q = await getQuestion(qid);
         if (!q) {
-          await sendTelegram(chatId,
+          await respondTelegram(chatId,
             cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question with that ID exists.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all to browse IDs.\n' + BOX_V + '\n' + cardBottom,
-            message.message_id, REPLY_KEYBOARD);
+            message.message_id, REPLY_KEYBOARD, loadingId);
           return res.status(200).json({ ok: true });
         }
         if (q.dismissed) {
@@ -1943,29 +1997,31 @@ module.exports = async function handler(req, res) {
 
     /* /dismissed */
     if (command === '/dismissed') {
+      var loadingId = await sendLoadingCard(chatId, '\uD83D\uDE48 <b>LOADING DISMISSED\u2026</b>', 'Finding hidden questions...', message.message_id);
       var all = await listAllQuestions();
       var dismissed = all.filter(function(q) { return questionState(q) === 'DISMISSED'; })
         .sort(function(a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
       if (!dismissed.length) {
-        await sendTelegram(chatId,
+        await respondTelegram(chatId,
           cardTop('\u2705 <b>NO DISMISSED QUESTIONS</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Nothing has been dismissed.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id, REPLY_KEYBOARD);
+          message.message_id, REPLY_KEYBOARD, loadingId);
         return res.status(200).json({ ok: true });
       }
       var result = buildDismissedPageText(dismissed, 1);
       var buttons = buildDismissedPageButtons(result.page, result.pages);
-      await sendTelegram(chatId, result.text, message.message_id, buttons);
+      await respondTelegram(chatId, result.text, message.message_id, buttons, loadingId);
       return res.status(200).json({ ok: true });
     }
 
     /* /retrieveall */
     if (command === '/retrieveall') {
+      var loadingId = await sendLoadingCard(chatId, '\u21A9\uFE0F <b>CHECKING RETRIEVE ALL\u2026</b>', 'Counting dismissed questions before confirmation...', message.message_id);
       var all = await listAllQuestions();
       var dismissed = all.filter(function(q) { return questionState(q) === 'DISMISSED'; });
       if (!dismissed.length) {
-        await sendTelegram(chatId,
+        await respondTelegram(chatId,
           cardTop('\u2705 <b>NOTHING TO RETRIEVE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No dismissed questions found.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id, REPLY_KEYBOARD);
+          message.message_id, REPLY_KEYBOARD, loadingId);
         return res.status(200).json({ ok: true });
       }
       var withAnswer = dismissed.filter(function(q) { return q.answer && String(q.answer).trim().length > 0; }).length;
@@ -1974,13 +2030,14 @@ module.exports = async function handler(req, res) {
       if (withAnswer > 0) detailLine += '\n' + BOX_V + ' \u2705 ' + withAnswer + ' \u2192 back on site (with answers)';
       if (withoutAnswer > 0) detailLine += '\n' + BOX_V + ' \u23F3 ' + withoutAnswer + ' \u2192 pending queue (no answers)';
 
-      await sendTelegram(chatId,
+      await respondTelegram(chatId,
         cardTop('\u21A9\uFE0F <b>CONFIRM RETRIEVE ALL</b>') + '\n' + BOX_V + '\n' + detailLine + '\n' + BOX_V + '\n' + BOX_V + ' \u21A9\uFE0F This will restore them all.\n' + BOX_V + '\n' + cardBottom,
         message.message_id,
         { inline_keyboard: [[
           { text: '\u2705 Yes, Retrieve All', callback_data: 'confirmretrieveall' },
           { text: '\u274C Cancel', callback_data: 'cancelretrieveall' }
-        ]] }
+        ]] },
+        loadingId
       );
       return res.status(200).json({ ok: true });
     }
@@ -2094,7 +2151,7 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ ok: true, edited: pendingQuestionId });
       } catch (e) {
         await clearEditSession(chatId);
-        await sendTelegram(chatId,
+        await respondTelegram(chatId,
           cardTop('\u26A0\uFE0F <b>EDIT FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not save the edit.\n' + BOX_V + ' The question may have been deleted.\n' + BOX_V + '\n' + BOX_V + ' Edit session cleared. Try /pending\n' + BOX_V + ' to check current questions.\n' + BOX_V + '\n' + cardBottom,
           message.message_id, REPLY_KEYBOARD);
         return res.status(200).json({ ok: true, editError: e.message });
