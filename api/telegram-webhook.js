@@ -1785,6 +1785,26 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    /* /deleteall */
+    if (command === '/deleteall') {
+      var all = await listAllQuestions();
+      if (!all.length) {
+        await sendTelegram(chatId,
+          cardTop('\uD83D\uDCEC <b>NOTHING TO DELETE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No questions in the database.\n' + BOX_V + '\n' + cardBottom,
+          message.message_id, REPLY_KEYBOARD);
+        return res.status(200).json({ ok: true });
+      }
+      var count = all.length;
+      await sendTelegram(chatId,
+        cardTop('\u26A0\uFE0F <b>CONFIRM DELETE ALL</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This will permanently delete\n' + BOX_V + ' <b>all ' + count + ' question' + (count === 1 ? '' : 's') + '</b> from the database.\n' + BOX_V + '\n' + BOX_V + ' \u26A0\uFE0F <i>This cannot be undone.</i>\n' + BOX_V + '\n' + cardBottom,
+        message.message_id,
+        { inline_keyboard: [[
+          { text: '\u2705 Yes, Delete All', callback_data: 'confirmdeleteall' },
+          { text: '\u274C Cancel', callback_data: 'canceldeleteall' }
+        ]] }
+      );
+      return res.status(200).json({ ok: true });
+    }
     /* /delete <id> - delete a single question with confirmation */
     if (command === '/delete') {
       var qid = text.split(/\s+/)[1];
@@ -1818,27 +1838,33 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
-    /* /deleteall */
-    if (command === '/deleteall') {
+
+    /* /dismissall - dismiss all active (non-dismissed) questions with confirmation */
+    if (command === '/dismissall') {
       var all = await listAllQuestions();
-      if (!all.length) {
+      var active = all.filter(function(q) { return questionState(q) !== 'DISMISSED'; });
+      if (!active.length) {
         await sendTelegram(chatId,
-          cardTop('\uD83D\uDCEC <b>NOTHING TO DELETE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No questions in the database.\n' + BOX_V + '\n' + cardBottom,
+          cardTop('\u2705 <b>NOTHING TO DISMISS</b>') + '\n' + BOX_V + '\n' + BOX_V + ' All questions are already dismissed.\n' + BOX_V + '\n' + BOX_V + ' Use /retrieveall to restore them.\n' + BOX_V + '\n' + cardBottom,
           message.message_id, REPLY_KEYBOARD);
         return res.status(200).json({ ok: true });
       }
-      var count = all.length;
+      var answeredCount = active.filter(function(q) { return questionState(q) === 'ANSWERED'; }).length;
+      var unansweredCount = active.length - answeredCount;
+      var detailLine = BOX_V + ' <b>' + active.length + '</b> active question' + (active.length === 1 ? '' : 's') + ' will be hidden from your site.';
+      if (answeredCount > 0) detailLine += '\n' + BOX_V + ' \u2705 ' + answeredCount + ' answered \u2192 retrieve restores to site';
+      if (unansweredCount > 0) detailLine += '\n' + BOX_V + ' \u23F3 ' + unansweredCount + ' unanswered \u2192 retrieve restores to pending';
+
       await sendTelegram(chatId,
-        cardTop('\u26A0\uFE0F <b>CONFIRM DELETE ALL</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This will permanently delete\n' + BOX_V + ' <b>all ' + count + ' question' + (count === 1 ? '' : 's') + '</b> from the database.\n' + BOX_V + '\n' + BOX_V + ' \u26A0\uFE0F <i>This cannot be undone.</i>\n' + BOX_V + '\n' + cardBottom,
+        cardTop('\uD83D\uDE48 <b>CONFIRM DISMISS ALL</b>') + '\n' + BOX_V + '\n' + detailLine + '\n' + BOX_V + '\n' + BOX_V + ' Data is preserved safely.\n' + BOX_V + ' Retrieve any question later with\n' + BOX_V + ' /retrieveall or /retrieve <id>.\n' + BOX_V + '\n' + cardBottom,
         message.message_id,
         { inline_keyboard: [[
-          { text: '\u2705 Yes, Delete All', callback_data: 'confirmdeleteall' },
-          { text: '\u274C Cancel', callback_data: 'canceldeleteall' }
+          { text: '\uD83D\uDE48 Yes, Dismiss All', callback_data: 'confirmdismissall' },
+          { text: '\u274C Cancel', callback_data: 'canceldismissall' }
         ]] }
       );
       return res.status(200).json({ ok: true });
     }
-
     /* /dismiss <id> - dismiss a single question by ID */
     if (command === '/dismiss') {
       var qid = text.split(/\s+/)[1];
@@ -1898,33 +1924,32 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
-    /* /dismissall - dismiss all active (non-dismissed) questions with confirmation */
-    if (command === '/dismissall') {
+    /* /retrieveall */
+    if (command === '/retrieveall') {
       var all = await listAllQuestions();
-      var active = all.filter(function(q) { return questionState(q) !== 'DISMISSED'; });
-      if (!active.length) {
+      var dismissed = all.filter(function(q) { return questionState(q) === 'DISMISSED'; });
+      if (!dismissed.length) {
         await sendTelegram(chatId,
-          cardTop('\u2705 <b>NOTHING TO DISMISS</b>') + '\n' + BOX_V + '\n' + BOX_V + ' All questions are already dismissed.\n' + BOX_V + '\n' + BOX_V + ' Use /retrieveall to restore them.\n' + BOX_V + '\n' + cardBottom,
+          cardTop('\u2705 <b>NOTHING TO RETRIEVE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No dismissed questions found.\n' + BOX_V + '\n' + cardBottom,
           message.message_id, REPLY_KEYBOARD);
         return res.status(200).json({ ok: true });
       }
-      var answeredCount = active.filter(function(q) { return questionState(q) === 'ANSWERED'; }).length;
-      var unansweredCount = active.length - answeredCount;
-      var detailLine = BOX_V + ' <b>' + active.length + '</b> active question' + (active.length === 1 ? '' : 's') + ' will be hidden from your site.';
-      if (answeredCount > 0) detailLine += '\n' + BOX_V + ' \u2705 ' + answeredCount + ' answered \u2192 retrieve restores to site';
-      if (unansweredCount > 0) detailLine += '\n' + BOX_V + ' \u23F3 ' + unansweredCount + ' unanswered \u2192 retrieve restores to pending';
+      var withAnswer = dismissed.filter(function(q) { return q.answer && String(q.answer).trim().length > 0; }).length;
+      var withoutAnswer = dismissed.length - withAnswer;
+      var detailLine = BOX_V + ' <b>' + dismissed.length + '</b> dismissed question' + (dismissed.length === 1 ? '' : 's') + ' will be restored.';
+      if (withAnswer > 0) detailLine += '\n' + BOX_V + ' \u2705 ' + withAnswer + ' \u2192 back on site (with answers)';
+      if (withoutAnswer > 0) detailLine += '\n' + BOX_V + ' \u23F3 ' + withoutAnswer + ' \u2192 pending queue (no answers)';
 
       await sendTelegram(chatId,
-        cardTop('\uD83D\uDE48 <b>CONFIRM DISMISS ALL</b>') + '\n' + BOX_V + '\n' + detailLine + '\n' + BOX_V + '\n' + BOX_V + ' Data is preserved safely.\n' + BOX_V + ' Retrieve any question later with\n' + BOX_V + ' /retrieveall or /retrieve <id>.\n' + BOX_V + '\n' + cardBottom,
+        cardTop('\u21A9\uFE0F <b>CONFIRM RETRIEVE ALL</b>') + '\n' + BOX_V + '\n' + detailLine + '\n' + BOX_V + '\n' + BOX_V + ' \u21A9\uFE0F This will restore them all.\n' + BOX_V + '\n' + cardBottom,
         message.message_id,
         { inline_keyboard: [[
-          { text: '\uD83D\uDE48 Yes, Dismiss All', callback_data: 'confirmdismissall' },
-          { text: '\u274C Cancel', callback_data: 'canceldismissall' }
+          { text: '\u2705 Yes, Retrieve All', callback_data: 'confirmretrieveall' },
+          { text: '\u274C Cancel', callback_data: 'cancelretrieveall' }
         ]] }
       );
       return res.status(200).json({ ok: true });
     }
-
     /* /retrieve <id> */
     if (command === '/retrieve') {
       var qid = text.split(/\s+/)[1];
@@ -1985,32 +2010,6 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    /* /retrieveall */
-    if (command === '/retrieveall') {
-      var all = await listAllQuestions();
-      var dismissed = all.filter(function(q) { return questionState(q) === 'DISMISSED'; });
-      if (!dismissed.length) {
-        await sendTelegram(chatId,
-          cardTop('\u2705 <b>NOTHING TO RETRIEVE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No dismissed questions found.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id, REPLY_KEYBOARD);
-        return res.status(200).json({ ok: true });
-      }
-      var withAnswer = dismissed.filter(function(q) { return q.answer && String(q.answer).trim().length > 0; }).length;
-      var withoutAnswer = dismissed.length - withAnswer;
-      var detailLine = BOX_V + ' <b>' + dismissed.length + '</b> dismissed question' + (dismissed.length === 1 ? '' : 's') + ' will be restored.';
-      if (withAnswer > 0) detailLine += '\n' + BOX_V + ' \u2705 ' + withAnswer + ' \u2192 back on site (with answers)';
-      if (withoutAnswer > 0) detailLine += '\n' + BOX_V + ' \u23F3 ' + withoutAnswer + ' \u2192 pending queue (no answers)';
-
-      await sendTelegram(chatId,
-        cardTop('\u21A9\uFE0F <b>CONFIRM RETRIEVE ALL</b>') + '\n' + BOX_V + '\n' + detailLine + '\n' + BOX_V + '\n' + BOX_V + ' \u21A9\uFE0F This will restore them all.\n' + BOX_V + '\n' + cardBottom,
-        message.message_id,
-        { inline_keyboard: [[
-          { text: '\u2705 Yes, Retrieve All', callback_data: 'confirmretrieveall' },
-          { text: '\u274C Cancel', callback_data: 'cancelretrieveall' }
-        ]] }
-      );
-      return res.status(200).json({ ok: true });
-    }
 
     /* Answer session (from Answer button) */
     var answerSess = await getAnswerSession(chatId);
