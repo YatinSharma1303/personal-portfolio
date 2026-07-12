@@ -1,5 +1,5 @@
 /* ============================================================
- api/telegram-webhook.js - Vercel serverless function v4.2
+ api/telegram-webhook.js - Vercel serverless function v4.3
  The brain of the AMA Telegram interaction.
 
  Handles:
@@ -498,40 +498,75 @@ async function respondTelegram(chatId, text, replyToId, replyMarkup, editMessage
   return sendTelegram(chatId, text, replyToId, replyMarkup);
 }
 
+function visitorName(name) {
+  var n = String(name || '').trim();
+  if (!n || n.toLowerCase() === 'anonymous') return 'Anonymous visitor';
+  return n;
+}
+
+function clipText(value, max) {
+  var s = String(value || '').replace(/\s+/g, ' ').trim();
+  max = max || 120;
+  return s.length > max ? s.slice(0, max - 1) + '…' : s;
+}
+
+function answerPreviewCard(q, answerText, questionId) {
+  var name = visitorName(q && q.name);
+  var question = q ? q.question : 'Question unavailable';
+  return [
+    cardTop('\uD83D\uDC41 <b>ANSWER PREVIEW</b>'),
+    BOX_V,
+    BOX_V + ' \uD83D\uDC64 Visitor \u2500 <b>' + esc(name) + '</b>',
+    BOX_V + ' \uD83C\uDD94 ID \u2500 <code>' + esc(questionId) + '</code>',
+    BOX_V,
+    BOX_V + ' \uD83D\uDCAC <b>Question</b>',
+    BOX_V + ' “' + esc(clipText(question, 160)) + '”',
+    BOX_V,
+    BOX_V + ' \u270D\uFE0F <b>Your answer</b>',
+    BOX_V + ' “' + esc(clipText(answerText, 500)) + '”',
+    BOX_V,
+    BOX_V + ' Publish this to the site?',
+    BOX_V,
+    cardBottom
+  ].join('\n');
+}
+
+function previewButtons() {
+  return { inline_keyboard: [
+    [{ text: '\u2705 Publish', callback_data: 'previewconfirm' }, { text: '\u270F\uFE0F Revise', callback_data: 'previewedit' }],
+    [{ text: '\u274C Cancel', callback_data: 'previewcancel' }]
+  ] };
+}
+
 /* -- /start -- Dynamic welcome with live stats -- */
 async function buildWelcomeText() {
-  var statsBlock = '';
-  try {
-    var s = await getStats();
-    var parts = [];
-    if (s.total > 0) parts.push('\uD83D\uDCEC ' + s.total + ' total');
-    if (s.unanswered > 0) parts.push('\u23F3 ' + s.unanswered + ' pending');
-    if (s.answered > 0) parts.push('\u2705 ' + s.answered + ' answered');
-    if (s.dismissed > 0) parts.push('\uD83D\uDE48 ' + s.dismissed + ' dismissed');
-    if (s.totalVotes > 0) parts.push('\uD83D\uDC4D ' + s.totalVotes + ' votes');
-    if (s.avgResponseMs > 0) parts.push('\u26A1 ~' + formatDuration(s.avgResponseMs) + ' avg response');
-    if (parts.length) statsBlock = '\n' + BOX_V + ' ' + parts.join(' \u00B7 ') + '\n';
-  } catch (e) {}
+  var s = { total: 0, unanswered: 0, answered: 0, dismissed: 0, pinned: 0, totalVotes: 0, avgResponseMs: 0 };
+  try { s = await getStats(); } catch (e) {}
+  var health = s.unanswered === 0 ? 'Clear' : (s.unanswered <= 3 ? 'Active' : 'Busy');
+  var avg = s.avgResponseMs > 0 ? formatDuration(s.avgResponseMs) : '—';
 
   return [
-    cardTop('\uD83E\uDD16 <b>AMA BOT v4.2</b>'),
+    cardTop('\u2728 <b>AMA CONTROL ROOM</b>'),
     BOX_V,
-    BOX_V + ' Your portfolio AMA is live.',
-    BOX_V + ' Every visitor question arrives here',
-    BOX_V + ' instantly. Answer, dismiss, or pin \u2014',
-    BOX_V + ' you\'re in control.',
+    BOX_V + ' Portfolio inbox is online.',
+    BOX_V + ' Inbox health \u2500 <b>' + health + '</b>',
     BOX_V,
-    statsBlock,
-    BOX_V + ' <b>\u26A1 Quick commands:</b>',
+    BOX_V + ' \uD83D\uDCEC Total     \u2500 <b>' + s.total + '</b>',
+    BOX_V + ' \u23F3 Pending   \u2500 <b>' + s.unanswered + '</b>',
+    BOX_V + ' \u2705 Answered  \u2500 <b>' + s.answered + '</b>',
+    BOX_V + ' \uD83D\uDE48 Hidden    \u2500 <b>' + s.dismissed + '</b>',
+    BOX_V + ' \uD83D\uDCCD Pinned    \u2500 <b>' + s.pinned + '</b>',
+    BOX_V + ' \u26A1 Avg reply \u2500 <b>' + esc(avg) + '</b>',
     BOX_V,
-    BOX_V + ' \uD83D\uDCCB /pending  \u00B7 Unanswered queue',
-    BOX_V + ' \uD83D\uDCCA /stats    \u00B7 Full dashboard',
-    BOX_V + ' \uD83D\uDD50 /recent   \u00B7 Latest answers',
-    BOX_V + ' \uD83D\uDD0D /search   \u00B7 Find by keyword',
-    BOX_V + ' \uD83D\uDCD6 /help     \u00B7 All commands',
+    BOX_V + ' <b>Quick actions</b>',
+    BOX_V + ' /pending  · unanswered queue',
+    BOX_V + ' /stats    · dashboard',
+    BOX_V + ' /recent   · latest answers',
+    BOX_V + ' /all      · browse database',
+    BOX_V + ' /help     · command guide',
     BOX_V,
-    BOX_V + ' \uD83D\uDCA1 Reply to any question message',
-    BOX_V + ' to answer it directly.',
+    BOX_V + ' Tip: tap <b>Answer</b> or reply to any',
+    BOX_V + ' question card to publish with preview.',
     BOX_V,
     cardBottom
   ].join('\n');
@@ -539,104 +574,39 @@ async function buildWelcomeText() {
 
 /* -- /help -- Command reference -- */
 var HELP_TEXT = [
-  cardTop('\uD83D\uDCD6 <b>COMMANDS A\u2013Z</b>'),
+  cardTop('\uD83D\uDCD6 <b>AMA COMMAND GUIDE</b>'),
   BOX_V,
-  BOX_V + ' <b>\uD83D\uDCEC /all [page]</b>',
-  BOX_V + ' Browse every question. Paginated,',
-  BOX_V + ' shows state, preview &amp; ID. Tap to copy.',
+  BOX_V + ' <b>Queues</b>',
+  BOX_V + ' /pending  \u2500 unanswered inbox',
+  BOX_V + ' /recent   \u2500 latest answers',
+  BOX_V + ' /all      \u2500 all questions',
+  BOX_V + ' /dismissed \u2500 hidden questions',
+  BOX_V + ' /pinned   \u2500 pinned to site',
   BOX_V,
-  BOX_V + ' <b>\u270D\uFE0F /answer &lt;id&gt; &lt;text&gt;</b>',
-  BOX_V + ' Answer a question in one shot. Shows',
-  BOX_V + ' a preview before publishing. Reviseable.',
-  BOX_V + '   \u21B3 <b>/cancel</b>',
-  BOX_V + '     Abort active session (answer, edit,',
-  BOX_V + '     lookup). Returns to normal mode.',
+  BOX_V + ' <b>Single question actions</b>',
+  BOX_V + ' /get &lt;id&gt;          \u2500 detail card',
+  BOX_V + ' /answer &lt;id&gt; text  \u2500 preview answer',
+  BOX_V + ' /edit &lt;id&gt;         \u2500 revise answer',
+  BOX_V + ' /pin &lt;id&gt;          \u2500 pin to top',
+  BOX_V + ' /unpin &lt;id&gt;        \u2500 remove pin',
+  BOX_V + ' /dismiss &lt;id&gt;      \u2500 hide safely',
+  BOX_V + ' /retrieve &lt;id&gt;     \u2500 restore hidden',
+  BOX_V + ' /delete &lt;id&gt;       \u2500 permanent delete',
   BOX_V,
-  BOX_V + ' <b>\u270F\uFE0F /edit &lt;id&gt;</b>',
-  BOX_V + ' Edit the answer to a question.',
-  BOX_V + ' Only works on answered questions.',
-  BOX_V + ' Send new answer as next message.',
-  BOX_V + '   \u21B3 <b>/cancel</b>',
-  BOX_V + '     Abort the edit session.',
+  BOX_V + ' <b>Bulk actions</b>',
+  BOX_V + ' /dismissall  \u2500 hide active questions',
+  BOX_V + ' /retrieveall \u2500 restore hidden questions',
+  BOX_V + ' /deleteall   \u2500 delete everything',
   BOX_V,
-  BOX_V + ' <b>\uD83D\uDDD1 /delete &lt;id&gt;</b>',
-  BOX_V + ' Delete a single question permanently.',
-  BOX_V + ' \u26A0\uFE0F Confirms first. Cannot be undone.',
+  BOX_V + ' <b>Utilities</b>',
+  BOX_V + ' /stats       \u2500 AMA dashboard',
+  BOX_V + ' /search text \u2500 find by keyword/name',
+  BOX_V + ' /lookup      \u2500 paste ID mode',
+  BOX_V + ' /export      \u2500 text backup',
+  BOX_V + ' /cancel      \u2500 exit answer/edit/lookup',
   BOX_V,
-  BOX_V + ' <b>\uD83D\uDDD1 /deleteall</b>',
-  BOX_V + ' Permanently delete ALL questions.',
-  BOX_V + ' \u26A0\uFE0F Confirms first. Cannot be undone.',
-  BOX_V,
-  BOX_V + ' <b>\uD83D\uDE48 /dismiss &lt;id&gt;</b>',
-  BOX_V + ' Hide one question from your site.',
-  BOX_V + ' Data preserved. Retrieve later.',
-  BOX_V + '   \u21B3 <b>/dismissall</b>',
-  BOX_V + '     Hide ALL active questions at once.',
-  BOX_V + '     Confirms first. Shows answered vs pending.',
-  BOX_V,
-  BOX_V + ' <b>\uD83D\uDE48 /dismissed [page]</b>',
-  BOX_V + ' Browse all dismissed (hidden) questions.',
-  BOX_V + ' Shows if each had an answer before hiding.',
-  BOX_V + '   \u21B3 <b>/retrieve &lt;id&gt;</b>',
-  BOX_V + '     Restore one dismissed question.',
-  BOX_V + '     Answered\u2192site, unanswered\u2192pending.',
-  BOX_V + '   \u21B3 <b>/retrieveall</b>',
-  BOX_V + '     Restore ALL dismissed at once.',
-  BOX_V + '     Confirms first. Shows site vs pending.',
-  BOX_V,
-  BOX_V + ' <b>\uD83D\uDCE4 /export</b>',
-  BOX_V + ' Download all Q&amp;A as formatted text.',
-  BOX_V + ' Includes votes, reactions &amp; timestamps.',
-  BOX_V,
-  BOX_V + ' <b>\uD83D\uDCCB /get &lt;id&gt;</b>',
-  BOX_V + ' Full detail card with answer, response',
-  BOX_V + ' time, votes, reactions &amp; action buttons.',
-  BOX_V,
-  BOX_V + ' <b>\uD83D\uDCD6 /help</b>',
-  BOX_V + ' This message. Lists every command',
-  BOX_V + ' with its description &amp; usage.',
-  BOX_V,
-  BOX_V + ' <b>\uD83D\uDD0D /lookup</b>',
-  BOX_V + ' Interactive ID lookup mode. Paste an',
-  BOX_V + ' ID to get details. /cancel to exit.',
-  BOX_V,
-  BOX_V + ' <b>\uD83D\uDCCD /pin &lt;id&gt;</b>',
-  BOX_V + ' Pin question to top of site AMA section.',
-  BOX_V + ' Pinned Qs appear first with \uD83D\uDCCD badge.',
-  BOX_V + '   \u21B3 <b>/unpin &lt;id&gt;</b>',
-  BOX_V + '     Remove pin. Question returns to',
-  BOX_V + '     normal sort order on your site.',
-  BOX_V + '   \u21B3 <b>/pinned</b>',
-  BOX_V + '     List all currently pinned questions.',
-  BOX_V,
-  BOX_V + ' <b>\u23F3 /pending</b>',
-  BOX_V + ' List all unanswered questions waiting',
-  BOX_V + ' for your reply. Tap Answer or reply.',
-  BOX_V,
-  BOX_V + ' <b>\uD83D\uDD50 /recent</b>',
-  BOX_V + ' Last 5 answered questions with response',
-  BOX_V + ' times. Quick overview of latest activity.',
-  BOX_V,
-  BOX_V + ' <b>\uD83D\uDD01 /refresh</b>',
-  BOX_V + ' Combined view: unanswered + dismissed.',
-  BOX_V + ' Everything that still needs attention.',
-  BOX_V,
-  BOX_V + ' <b>\uD83D\uDD0D /search &lt;text&gt;</b>',
-  BOX_V + ' Search Q&amp;A by keyword. Matches question,',
-  BOX_V + ' answer &amp; name. Case-insensitive, max 8.',
-  BOX_V,
-  BOX_V + ' <b>\uD83D\uDE80 /start</b>',
-  BOX_V + ' Welcome message with live stats &amp;',
-  BOX_V + ' quick command reference + reply keyboard.',
-  BOX_V,
-  BOX_V + ' <b>\uD83D\uDCCA /stats</b>',
-  BOX_V + ' Full dashboard: totals, pinned count,',
-  BOX_V + ' avg response time &amp; top question.',
-  BOX_V,
-  BOX_V + ' <b>\uD83D\uDCAC Answer a question</b>',
-  BOX_V + ' Tap the Answer button on any card,',
-  BOX_V + ' reply to a bot message, or use',
-  BOX_V + ' /answer &lt;id&gt; &lt;text&gt;. Preview first.',
+  BOX_V + ' Every answer shows a preview first,',
+  BOX_V + ' including the visitor name + question.',
   BOX_V,
   cardBottom
 ].join('\n');
@@ -657,36 +627,36 @@ async function sendStats(chatId, replyToId, editMessageId) {
   try {
     var s = await getStats();
     var maxStat = Math.max(s.total, 1);
+    var health = s.unanswered === 0 ? 'Clean' : (s.unanswered <= 3 ? 'Healthy' : 'Needs attention');
+    var avg = s.avgResponseMs > 0 ? formatDuration(s.avgResponseMs) : '—';
 
     var topQ = '';
     if (s.mostVoted) {
-      var qText = esc(s.mostVoted.question).slice(0, 50);
-      topQ = '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDD25 <b>Top Question</b>\n' + BOX_V + ' "' + qText + '"\n' + BOX_V + ' with ' + (s.mostVoted.votes || 0) + ' \uD83D\uDC4D votes';
-    }
-
-    var avgLine = '';
-    if (s.avgResponseMs > 0) {
-      avgLine = '\n' + BOX_V + ' \u26A1 Avg response time \u2500 <b>' + formatDuration(s.avgResponseMs) + '</b>';
+      topQ = '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDD25 <b>Top question</b>' +
+        '\n' + BOX_V + ' “' + esc(clipText(s.mostVoted.question, 70)) + '”' +
+        '\n' + BOX_V + ' ' + (s.mostVoted.votes || 0) + ' votes';
     }
 
     var statsText = [
       cardTop('\uD83D\uDCCA <b>AMA DASHBOARD</b>'),
       BOX_V,
-      BOX_V + ' \uD83D\uDCEC Total \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 <b>' + s.total + '</b>',
+      BOX_V + ' Inbox health \u2500 <b>' + health + '</b>',
       BOX_V,
-      BOX_V + ' \u23F3 Pending \u2500\u2500 ' + progressBar(s.unanswered, maxStat) + ' <b>' + s.unanswered + '</b>',
-      BOX_V + ' \u2705 Answered \u2500 ' + progressBar(s.answered, maxStat) + ' <b>' + s.answered + '</b>',
-      BOX_V + ' \uD83D\uDE48 Dismissed \u2500 ' + progressBar(s.dismissed, maxStat) + ' <b>' + s.dismissed + '</b>',
-      BOX_V + ' \uD83D\uDCCD Pinned \u2500\u2500\u2500 ' + progressBar(s.pinned, Math.max(s.answered, 1)) + ' <b>' + s.pinned + '</b>',
+      BOX_V + ' \uD83D\uDCEC Total     ' + progressBar(s.total, maxStat, 8) + ' <b>' + s.total + '</b>',
+      BOX_V + ' \u23F3 Pending   ' + progressBar(s.unanswered, maxStat, 8) + ' <b>' + s.unanswered + '</b>',
+      BOX_V + ' \u2705 Answered  ' + progressBar(s.answered, maxStat, 8) + ' <b>' + s.answered + '</b>',
+      BOX_V + ' \uD83D\uDE48 Hidden    ' + progressBar(s.dismissed, maxStat, 8) + ' <b>' + s.dismissed + '</b>',
+      BOX_V + ' \uD83D\uDCCD Pinned    ' + progressBar(s.pinned, Math.max(s.answered, 1), 8) + ' <b>' + s.pinned + '</b>',
       BOX_V,
-      BOX_V + ' \uD83D\uDC4D Total votes \u2500\u2500\u2500\u2500\u2500\u2500 <b>' + s.totalVotes + '</b>' + avgLine + topQ,
+      BOX_V + ' \uD83D\uDC4D Votes     \u2500 <b>' + s.totalVotes + '</b>',
+      BOX_V + ' \u26A1 Avg reply \u2500 <b>' + esc(avg) + '</b>' + topQ,
       BOX_V,
       cardBottom
     ].join('\n');
     await respondTelegram(chatId, statsText, replyToId, REPLY_KEYBOARD, editMessageId);
   } catch (e) {
     await respondTelegram(chatId,
-      cardTop('\u26A0\uFE0F <b>STATS ERROR</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not load statistics.\n' + BOX_V + ' Please try again in a moment.\n' + BOX_V + '\n' + cardBottom,
+      cardTop('\u26A0\uFE0F <b>STATS ERROR</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Dashboard could not load.\n' + BOX_V + ' Please try again in a moment.\n' + BOX_V + '\n' + cardBottom,
       replyToId, REPLY_KEYBOARD, editMessageId);
   }
 }
@@ -695,7 +665,7 @@ async function sendStats(chatId, replyToId, editMessageId) {
 async function sendAnsweredCard(chatId, questionId, answerText, replyToId, isUpdate) {
   isUpdate = isUpdate || false;
   var q = await getQuestion(questionId);
-  var qName = q ? q.name : 'Anonymous';
+  var qName = visitorName(q && q.name);
   var qText = q ? q.question : 'Question text unavailable';
   var qVotes = q ? q.votes : 0;
   var rTime = q ? responseTime(q.createdAt, q.answeredAt) : '';
@@ -715,13 +685,16 @@ async function sendAnsweredCard(chatId, questionId, answerText, replyToId, isUpd
   var text = [
     cardTop(headerText),
     BOX_V,
-    BOX_V + ' \uD83D\uDC64 <b>' + esc(qName) + '</b> asked:',
-    BOX_V + '\n&gt; ' + esc(qText) + '\n' + BOX_V,
-    BOX_V + ' \uD83D\uDCAC <b>Answer:</b>',
-    BOX_V + '\n&gt; ' + esc(answerText) + '\n' + BOX_V,
-    BOX_V + metaLine,
+    BOX_V + ' \uD83D\uDC64 Visitor \u2500 <b>' + esc(qName) + '</b>' + ((q && q.pinned) ? '\n' + BOX_V + ' \uD83D\uDCCD Pinned to top' : ''),
+    BOX_V + ' \uD83C\uDD94 ID \u2500 <code>' + esc(questionId) + '</code>',
     BOX_V,
-    BOX_V + ' \uD83C\uDD94 <code>' + esc(questionId) + '</code>',
+    BOX_V + ' \uD83D\uDCAC <b>Question</b>',
+    BOX_V + ' “' + esc(clipText(qText, 170)) + '”',
+    BOX_V,
+    BOX_V + ' \u270D\uFE0F <b>Answer</b>',
+    BOX_V + ' “' + esc(clipText(answerText, 500)) + '”',
+    metaLine ? BOX_V + metaLine : BOX_V,
+    BOX_V,
     cardBottom
   ].join('\n');
 
@@ -740,104 +713,96 @@ async function sendAnsweredCard(chatId, questionId, answerText, replyToId, isUpd
 /* -- Build card for question's current state -- */
 function buildCardForQuestion(q) {
   var state = questionState(q);
+  var name = visitorName(q.name);
+  var qAge = timeAgo(q.createdAt);
   var rLine = reactionLine(q.reactions);
+  var pinLine = q.pinned ? '\n' + BOX_V + ' \uD83D\uDCCD Pinned to top' : '';
 
   if (state === 'ANSWERED') {
     var rTime = responseTime(q.createdAt, q.answeredAt);
-    var qAge = timeAgo(q.createdAt);
-    var metaLine = '';
-    if (rTime) metaLine += '\n' + BOX_V + ' \u26A1 Responded in <b>' + esc(rTime) + '</b>';
-    if (qAge) metaLine += '\n' + BOX_V + ' \uD83D\uDD50 Asked ' + esc(qAge);
-    if (q.editedAt) metaLine += '\n' + BOX_V + ' \u270F\uFE0F Edited ' + esc(formatTime(q.editedAt)) + ' IST';
-    if (q.votes > 0) metaLine += '\n' + BOX_V + ' \uD83D\uDC4D ' + q.votes + ' votes';
-    if (rLine) metaLine += '\n' + BOX_V + ' ' + rLine;
-    if (q.pinned) metaLine += '\n' + BOX_V + ' \uD83D\uDCCD Pinned to top';
-
+    var meta = [];
+    if (qAge) meta.push('asked ' + qAge);
+    if (rTime) meta.push('replied in ' + rTime);
+    if (q.editedAt) meta.push('edited ' + formatTime(q.editedAt) + ' IST');
     var text = [
-      cardTop('\u2705 <b>ANSWERED</b>'),
+      cardTop('\u2705 <b>ANSWERED QUESTION</b>'),
       BOX_V,
-      BOX_V + ' \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:',
-      BOX_V + '\n&gt; ' + esc(q.question) + '\n' + BOX_V,
-      BOX_V + ' \uD83D\uDCAC <b>Answer:</b>',
-      BOX_V + '\n&gt; ' + esc(q.answer) + '\n' + BOX_V,
-      BOX_V + metaLine,
+      BOX_V + ' \uD83D\uDC64 Visitor \u2500 <b>' + esc(name) + '</b>' + pinLine,
+      BOX_V + ' \uD83C\uDD94 ID \u2500 <code>' + esc(q.id) + '</code>',
       BOX_V,
-      BOX_V + ' \uD83C\uDD94 <code>' + esc(q.id) + '</code>',
+      BOX_V + ' \uD83D\uDCAC <b>Question</b>',
+      BOX_V + ' “' + esc(clipText(q.question, 170)) + '”',
+      BOX_V,
+      BOX_V + ' \u270D\uFE0F <b>Answer</b>',
+      BOX_V + ' “' + esc(clipText(q.answer, 500)) + '”',
+      BOX_V,
+      BOX_V + ' ' + (meta.length ? meta.join(' · ') : 'published'),
+      q.votes > 0 ? BOX_V + ' \uD83D\uDC4D ' + q.votes + ' votes' : BOX_V,
+      rLine ? BOX_V + ' ' + rLine : BOX_V,
       cardBottom
     ].join('\n');
-    var replyMarkup = {
+    return { text: text, replyMarkup: {
       inline_keyboard: [
-        [{ text: '\u270F\uFE0F Edit', callback_data: 'edit:' + q.id }],
+        [{ text: '\u270F\uFE0F Edit Answer', callback_data: 'edit:' + q.id }],
         [{ text: q.pinned ? '\uD83D\uDCCD Unpin' : '\uD83D\uDCCD Pin', callback_data: (q.pinned ? 'unpin:' : 'pin:') + q.id }],
-        [
-          { text: '\uD83D\uDE48 Dismiss', callback_data: 'dismiss:' + q.id },
-          { text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + q.id }
-        ]
+        [{ text: '\uD83D\uDE48 Dismiss', callback_data: 'dismiss:' + q.id }, { text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + q.id }]
       ]
-    };
-    return { text: text, replyMarkup: replyMarkup };
+    } };
   }
 
   if (state === 'DISMISSED') {
     var hasAnswer = q.answer && String(q.answer).trim().length > 0;
-    var tag = hasAnswer ? '\uD83D\uDCDD Was answered \u2014 retrieve restores to site' : '\u23F3 Was unanswered \u2014 retrieve restores to pending';
-    var answerLines = hasAnswer
-      ? [BOX_V, BOX_V + ' \uD83D\uDCAC <b>Previous answer:</b>', BOX_V + '\n&gt; ' + esc(q.answer) + '\n' + BOX_V]
-      : [];
-    if (rLine && hasAnswer) answerLines.push(BOX_V + ' ' + rLine);
-
-    var allLines = [
-      cardTop('\uD83D\uDE48 <b>DISMISSED</b>'),
+    var textLines = [
+      cardTop('\uD83D\uDE48 <b>HIDDEN QUESTION</b>'),
       BOX_V,
-      BOX_V + ' ' + tag,
+      BOX_V + ' Hidden from the site. Data is preserved.',
+      BOX_V + ' Restore target \u2500 <b>' + (hasAnswer ? 'site with answer' : 'pending queue') + '</b>',
       BOX_V,
-      BOX_V + ' \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:',
-      BOX_V + '\n&gt; ' + esc(q.question) + '\n' + BOX_V
-    ].concat(answerLines).concat([
-      BOX_V + ' Hidden from your site.',
-      BOX_V + ' \u21A9\uFE0F Retrieve to restore it.',
+      BOX_V + ' \uD83D\uDC64 Visitor \u2500 <b>' + esc(name) + '</b>' + pinLine,
+      BOX_V + ' \uD83C\uDD94 ID \u2500 <code>' + esc(q.id) + '</code>',
       BOX_V,
-      BOX_V + ' \uD83C\uDD94 <code>' + esc(q.id) + '</code>',
-      cardBottom
-    ]);
-    var text = allLines.join('\n');
-    var replyMarkup = {
+      BOX_V + ' \uD83D\uDCAC <b>Question</b>',
+      BOX_V + ' “' + esc(clipText(q.question, 170)) + '”'
+    ];
+    if (hasAnswer) {
+      textLines.push(BOX_V);
+      textLines.push(BOX_V + ' \u270D\uFE0F Previous answer');
+      textLines.push(BOX_V + ' “' + esc(clipText(q.answer, 220)) + '”');
+    }
+    if (rLine) textLines.push(BOX_V + ' ' + rLine);
+    textLines.push(BOX_V);
+    textLines.push(cardBottom);
+    return { text: textLines.join('\n'), replyMarkup: {
       inline_keyboard: [
         [{ text: '\u21A9\uFE0F Retrieve', callback_data: 'retrieve:' + q.id }],
         [{ text: '\uD83D\uDCAC Answer', callback_data: 'answer:' + q.id }],
         [{ text: q.pinned ? '\uD83D\uDCCD Unpin' : '\uD83D\uDCCD Pin', callback_data: (q.pinned ? 'unpin:' : 'pin:') + q.id }],
         [{ text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + q.id }]
       ]
-    };
-    return { text: text, replyMarkup: replyMarkup };
+    } };
   }
 
-  // UNANSWERED - incoming question
-  var qAge = timeAgo(q.createdAt);
-  var pinnedLine = '';
-  if (q.pinned) pinnedLine = '\n' + BOX_V + ' \uD83D\uDCCD Pinned to top';
   var text = [
-    cardTop('\uD83D\uDCD8 <b>NEW QUESTION</b>'),
+    cardTop('\uD83D\uDCEC <b>NEW AMA QUESTION</b>'),
     BOX_V,
-    BOX_V + ' \uD83D\uDC64 <b>' + esc(q.name) + '</b>',
+    BOX_V + ' \uD83D\uDC64 Visitor \u2500 <b>' + esc(name) + '</b>' + pinLine,
+    BOX_V + ' \uD83D\uDD50 Asked \u2500 ' + esc(formatTime(q.createdAt)) + ' IST' + (qAge ? ' · ' + esc(qAge) : ''),
+    BOX_V + ' \uD83C\uDD94 ID \u2500 <code>' + esc(q.id) + '</code>',
     BOX_V,
-    BOX_V + ' \uD83D\uDCAC\n&gt; ' + esc(q.question) + '\n' + BOX_V,
-    BOX_V + ' \uD83D\uDD50 ' + esc(formatTime(q.createdAt)) + ' IST' + (qAge ? ' \u00B7 ' + esc(qAge) : '') + pinnedLine,
-    BOX_V + ' \uD83C\uDD94 <code>' + esc(q.id) + '</code>',
+    BOX_V + ' \uD83D\uDCAC <b>Question</b>',
+    BOX_V + ' “' + esc(clipText(q.question, 220)) + '”',
     BOX_V,
-    BOX_BL + BOX_H + '\u26A1 <i>tap Answer or reply</i>' + BOX_H.repeat(10) + BOX_BR
+    BOX_V + ' Tap <b>Answer</b> or reply to this card.',
+    BOX_V,
+    cardBottom
   ].join('\n');
-  var replyMarkup = {
+  return { text: text, replyMarkup: {
     inline_keyboard: [
       [{ text: '\uD83D\uDCAC Answer', callback_data: 'answer:' + q.id }],
       [{ text: q.pinned ? '\uD83D\uDCCD Unpin' : '\uD83D\uDCCD Pin', callback_data: (q.pinned ? 'unpin:' : 'pin:') + q.id }],
-      [
-        { text: '\uD83D\uDE48 Dismiss', callback_data: 'dismiss:' + q.id },
-        { text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + q.id }
-      ]
+      [{ text: '\uD83D\uDE48 Dismiss', callback_data: 'dismiss:' + q.id }, { text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + q.id }]
     ]
-  };
-  return { text: text, replyMarkup: replyMarkup };
+  } };
 }
 
 /* -- Full detail card for /get -- */
@@ -845,39 +810,41 @@ async function sendFullDetailCard(chatId, questionId, replyToId, editMessageId) 
   var q = await getQuestion(questionId);
   if (!q) {
     await respondTelegram(chatId,
-      cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question with that ID exists.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(questionId) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Try /all to browse all IDs.\n' + BOX_V + '\n' + cardBottom,
+      cardTop('\u26A0\uFE0F <b>QUESTION NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No AMA entry exists for this ID.\n' + BOX_V + ' ID \u2500 <code>' + esc(questionId) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Try /all, /pending, or /search.\n' + BOX_V + '\n' + cardBottom,
       replyToId, REPLY_KEYBOARD, editMessageId);
     return;
   }
+
   var state = questionState(q);
   var stateEmoji = state === 'ANSWERED' ? '\u2705' : state === 'DISMISSED' ? '\uD83D\uDE48' : '\u23F3';
   var rTime = responseTime(q.createdAt, q.answeredAt);
   var qAge = timeAgo(q.createdAt);
   var rLine = reactionLine(q.reactions);
+  var name = visitorName(q.name);
 
   var lines = [
-    cardTop('\uD83D\uDCCB <b>QUESTION DETAILS</b>'),
+    cardTop('\uD83D\uDCCB <b>QUESTION DETAIL</b>'),
     BOX_V,
-    BOX_V + ' ' + stateEmoji + ' Status: <b>' + state + '</b>' + (q.pinned ? ' \u00B7 \uD83D\uDCCD Pinned' : ''),
+    BOX_V + ' ' + stateEmoji + ' Status \u2500 <b>' + state + '</b>' + (q.pinned ? ' · \uD83D\uDCCD pinned' : ''),
+    BOX_V + ' \uD83D\uDC64 Visitor \u2500 <b>' + esc(name) + '</b>',
+    BOX_V + ' \uD83C\uDD94 ID \u2500 <code>' + esc(q.id) + '</code>',
+    BOX_V + ' \uD83D\uDD50 Asked \u2500 ' + esc(formatTime(q.createdAt)) + ' IST' + (qAge ? ' · ' + esc(qAge) : ''),
     BOX_V,
-    BOX_V + ' \uD83D\uDC64 <b>' + esc(q.name) + '</b>',
-    BOX_V + ' \uD83D\uDCAC\n&gt; ' + esc(q.question) + '\n' + BOX_V,
-    BOX_V + ' \uD83D\uDD50 Asked ' + esc(formatTime(q.createdAt)) + ' IST' + (qAge ? ' \u00B7 ' + esc(qAge) : '')
+    BOX_V + ' \uD83D\uDCAC <b>Question</b>',
+    BOX_V + ' “' + esc(clipText(q.question, 260)) + '”'
   ];
 
-  if (state === 'ANSWERED') {
+  if (q.answer) {
     lines.push(BOX_V);
-    lines.push(BOX_V + ' \uD83D\uDCAC <b>Answer:</b>');
-    lines.push(BOX_V + '\n&gt; ' + esc(q.answer) + '\n' + BOX_V);
-    lines.push(BOX_V + ' \uD83D\uDD50 Answered ' + esc(formatTime(q.answeredAt)) + ' IST');
-    if (q.editedAt) lines.push(BOX_V + ' \u270F\uFE0F Edited ' + esc(formatTime(q.editedAt)) + ' IST');
-    if (rTime) lines.push(BOX_V + ' \u26A1 Responded in <b>' + esc(rTime) + '</b>');
+    lines.push(BOX_V + ' \u270D\uFE0F <b>Answer</b>');
+    lines.push(BOX_V + ' “' + esc(clipText(q.answer, 650)) + '”');
+    if (q.answeredAt) lines.push(BOX_V + ' \uD83D\uDD50 Answered \u2500 ' + esc(formatTime(q.answeredAt)) + ' IST');
+    if (q.editedAt) lines.push(BOX_V + ' \u270F\uFE0F Edited \u2500 ' + esc(formatTime(q.editedAt)) + ' IST');
+    if (rTime) lines.push(BOX_V + ' \u26A1 Response time \u2500 <b>' + esc(rTime) + '</b>');
   }
-
-  if (q.votes > 0) lines.push(BOX_V + ' \uD83D\uDC4D ' + q.votes + ' votes');
+  if (q.votes > 0) lines.push(BOX_V + ' \uD83D\uDC4D Votes \u2500 <b>' + q.votes + '</b>');
   if (rLine) lines.push(BOX_V + ' ' + rLine);
   lines.push(BOX_V);
-  lines.push(BOX_V + ' \uD83C\uDD94 <code>' + esc(q.id) + '</code>');
   lines.push(cardBottom);
 
   var buttons = [];
@@ -888,15 +855,11 @@ async function sendFullDetailCard(chatId, questionId, replyToId, editMessageId) 
   } else if (state === 'UNANSWERED') {
     buttons.push([{ text: '\uD83D\uDCAC Answer', callback_data: 'answer:' + q.id }]);
     buttons.push([{ text: q.pinned ? '\uD83D\uDCCD Unpin' : '\uD83D\uDCCD Pin', callback_data: (q.pinned ? 'unpin:' : 'pin:') + q.id }]);
-  }
-  if (state === 'ANSWERED') {
+  } else {
     buttons.push([{ text: '\u270F\uFE0F Edit Answer', callback_data: 'edit:' + q.id }]);
     buttons.push([{ text: q.pinned ? '\uD83D\uDCCD Unpin' : '\uD83D\uDCCD Pin', callback_data: (q.pinned ? 'unpin:' : 'pin:') + q.id }]);
   }
-  buttons.push([
-    { text: '\uD83D\uDE48 Dismiss', callback_data: 'dismiss:' + q.id },
-    { text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + q.id }
-  ]);
+  buttons.push([{ text: '\uD83D\uDE48 Dismiss', callback_data: 'dismiss:' + q.id }, { text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + q.id }]);
 
   await respondTelegram(chatId, lines.join('\n'), replyToId, { inline_keyboard: buttons }, editMessageId);
 }
@@ -911,13 +874,13 @@ async function sendRecent(chatId, replyToId, editMessageId) {
 
   if (!answered.length) {
     await respondTelegram(chatId,
-      cardTop('\uD83D\uDCCB <b>NO ANSWERED QUESTIONS</b>') + '\n' + BOX_V + '\n' + BOX_V + ' You haven\'t answered anything yet.\n' + BOX_V + ' When you do, they\'ll show up here.\n' + BOX_V + '\n' + cardBottom,
+      cardTop('\uD83D\uDD50 <b>RECENT ANSWERS</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No answers published yet.\n' + BOX_V + ' New replies will appear here.\n' + BOX_V + '\n' + cardBottom,
       replyToId, REPLY_KEYBOARD, editMessageId);
     return;
   }
 
   var lines = [
-    cardTop('\uD83D\uDD50 <b>RECENTLY ANSWERED</b>'),
+    cardTop('\uD83D\uDD50 <b>RECENT ANSWERS</b>'),
     BOX_V
   ];
 
@@ -925,15 +888,15 @@ async function sendRecent(chatId, replyToId, editMessageId) {
     var q = answered[idx];
     var rTime = responseTime(q.createdAt, q.answeredAt);
     var qAge = timeAgo(q.answeredAt);
-    lines.push(BOX_V + ' \uD83D\uDC64 <b>' + esc(q.name) + '</b>' + (qAge ? ' \u00B7 ' + esc(qAge) : ''));
-    lines.push(BOX_V + ' \uD83D\uDCAC ' + esc(q.question).slice(0, 80));
-    lines.push(BOX_V + ' \u2192 ' + esc(q.answer).slice(0, 80));
-    if (rTime) lines.push(BOX_V + ' \u26A1 ' + esc(rTime));
-    if (q.votes > 0) lines.push(BOX_V + ' \uD83D\uDC4D ' + q.votes + ' votes');
+    lines.push(BOX_V + ' ' + (idx + 1) + '. <b>' + esc(visitorName(q.name)) + '</b>' + (qAge ? ' · ' + esc(qAge) : '') + (q.pinned ? ' · \uD83D\uDCCD' : ''));
+    lines.push(BOX_V + ' Q: “' + esc(clipText(q.question, 82)) + '”');
+    lines.push(BOX_V + ' A: “' + esc(clipText(q.answer, 82)) + '”');
+    if (rTime) lines.push(BOX_V + ' \u26A1 ' + esc(rTime) + (q.votes > 0 ? ' · \uD83D\uDC4D ' + q.votes : ''));
+    lines.push(BOX_V + ' ID: <code>' + esc(q.id) + '</code>');
     lines.push(BOX_V);
   }
 
-  lines.push(BOX_V + ' \uD83C\uDD94 Use /get id for full details + actions');
+  lines.push(BOX_V + ' Use /get &lt;id&gt; for full actions.');
   lines.push(cardBottom);
 
   await respondTelegram(chatId, lines.join('\n'), replyToId, REPLY_KEYBOARD, editMessageId);
@@ -943,7 +906,7 @@ async function sendRecent(chatId, replyToId, editMessageId) {
 async function searchQuestions(chatId, searchText, replyToId, editMessageId) {
   if (!searchText || searchText.length < 2) {
     await respondTelegram(chatId,
-      cardTop('\uD83D\uDD0D <b>SEARCH</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Type at least 2 characters.\n' + BOX_V + '\n' + BOX_V + ' Example:\n' + BOX_V + ' /search react\n' + BOX_V + ' /search healthcare\n' + BOX_V + '\n' + cardBottom,
+      cardTop('\uD83D\uDD0D <b>SEARCH AMA</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Type at least 2 characters.\n' + BOX_V + '\n' + BOX_V + ' Examples:\n' + BOX_V + ' /search react\n' + BOX_V + ' /search anonymous\n' + BOX_V + '\n' + cardBottom,
       replyToId, REPLY_KEYBOARD, editMessageId);
     return;
   }
@@ -958,13 +921,16 @@ async function searchQuestions(chatId, searchText, replyToId, editMessageId) {
 
   if (!results.length) {
     await respondTelegram(chatId,
-      cardTop('\uD83D\uDD0D <b>NO RESULTS</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Nothing found for "' + esc(searchText) + '".\n' + BOX_V + '\n' + BOX_V + ' Try different keywords, or\n' + BOX_V + ' use /all to browse everything.\n' + BOX_V + '\n' + cardBottom,
+      cardTop('\uD83D\uDD0D <b>NO MATCHES</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Nothing matched “' + esc(searchText) + '”.\n' + BOX_V + '\n' + BOX_V + ' Try a different keyword, or use /all.\n' + BOX_V + '\n' + cardBottom,
       replyToId, REPLY_KEYBOARD, editMessageId);
     return;
   }
 
   var lines = [
-    cardTop('\uD83D\uDD0D <b>RESULTS</b> for "' + esc(searchText) + '" \u2500\u2500 ' + results.length + ' found'),
+    cardTop('\uD83D\uDD0D <b>SEARCH RESULTS</b>'),
+    BOX_V,
+    BOX_V + ' Query \u2500 “' + esc(clipText(searchText, 40)) + '”',
+    BOX_V + ' Matches \u2500 <b>' + results.length + '</b>',
     BOX_V
   ];
 
@@ -972,16 +938,14 @@ async function searchQuestions(chatId, searchText, replyToId, editMessageId) {
     var q = results[idx];
     var st = questionState(q);
     var stateEmoji = st === 'ANSWERED' ? '\u2705' : st === 'DISMISSED' ? '\uD83D\uDE48' : '\u23F3';
-    lines.push(BOX_V + ' ' + stateEmoji + ' <b>[' + st + ']</b> ' + esc(q.name));
-    lines.push(BOX_V + ' \uD83D\uDCAC ' + esc(q.question).slice(0, 100));
-    if (st === 'ANSWERED' && q.answer) {
-      lines.push(BOX_V + ' \u2192 ' + esc(q.answer).slice(0, 80));
-    }
-    lines.push(BOX_V + ' \uD83C\uDD94 <code>' + esc(q.id) + '</code>');
+    lines.push(BOX_V + ' ' + stateEmoji + ' <b>' + st + '</b> · ' + esc(visitorName(q.name)) + (q.pinned ? ' · \uD83D\uDCCD' : ''));
+    lines.push(BOX_V + ' “' + esc(clipText(q.question, 105)) + '”');
+    if (st === 'ANSWERED' && q.answer) lines.push(BOX_V + ' → “' + esc(clipText(q.answer, 80)) + '”');
+    lines.push(BOX_V + ' ID: <code>' + esc(q.id) + '</code>');
     lines.push(BOX_V);
   }
 
-  lines.push(BOX_V + ' Use /get id for full details + actions');
+  lines.push(BOX_V + ' Use /get &lt;id&gt; for full actions.');
   lines.push(cardBottom);
 
   await respondTelegram(chatId, lines.join('\n'), replyToId, REPLY_KEYBOARD, editMessageId);
@@ -1053,7 +1017,9 @@ function buildAllPageText(sorted, page) {
   var start = (page - 1) * ALL_PER_PAGE;
   var slice = sorted.slice(start, start + ALL_PER_PAGE);
   var lines = [
-    cardTop('\uD83D\uDCCB <b>ALL QUESTIONS</b> (' + total + ') \u00B7 Page ' + page + '/' + pages),
+    cardTop('\uD83D\uDCCB <b>AMA DATABASE</b>'),
+    BOX_V,
+    BOX_V + ' Total \u2500 <b>' + total + '</b> · Page <b>' + page + '/' + pages + '</b>',
     BOX_V
   ];
   for (var i = 0; i < slice.length; i++) {
@@ -1061,16 +1027,14 @@ function buildAllPageText(sorted, page) {
     var st = questionState(q);
     var stateEmoji = st === 'ANSWERED' ? '\u2705' : st === 'DISMISSED' ? '\uD83D\uDE48' : '\u23F3';
     var qAge = timeAgo(q.createdAt);
-    lines.push(BOX_V + ' ' + stateEmoji + ' <b>[' + st + ']</b> ' + esc(q.name) + (qAge ? ' \u00B7 ' + esc(qAge) : '') + (q.pinned ? ' \uD83D\uDCCD' : ''));
-    lines.push(BOX_V + ' \uD83D\uDCAC\n&gt; ' + esc(q.question).slice(0, 120) + '\n' + BOX_V);
-    if (st === 'ANSWERED' && q.answer) {
-      lines.push(BOX_V + ' \u2192\n&gt; ' + esc(q.answer).slice(0, 100) + '\n' + BOX_V);
-    }
+    lines.push(BOX_V + ' ' + stateEmoji + ' <b>' + st + '</b> · ' + esc(visitorName(q.name)) + (qAge ? ' · ' + esc(qAge) : '') + (q.pinned ? ' · \uD83D\uDCCD' : ''));
+    lines.push(BOX_V + ' “' + esc(clipText(q.question, 120)) + '”');
+    if (st === 'ANSWERED' && q.answer) lines.push(BOX_V + ' → “' + esc(clipText(q.answer, 95)) + '”');
     if (q.votes > 0) lines.push(BOX_V + ' \uD83D\uDC4D ' + q.votes + ' votes');
-    lines.push(BOX_V + ' \uD83C\uDD94 <code>' + esc(q.id) + '</code>');
+    lines.push(BOX_V + ' ID: <code>' + esc(q.id) + '</code>');
     lines.push(BOX_V);
   }
-  lines.push(BOX_V + ' Tap ID to copy \u00B7 /get id for actions');
+  lines.push(BOX_V + ' Tap/copy ID · /get &lt;id&gt; for actions');
   lines.push(cardBottom);
   return { text: lines.join('\n'), pages: pages, page: page };
 }
@@ -1080,6 +1044,43 @@ function buildAllPageButtons(page, pages) {
   if (page > 1) row.push({ text: '\u25C0 Prev', callback_data: 'all:' + (page - 1) });
   row.push({ text: page + ' / ' + pages, callback_data: 'all:noop' });
   if (page < pages) row.push({ text: 'Next \u25B6', callback_data: 'all:' + (page + 1) });
+  return { inline_keyboard: [row] };
+}
+
+var QUEUE_PER_PAGE = 4;
+function buildQueuePageText(items, page, title, footer) {
+  var total = items.length;
+  var pages = Math.max(1, Math.ceil(total / QUEUE_PER_PAGE));
+  if (page > pages) page = pages;
+  if (page < 1) page = 1;
+  var start = (page - 1) * QUEUE_PER_PAGE;
+  var slice = items.slice(start, start + QUEUE_PER_PAGE);
+  var lines = [
+    cardTop(title),
+    BOX_V,
+    BOX_V + ' Total \u2500 <b>' + total + '</b> · Page <b>' + page + '/' + pages + '</b>',
+    BOX_V
+  ];
+  for (var i = 0; i < slice.length; i++) {
+    var q = slice[i];
+    var st = questionState(q);
+    var emoji = st === 'DISMISSED' ? '\uD83D\uDE48' : '\u23F3';
+    var age = timeAgo(q.createdAt);
+    lines.push(BOX_V + ' ' + emoji + ' <b>' + st + '</b> · ' + esc(visitorName(q.name)) + (age ? ' · ' + esc(age) : '') + (q.pinned ? ' · \uD83D\uDCCD' : ''));
+    lines.push(BOX_V + ' “' + esc(clipText(q.question, 130)) + '”');
+    lines.push(BOX_V + ' ID: <code>' + esc(q.id) + '</code>');
+    lines.push(BOX_V);
+  }
+  lines.push(BOX_V + footer);
+  lines.push(cardBottom);
+  return { text: lines.join('\n'), pages: pages, page: page };
+}
+
+function buildQueuePageButtons(action, page, pages) {
+  var row = [];
+  if (page > 1) row.push({ text: '\u25C0 Prev', callback_data: action + ':' + (page - 1) });
+  row.push({ text: page + ' / ' + pages, callback_data: action + ':noop' });
+  if (page < pages) row.push({ text: 'Next \u25B6', callback_data: action + ':' + (page + 1) });
   return { inline_keyboard: [row] };
 }
 
@@ -1093,23 +1094,24 @@ function buildDismissedPageText(sorted, page) {
   var start = (page - 1) * DISMISSED_PER_PAGE;
   var slice = sorted.slice(start, start + DISMISSED_PER_PAGE);
   var lines = [
-    cardTop('\uD83D\uDE48 <b>DISMISSED</b> (' + total + ') \u00B7 Page ' + page + '/' + pages),
+    cardTop('\uD83D\uDE48 <b>HIDDEN QUESTIONS</b>'),
+    BOX_V,
+    BOX_V + ' Total \u2500 <b>' + total + '</b> · Page <b>' + page + '/' + pages + '</b>',
     BOX_V
   ];
   for (var i = 0; i < slice.length; i++) {
     var q = slice[i];
     var hasAnswer = q.answer && String(q.answer).trim().length > 0;
-    var tag = hasAnswer ? 'WAS ANSWERED' : 'WAS UNANSWERED';
-    var tagEmoji = hasAnswer ? '\uD83D\uDCDD' : '\u23F3';
     var qAge = timeAgo(q.createdAt);
-    lines.push(BOX_V + ' ' + tagEmoji + ' <b>[' + tag + ']</b> ' + esc(q.name) + (qAge ? ' \u00B7 ' + esc(qAge) : ''));
-    lines.push(BOX_V + ' \uD83D\uDCAC\n&gt; ' + esc(q.question).slice(0, 120) + '\n' + BOX_V);
-    if (hasAnswer) lines.push(BOX_V + ' \u2192\n&gt; ' + esc(q.answer).slice(0, 80) + '\n' + BOX_V);
+    lines.push(BOX_V + ' ' + (hasAnswer ? '\u2705' : '\u23F3') + ' <b>' + (hasAnswer ? 'Answered before hide' : 'Pending before hide') + '</b>');
+    lines.push(BOX_V + ' Visitor \u2500 <b>' + esc(visitorName(q.name)) + '</b>' + (qAge ? ' · ' + esc(qAge) : ''));
+    lines.push(BOX_V + ' “' + esc(clipText(q.question, 120)) + '”');
+    if (hasAnswer) lines.push(BOX_V + ' → “' + esc(clipText(q.answer, 80)) + '”');
     if (q.votes > 0) lines.push(BOX_V + ' \uD83D\uDC4D ' + q.votes + ' votes');
-    lines.push(BOX_V + ' \uD83C\uDD94 <code>' + esc(q.id) + '</code>');
+    lines.push(BOX_V + ' ID: <code>' + esc(q.id) + '</code>');
     lines.push(BOX_V);
   }
-  lines.push(BOX_V + ' /retrieve id to restore \u00B7 /retrieveall for all');
+  lines.push(BOX_V + ' /retrieve &lt;id&gt; · /retrieveall');
   lines.push(cardBottom);
   return { text: lines.join('\n'), pages: pages, page: page };
 }
@@ -1140,8 +1142,17 @@ async function sendQuestionsList(chatId, title, items, replyToId, editMessageId)
     var tag = questionState(q);
     var tagEmoji = tag === 'UNANSWERED' ? '\u23F3' : '\uD83D\uDE48';
     var qAge = timeAgo(q.createdAt);
-    var ageStr = qAge ? ' \u00B7 ' + esc(qAge) : '';
-    var line = cardTop(tagEmoji + ' <b>[' + tag + ']</b> ' + esc(q.name) + ageStr) + '\n' + BOX_V + ' \uD83D\uDCAC\n&gt; ' + esc(q.question).slice(0, 120) + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(q.id) + '</code>\n' + cardBottom + '\n';
+    var line = [
+      cardTop(tagEmoji + ' <b>' + tag + '</b>'),
+      BOX_V,
+      BOX_V + ' Visitor \u2500 <b>' + esc(visitorName(q.name)) + '</b>' + (qAge ? ' · ' + esc(qAge) : '') + (q.pinned ? ' · \uD83D\uDCCD' : ''),
+      BOX_V + ' ID \u2500 <code>' + esc(q.id) + '</code>',
+      BOX_V,
+      BOX_V + ' “' + esc(clipText(q.question, 150)) + '”',
+      BOX_V,
+      cardBottom,
+      ''
+    ].join('\n');
     if ((chunk + line + '\n').length > 3500) {
       if (sent === 0 && editMessageId) await editMessage(chatId, editMessageId, chunk.trim());
       else await sendTelegram(chatId, chunk.trim(), sent === 0 ? replyToId : undefined);
@@ -1155,7 +1166,9 @@ async function sendQuestionsList(chatId, title, items, replyToId, editMessageId)
     else await sendTelegram(chatId, chunk.trim(), sent === 0 ? replyToId : undefined);
     sent++;
   }
-  await sendTelegram(chatId, ' <i>' + items.length + ' question' + (items.length === 1 ? '' : 's') + ' listed.\nTap Answer or reply to answer one.</i>', undefined, REPLY_KEYBOARD);
+  await sendTelegram(chatId,
+    cardTop('\u2705 <b>LIST READY</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Listed <b>' + items.length + '</b> question' + (items.length === 1 ? '' : 's') + '.\n' + BOX_V + ' Tap Answer or reply to answer.\n' + BOX_V + '\n' + cardBottom,
+    undefined, REPLY_KEYBOARD);
 }
 
 /* ============================================================
@@ -1205,7 +1218,7 @@ module.exports = async function handler(req, res) {
       if (action === 'delete') {
         await answerCallback(callback.id, '\u26A0\uFE0F Confirming delete\u2026');
         await editMessage(cbChatId, cbMessageId,
-          cardTop('\u26A0\uFE0F <b>CONFIRM DELETE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This will permanently remove\n' + BOX_V + ' this question and all its data.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(questionId) + '</code>\n' + BOX_V + '\n' + BOX_V + ' \u26A0\uFE0F <i>This cannot be undone.</i>\n' + BOX_V + '\n' + cardBottom,
+          cardTop('\u26A0\uFE0F <b>DELETE QUESTION?</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This permanently removes the question\n' + BOX_V + ' and all related data.\n' + BOX_V + '\n' + BOX_V + ' ID \u2500 <code>' + esc(questionId) + '</code>\n' + BOX_V + '\n' + BOX_V + ' This cannot be undone.\n' + BOX_V + '\n' + cardBottom,
           { inline_keyboard: [[
             { text: '\u2705 Yes, Delete', callback_data: 'confirmdelete:' + questionId },
             { text: '\u274C Cancel', callback_data: 'canceldelete:' + questionId }
@@ -1244,9 +1257,10 @@ module.exports = async function handler(req, res) {
         await clearLookupSession(cbChatId);
         await clearPreviewSession(cbChatId);
         await saveAnswerSession(cbChatId, questionId);
-        await answerCallback(callback.id, '');
+        await answerCallback(callback.id, 'Answer mode ready');
+        var aq = await getQuestion(questionId).catch(function() { return null; });
         await sendTelegram(cbChatId,
-          cardTop('\uD83D\uDCAC <b>ANSWER MODE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Send your answer for:\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(questionId) + '</code>\n' + BOX_V + '\n' + BOX_V + ' <i>Type your answer as your\n' + BOX_V + ' next message.</i>\n' + BOX_V + '\n' + BOX_V + ' Send /cancel to abort.\n' + BOX_V + '\n' + cardBottom
+          cardTop('\uD83D\uDCAC <b>ANSWER MODE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Reply with your answer. Preview comes first.\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 Visitor \u2500 <b>' + esc(visitorName(aq && aq.name)) + '</b>\n' + BOX_V + ' \uD83C\uDD94 ID \u2500 <code>' + esc(questionId) + '</code>\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDCAC <b>Question</b>\n' + BOX_V + ' “' + esc(clipText(aq && aq.question || 'Question unavailable', 150)) + '”\n' + BOX_V + '\n' + BOX_V + ' /cancel to exit.\n' + BOX_V + '\n' + cardBottom
         );
       }
       else if (action === 'dismiss') {
@@ -1272,9 +1286,10 @@ module.exports = async function handler(req, res) {
           await clearLookupSession(cbChatId);
           await clearPreviewSession(cbChatId);
           await saveEditSession(cbChatId, questionId);
-          await answerCallback(callback.id, '\u270F\uFE0F Edit mode activated');
+          await answerCallback(callback.id, '\u270F\uFE0F Edit mode ready');
+          var eq = await getQuestion(questionId).catch(function() { return null; });
           await sendTelegram(cbChatId,
-            cardTop('\u270F\uFE0F <b>EDIT MODE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Send the new answer text for:\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(questionId) + '</code>\n' + BOX_V + '\n' + BOX_V + ' <i>Type your new answer as\n' + BOX_V + ' your next message.</i>\n' + BOX_V + '\n' + BOX_V + ' Send /cancel to abort.\n' + BOX_V + '\n' + cardBottom
+            cardTop('\u270F\uFE0F <b>EDIT MODE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Send the revised answer as your next message.\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 Visitor \u2500 <b>' + esc(visitorName(eq && eq.name)) + '</b>\n' + BOX_V + ' \uD83C\uDD94 ID \u2500 <code>' + esc(questionId) + '</code>\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDCAC <b>Question</b>\n' + BOX_V + ' “' + esc(clipText(eq && eq.question || 'Question unavailable', 140)) + '”\n' + BOX_V + '\n' + BOX_V + ' Current answer: “' + esc(clipText(eq && eq.answer || '—', 140)) + '”\n' + BOX_V + '\n' + BOX_V + ' /cancel to exit.\n' + BOX_V + '\n' + cardBottom
           );
         } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not start edit - try again'); }
       }
@@ -1477,6 +1492,30 @@ module.exports = async function handler(req, res) {
           await editMessage(cbChatId, cbMessageId, result.text, buildDismissedPageButtons(page, result.pages));
         } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Error loading page'); }
       }
+      else if (action === 'pending') {
+        if (questionId === 'noop') { await answerCallback(callback.id, ''); return res.status(200).json({ ok: true, callback: action }); }
+        var page = parseInt(questionId, 10) || 1;
+        try {
+          var all = await listAllQuestions();
+          var items = all.filter(function(q) { return questionState(q) === 'UNANSWERED'; })
+            .sort(function(a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
+          var result = buildQueuePageText(items, page, '\u23F3 <b>PENDING INBOX</b>', 'Tap Answer or reply to a card.');
+          await answerCallback(callback.id, 'Page ' + page + '/' + result.pages);
+          await editMessage(cbChatId, cbMessageId, result.text, buildQueuePageButtons('pending', result.page, result.pages));
+        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Error loading page'); }
+      }
+      else if (action === 'refresh') {
+        if (questionId === 'noop') { await answerCallback(callback.id, ''); return res.status(200).json({ ok: true, callback: action }); }
+        var page = parseInt(questionId, 10) || 1;
+        try {
+          var all = await listAllQuestions();
+          var items = all.filter(function(q) { return questionState(q) === 'UNANSWERED' || questionState(q) === 'DISMISSED'; })
+            .sort(function(a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
+          var result = buildQueuePageText(items, page, '\uD83D\uDD04 <b>ATTENTION QUEUE</b>', 'Pending + hidden questions.');
+          await answerCallback(callback.id, 'Page ' + page + '/' + result.pages);
+          await editMessage(cbChatId, cbMessageId, result.text, buildQueuePageButtons('refresh', result.page, result.pages));
+        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Error loading page'); }
+      }
       else {
         await answerCallback(callback.id, 'Unknown action');
       }
@@ -1567,7 +1606,8 @@ module.exports = async function handler(req, res) {
           message.message_id, REPLY_KEYBOARD, loadingId);
         return res.status(200).json({ ok: true });
       }
-      await sendQuestionsList(chatId, '\u23F3 <b>UNANSWERED QUESTIONS</b>', items, message.message_id, loadingId);
+      var result = buildQueuePageText(items, 1, '\u23F3 <b>PENDING INBOX</b>', 'Tap Answer or reply to a card.');
+      await respondTelegram(chatId, result.text, message.message_id, buildQueuePageButtons('pending', result.page, result.pages), loadingId);
       return res.status(200).json({ ok: true });
     }
 
@@ -1583,7 +1623,8 @@ module.exports = async function handler(req, res) {
           message.message_id, REPLY_KEYBOARD, loadingId);
         return res.status(200).json({ ok: true });
       }
-      await sendQuestionsList(chatId, '\uD83D\uDCCB <b>PENDING &amp; DISMISSED</b>', items, message.message_id, loadingId);
+      var result = buildQueuePageText(items, 1, '\uD83D\uDD04 <b>ATTENTION QUEUE</b>', 'Pending + hidden questions.');
+      await respondTelegram(chatId, result.text, message.message_id, buildQueuePageButtons('refresh', result.page, result.pages), loadingId);
       return res.status(200).json({ ok: true });
     }
 
@@ -1640,7 +1681,7 @@ module.exports = async function handler(req, res) {
         await clearPreviewSession(chatId);
         await saveEditSession(chatId, qid);
         await respondTelegram(chatId,
-          cardTop('\u270F\uFE0F <b>EDIT MODE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Send the new answer text for:\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:\n' + BOX_V + ' ' + esc(q.question).slice(0, 120) + '\n' + BOX_V + '\n' + BOX_V + ' <i>Type your new answer as\n' + BOX_V + ' your next message.</i>\n' + BOX_V + '\n' + BOX_V + ' Send /cancel to abort.\n' + BOX_V + '\n' + cardBottom,
+          cardTop('\u270F\uFE0F <b>EDIT MODE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Send the revised answer as your next message.\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 Visitor \u2500 <b>' + esc(visitorName(q.name)) + '</b>\n' + BOX_V + ' \uD83C\uDD94 ID \u2500 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDCAC <b>Question</b>\n' + BOX_V + ' “' + esc(clipText(q.question, 140)) + '”\n' + BOX_V + '\n' + BOX_V + ' Current answer: “' + esc(clipText(q.answer || '—', 140)) + '”\n' + BOX_V + '\n' + BOX_V + ' /cancel to exit.\n' + BOX_V + '\n' + cardBottom,
           message.message_id, REPLY_KEYBOARD, loadingId);
       } catch (e) {
         await respondTelegram(chatId,
@@ -1676,16 +1717,10 @@ module.exports = async function handler(req, res) {
           return res.status(200).json({ ok: true });
         }
         await savePreviewSession(chatId, qid, answerText);
-        var qName = q ? q.name : 'Anonymous';
-        var qText = q ? q.question : 'Question unavailable';
-
         await sendTelegram(chatId,
-          cardTop('\uD83D\uDC41 <b>ANSWER PREVIEW</b>') + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(qName) + '</b> asked:\n' + BOX_V + ' ' + esc(qText).slice(0, 100) + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDCAC <b>Answer:</b>\n' + BOX_V + ' ' + esc(answerText) + '\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' <i>Review before publishing.</i>\n' + BOX_V + '\n' + cardBottom,
+          answerPreviewCard(q, answerText, qid),
           message.message_id,
-          { inline_keyboard: [
-            [{ text: '\u2705 Publish', callback_data: 'previewconfirm' }, { text: '\u270F\uFE0F Revise', callback_data: 'previewedit' }],
-            [{ text: '\u274C Cancel', callback_data: 'previewcancel' }]
-          ] }
+          previewButtons()
         );
       } catch (e) {
         await sendTelegram(chatId,
@@ -1800,7 +1835,7 @@ module.exports = async function handler(req, res) {
         var st = questionState(q);
         var stateEmoji = st === 'ANSWERED' ? '\u2705' : st === 'DISMISSED' ? '\uD83D\uDE48' : '\u23F3';
         var qAge = timeAgo(q.createdAt);
-        lines.push(BOX_V + ' ' + stateEmoji + ' <b>' + esc(q.name) + '</b>' + (qAge ? ' \u00B7 ' + esc(qAge) : ''));
+        lines.push(BOX_V + ' ' + stateEmoji + ' <b>' + esc(visitorName(q.name)) + '</b>' + (qAge ? ' \u00B7 ' + esc(qAge) : ''));
         lines.push(BOX_V + ' \uD83D\uDCAC ' + esc(q.question).slice(0, 120));
         if (st === 'ANSWERED' && q.answer) {
           lines.push(BOX_V + ' \u2192 ' + esc(q.answer).slice(0, 80));
@@ -1867,7 +1902,7 @@ module.exports = async function handler(req, res) {
       }
       var count = all.length;
       await respondTelegram(chatId,
-        cardTop('\u26A0\uFE0F <b>CONFIRM DELETE ALL</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This will permanently delete\n' + BOX_V + ' <b>all ' + count + ' question' + (count === 1 ? '' : 's') + '</b> from the database.\n' + BOX_V + '\n' + BOX_V + ' \u26A0\uFE0F <i>This cannot be undone.</i>\n' + BOX_V + '\n' + cardBottom,
+        cardTop('\u26A0\uFE0F <b>DELETE ALL?</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This permanently deletes <b>' + count + '</b> question' + (count === 1 ? '' : 's') + '.\n' + BOX_V + ' This cannot be undone.\n' + BOX_V + '\n' + BOX_V + ' Use only when you want a clean reset.\n' + BOX_V + '\n' + cardBottom,
         message.message_id,
         { inline_keyboard: [[
           { text: '\u2705 Yes, Delete All', callback_data: 'confirmdeleteall' },
@@ -1902,7 +1937,7 @@ module.exports = async function handler(req, res) {
           return res.status(200).json({ ok: true });
         }
         await respondTelegram(chatId,
-          cardTop('\u26A0\uFE0F <b>CONFIRM DELETE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Permanently delete this question?\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:\n' + BOX_V + ' ' + esc(q.question).slice(0, 120) + '\n' + BOX_V + '\n' + BOX_V + ' \u26A0\uFE0F <i>This cannot be undone.</i>\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
+          cardTop('\u26A0\uFE0F <b>DELETE QUESTION?</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This permanently removes the question.\n' + BOX_V + ' This cannot be undone.\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 Visitor \u2500 <b>' + esc(visitorName(q.name)) + '</b>\n' + BOX_V + ' \uD83C\uDD94 ID \u2500 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' “' + esc(clipText(q.question, 140)) + '”\n' + BOX_V + '\n' + cardBottom,
           message.message_id,
           { inline_keyboard: [[
             { text: '\u2705 Yes, Delete', callback_data: 'confirmdelete:' + qid },
@@ -1938,7 +1973,7 @@ module.exports = async function handler(req, res) {
         if (unansweredCount > 0) detailLine += '\n' + BOX_V + ' \u23F3 ' + unansweredCount + ' unanswered \u2192 retrieve restores to pending';
 
         await respondTelegram(chatId,
-          cardTop('\uD83D\uDE48 <b>CONFIRM DISMISS ALL</b>') + '\n' + BOX_V + '\n' + detailLine + '\n' + BOX_V + '\n' + BOX_V + ' Data is preserved safely.\n' + BOX_V + ' Retrieve any question later with\n' + BOX_V + ' /retrieveall or /retrieve &lt;id&gt;.\n' + BOX_V + '\n' + cardBottom,
+          cardTop('\uD83D\uDE48 <b>DISMISS ALL?</b>') + '\n' + BOX_V + '\n' + detailLine + '\n' + BOX_V + '\n' + BOX_V + ' Data stays safe and can be restored.\n' + BOX_V + ' Use /retrieveall to bring them back.\n' + BOX_V + '\n' + cardBottom,
           message.message_id,
           { inline_keyboard: [[
             { text: '\uD83D\uDE48 Yes, Dismiss All', callback_data: 'confirmdismissall' },
@@ -1988,7 +2023,7 @@ module.exports = async function handler(req, res) {
         }
         await dismissQuestion(qid);
         await respondTelegram(chatId,
-          cardTop('\uD83D\uDE48 <b>DISMISSED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:\n' + BOX_V + ' ' + esc(q.question).slice(0, 120) + '\n' + BOX_V + '\n' + BOX_V + ' Hidden from your site.\n' + BOX_V + ' Data preserved safely.\n' + BOX_V + ' \u21A9\uFE0F Use Retrieve to restore it.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + ' \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n' + BOX_V + '\n' + cardBottom,
+          cardTop('\uD83D\uDE48 <b>QUESTION HIDDEN</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Hidden from the site. Data is preserved.\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 Visitor \u2500 <b>' + esc(visitorName(q.name)) + '</b>\n' + BOX_V + ' \uD83C\uDD94 ID \u2500 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' “' + esc(clipText(q.question, 140)) + '”\n' + BOX_V + '\n' + BOX_V + ' Use Retrieve to restore it.\n' + BOX_V + ' \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n' + BOX_V + '\n' + cardBottom,
           message.message_id,
           { inline_keyboard: [
             [{ text: '\u21A9\uFE0F Retrieve', callback_data: 'retrieve:' + qid }],
@@ -2042,7 +2077,7 @@ module.exports = async function handler(req, res) {
       if (withoutAnswer > 0) detailLine += '\n' + BOX_V + ' \u23F3 ' + withoutAnswer + ' \u2192 pending queue (no answers)';
 
       await respondTelegram(chatId,
-        cardTop('\u21A9\uFE0F <b>CONFIRM RETRIEVE ALL</b>') + '\n' + BOX_V + '\n' + detailLine + '\n' + BOX_V + '\n' + BOX_V + ' \u21A9\uFE0F This will restore them all.\n' + BOX_V + '\n' + cardBottom,
+        cardTop('\u21A9\uFE0F <b>RETRIEVE ALL?</b>') + '\n' + BOX_V + '\n' + detailLine + '\n' + BOX_V + '\n' + BOX_V + ' Restores hidden questions to their\n' + BOX_V + ' correct destination.\n' + BOX_V + '\n' + cardBottom,
         message.message_id,
         { inline_keyboard: [[
           { text: '\u2705 Yes, Retrieve All', callback_data: 'confirmretrieveall' },
@@ -2084,7 +2119,7 @@ module.exports = async function handler(req, res) {
         var result = await retrieveQuestion(qid);
         if (result.restoredAs === 'answered') {
           await sendTelegram(chatId,
-            cardTop('\u21A9\uFE0F <b>RETRIEVED &amp; PUBLISHED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:\n' + BOX_V + ' ' + esc(q.question).slice(0, 120) + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDCAC Previous answer:\n' + BOX_V + ' ' + esc(q.answer).slice(0, 120) + '\n' + BOX_V + '\n' + BOX_V + ' \u2705 Back on your site with its answer.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + cardBottom,
+            cardTop('\u21A9\uFE0F <b>RESTORED TO SITE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Published again with its answer.\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 Visitor \u2500 <b>' + esc(visitorName(q.name)) + '</b>\n' + BOX_V + ' \uD83C\uDD94 ID \u2500 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Q: “' + esc(clipText(q.question, 120)) + '”\n' + BOX_V + ' A: “' + esc(clipText(q.answer, 120)) + '”\n' + BOX_V + '\n' + cardBottom,
             message.message_id,
             { inline_keyboard: [
               [{ text: '\u270F\uFE0F Edit', callback_data: 'edit:' + qid }],
@@ -2097,7 +2132,7 @@ module.exports = async function handler(req, res) {
           );
         } else {
           await sendTelegram(chatId,
-            cardTop('\u21A9\uFE0F <b>RETRIEVED TO PENDING</b>') + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:\n' + BOX_V + ' ' + esc(q.question).slice(0, 120) + '\n' + BOX_V + '\n' + BOX_V + ' \u23F3 Back in your pending queue.\n' + BOX_V + ' Tap Answer or reply to answer it.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + cardBottom,
+            cardTop('\u21A9\uFE0F <b>RESTORED TO PENDING</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Back in your pending queue.\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 Visitor \u2500 <b>' + esc(visitorName(q.name)) + '</b>\n' + BOX_V + ' \uD83C\uDD94 ID \u2500 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' “' + esc(clipText(q.question, 140)) + '”\n' + BOX_V + '\n' + BOX_V + ' Tap Answer or reply to answer it.\n' + BOX_V + '\n' + cardBottom,
             message.message_id,
             { inline_keyboard: [
               [{ text: '\uD83D\uDCAC Answer', callback_data: 'answer:' + qid }],
@@ -2130,16 +2165,10 @@ module.exports = async function handler(req, res) {
         if (answerQid) {
           await savePreviewSession(chatId, answerQid, text);
           var q = await getQuestion(answerQid);
-          var qName = q ? q.name : 'Anonymous';
-          var qText = q ? q.question : 'Question unavailable';
-
           await sendTelegram(chatId,
-            cardTop('\uD83D\uDC41 <b>ANSWER PREVIEW</b>') + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(qName) + '</b> asked:\n' + BOX_V + ' ' + esc(qText).slice(0, 100) + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDCAC <b>Answer:</b>\n' + BOX_V + ' ' + esc(text) + '\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(answerQid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' <i>Review before publishing.</i>\n' + BOX_V + '\n' + cardBottom,
+            answerPreviewCard(q, text, answerQid),
             message.message_id,
-            { inline_keyboard: [
-              [{ text: '\u2705 Publish', callback_data: 'previewconfirm' }, { text: '\u270F\uFE0F Revise', callback_data: 'previewedit' }],
-              [{ text: '\u274C Cancel', callback_data: 'previewcancel' }]
-            ] }
+            previewButtons()
           );
           return res.status(200).json({ ok: true, preview: answerQid });
         }
@@ -2210,16 +2239,10 @@ module.exports = async function handler(req, res) {
     // Save to preview session and show confirmation
     await savePreviewSession(chatId, questionId, text);
     var q = await getQuestion(questionId);
-    var qName = q ? q.name : 'Anonymous';
-    var qText = q ? q.question : 'Question unavailable';
-
     await sendTelegram(chatId,
-      cardTop('\uD83D\uDC41 <b>ANSWER PREVIEW</b>') + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(qName) + '</b> asked:\n' + BOX_V + ' ' + esc(qText).slice(0, 100) + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDCAC <b>Answer:</b>\n' + BOX_V + ' ' + esc(text) + '\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(questionId) + '</code>\n' + BOX_V + '\n' + BOX_V + ' <i>Review before publishing.</i>\n' + BOX_V + '\n' + cardBottom,
+      answerPreviewCard(q, text, questionId),
       message.message_id,
-      { inline_keyboard: [
-        [{ text: '\u2705 Publish', callback_data: 'previewconfirm' }, { text: '\u270F\uFE0F Revise', callback_data: 'previewedit' }],
-        [{ text: '\u274C Cancel', callback_data: 'previewcancel' }]
-      ] }
+      previewButtons()
     );
     return res.status(200).json({ ok: true, preview: questionId });
 

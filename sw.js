@@ -2,7 +2,7 @@
  sw.js - Service Worker for portfolio.yatinsharma.me
  Strategy: Stale-While-Revalidate for static assets,
            Network-Only for API calls.
- Cache version matches bot version: v4.2
+ Cache version matches bot version: v4.3
  ============================================================ */
 
 var CACHE_NAME = 'portfolio-v4.3';

@@ -59,16 +59,22 @@ module.exports = async function handler(req, res) {
     function cardTop(title) { return BOX_TL + BOX_H + title + BOX_H.repeat(5) + BOX_TR; }
     var cardBottom = BOX_BL + BOX_H.repeat(30) + BOX_BR;
 
+    var visitor = (!name || String(name).toLowerCase() === 'anonymous') ? 'Anonymous visitor' : name;
     var text = [
-      cardTop('\uD83D\uDCD8 <b>NEW QUESTION</b>'),
+      cardTop('\uD83D\uDCEC <b>NEW AMA QUESTION</b>'),
       BOX_V,
-      BOX_V + ' \uD83D\uDC64 <b>' + escapeHtml(name) + '</b>',
+      BOX_V + ' Inbox received a new visitor question.',
       BOX_V,
-      BOX_V + ' \uD83D\uDCAC\n&gt; ' + escapeHtml(question) + '\n' + BOX_V,
-      BOX_V + ' \uD83D\uDD50 ' + escapeHtml(timeStr) + ' IST',
-      BOX_V + ' \uD83C\uDD94 <code>' + escapeHtml(questionId) + '</code>',
+      BOX_V + ' \uD83D\uDC64 Visitor \u2500 <b>' + escapeHtml(visitor) + '</b>',
+      BOX_V + ' \uD83D\uDD50 Time \u2500 ' + escapeHtml(timeStr) + ' IST',
+      BOX_V + ' \uD83C\uDD94 ID \u2500 <code>' + escapeHtml(questionId) + '</code>',
       BOX_V,
-      BOX_BL + BOX_H + '\u26A1 <i>tap Answer or reply</i>' + BOX_H.repeat(10) + BOX_BR
+      BOX_V + ' \uD83D\uDCAC <b>Question</b>',
+      BOX_V + ' “' + escapeHtml(question) + '”',
+      BOX_V,
+      BOX_V + ' Tap <b>Answer</b> or reply to this card.',
+      BOX_V,
+      cardBottom
     ].join('\n');
 
     // Action buttons - matches buildCardForQuestion() UNANSWERED layout
