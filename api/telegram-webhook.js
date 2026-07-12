@@ -172,14 +172,24 @@ async function answerCallback(callbackId, text) {
 async function editMessage(chatId, messageId, text, replyMarkup) {
   var botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken) return;
+
+  /* Telegram editMessageText only accepts InlineKeyboardMarkup.
+     Reply keyboards ({ keyboard: ... }) are valid for sendMessage,
+     but invalid for edits and were causing loading cards to stay stuck.
+     So when editing a loading card into final content, keep inline buttons
+     if present and silently omit regular reply keyboards. */
+  var payload = {
+    chat_id: chatId,
+    message_id: messageId,
+    text: text,
+    parse_mode: 'HTML'
+  };
+  if (replyMarkup && replyMarkup.inline_keyboard) payload.reply_markup = replyMarkup;
+
   var result = await fetch(TELEGRAM_API + botToken + '/editMessageText', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: chatId, message_id: messageId,
-      text: text, parse_mode: 'HTML',
-      reply_markup: replyMarkup
-    })
+    body: JSON.stringify(payload)
   });
   var data = await result.json().catch(function() { return null; });
   if (!result.ok) {
@@ -1971,13 +1981,13 @@ module.exports = async function handler(req, res) {
           return res.status(200).json({ ok: true });
         }
         if (q.dismissed) {
-          await sendTelegram(chatId,
+          await respondTelegram(chatId,
             cardTop('\uD83D\uDE48 <b>ALREADY DISMISSED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This question is already dismissed.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /retrieve ' + esc(qid) + ' to restore.\n' + BOX_V + '\n' + cardBottom,
-            message.message_id, REPLY_KEYBOARD);
+            message.message_id, REPLY_KEYBOARD, loadingId);
           return res.status(200).json({ ok: true });
         }
         await dismissQuestion(qid);
-        await sendTelegram(chatId,
+        await respondTelegram(chatId,
           cardTop('\uD83D\uDE48 <b>DISMISSED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:\n' + BOX_V + ' ' + esc(q.question).slice(0, 120) + '\n' + BOX_V + '\n' + BOX_V + ' Hidden from your site.\n' + BOX_V + ' Data preserved safely.\n' + BOX_V + ' \u21A9\uFE0F Use Retrieve to restore it.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + ' \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n' + BOX_V + '\n' + cardBottom,
           message.message_id,
           { inline_keyboard: [
@@ -1985,12 +1995,13 @@ module.exports = async function handler(req, res) {
             [{ text: '\uD83D\uDCAC Answer', callback_data: 'answer:' + qid }],
             [{ text: q.pinned ? '\uD83D\uDCCD Unpin' : '\uD83D\uDCCD Pin', callback_data: (q.pinned ? 'unpin:' : 'pin:') + qid }],
             [{ text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + qid }]
-          ] }
+          ] },
+          loadingId
         );
       } catch (e) {
-        await sendTelegram(chatId,
+        await respondTelegram(chatId,
           cardTop('\u26A0\uFE0F <b>DISMISS FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not dismiss. Check the ID.\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
-          message.message_id, REPLY_KEYBOARD);
+          message.message_id, REPLY_KEYBOARD, loadingId);
       }
       return res.status(200).json({ ok: true });
     }
