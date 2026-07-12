@@ -1,5 +1,5 @@
 /* ============================================================
- api/telegram-webhook.js - Vercel serverless function v4
+ api/telegram-webhook.js - Vercel serverless function v4.1
  The brain of the AMA Telegram interaction.
 
  Handles:
@@ -524,7 +524,7 @@ var HELP_TEXT = [
   BOX_V,
   BOX_V + ' <b>\u23F3 /pending</b>',
   BOX_V + ' List all unanswered questions waiting',
-  BOX_V + ' for your reply. Reply to any to answer.',
+  BOX_V + ' for your reply. Tap Answer or reply.',
   BOX_V,
   BOX_V + ' <b>\uD83D\uDD50 /recent</b>',
   BOX_V + ' Last 5 answered questions with response',
@@ -596,7 +596,7 @@ async function sendStats(chatId, replyToId) {
       BOX_V,
       cardBottom
     ].join('\n');
-    await sendTelegram(chatId, statsText, replyToId);
+    await sendTelegram(chatId, statsText, replyToId, REPLY_KEYBOARD);
   } catch (e) {
     await sendTelegram(chatId,
       cardTop('\u26A0\uFE0F <b>STATS ERROR</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not load statistics.\n' + BOX_V + ' Please try again in a moment.\n' + BOX_V + '\n' + cardBottom,
@@ -836,7 +836,7 @@ async function sendRecent(chatId, replyToId) {
     lines.push(BOX_V + ' \uD83D\uDCAC ' + esc(q.question).slice(0, 80));
     lines.push(BOX_V + ' \u2192 ' + esc(q.answer).slice(0, 80));
     if (rTime) lines.push(BOX_V + ' \u26A1 ' + esc(rTime));
-    if (q.votes > 0) lines.push(BOX_V + ' \uD83D\uDC4D ' + q.votes);
+    if (q.votes > 0) lines.push(BOX_V + ' \uD83D\uDC4D ' + q.votes + ' votes');
     lines.push(BOX_V);
   }
 
@@ -898,9 +898,9 @@ async function searchQuestions(chatId, searchText, replyToId) {
 async function exportQuestions(chatId, replyToId) {
   var all = await listAllQuestions();
   if (!all.length) {
-    await sendTelegram(chatId,
-      cardTop('\uD83D\uDCE4 <b>EXPORT</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No questions to export.\n' + BOX_V + '\n' + cardBottom,
-      replyToId);
+        await sendTelegram(chatId,
+          cardTop('\uD83D\uDCE4 <b>EXPORT</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No questions to export.\n' + BOX_V + '\n' + cardBottom,
+          replyToId, REPLY_KEYBOARD);
     return;
   }
 
@@ -968,7 +968,7 @@ function buildAllPageText(sorted, page) {
     if (st === 'ANSWERED' && q.answer) {
       lines.push(BOX_V + ' \u2192\n&gt; ' + esc(q.answer).slice(0, 100) + '\n' + BOX_V);
     }
-    if (q.votes > 0) lines.push(BOX_V + ' \uD83D\uDC4D ' + q.votes);
+    if (q.votes > 0) lines.push(BOX_V + ' \uD83D\uDC4D ' + q.votes + ' votes');
     lines.push(BOX_V + ' \uD83C\uDD94 <code>' + esc(q.id) + '</code>');
     lines.push(BOX_V);
   }
@@ -1007,7 +1007,7 @@ function buildDismissedPageText(sorted, page) {
     lines.push(BOX_V + ' ' + tagEmoji + ' <b>[' + tag + ']</b> ' + esc(q.name) + (qAge ? ' \u00B7 ' + esc(qAge) : ''));
     lines.push(BOX_V + ' \uD83D\uDCAC\n&gt; ' + esc(q.question).slice(0, 120) + '\n' + BOX_V);
     if (hasAnswer) lines.push(BOX_V + ' \u2192\n&gt; ' + esc(q.answer).slice(0, 80) + '\n' + BOX_V);
-    if (q.votes > 0) lines.push(BOX_V + ' \uD83D\uDC4D ' + q.votes);
+    if (q.votes > 0) lines.push(BOX_V + ' \uD83D\uDC4D ' + q.votes + ' votes');
     lines.push(BOX_V + ' \uD83C\uDD94 <code>' + esc(q.id) + '</code>');
     lines.push(BOX_V);
   }
@@ -1130,6 +1130,9 @@ module.exports = async function handler(req, res) {
         }
       }
       else if (action === 'answer') {
+        await clearEditSession(cbChatId);
+        await clearLookupSession(cbChatId);
+        await clearPreviewSession(cbChatId);
         await saveAnswerSession(cbChatId, questionId);
         await answerCallback(callback.id, '');
         await sendTelegram(cbChatId,
@@ -1152,6 +1155,9 @@ module.exports = async function handler(req, res) {
       }
       else if (action === 'edit') {
         try {
+          await clearAnswerSession(cbChatId);
+          await clearLookupSession(cbChatId);
+          await clearPreviewSession(cbChatId);
           await saveEditSession(cbChatId, questionId);
           await answerCallback(callback.id, '\u270F\uFE0F Edit mode activated');
           await sendTelegram(cbChatId,
@@ -1183,7 +1189,7 @@ module.exports = async function handler(req, res) {
       else if (action === 'previewconfirm') {
         try {
           var session = await getPreviewSession(cbChatId);
-          if (!session || !session.fields) { await answerCallback(callback.id, '\u26A0\uFE0F Session expired - try answering again'); return res.status(200).json({ ok: true }); }
+          if (!session || !session.fields || isSessionExpired(session)) { await clearPreviewSession(cbChatId); await answerCallback(callback.id, '\u26A0\uFE0F Session expired - try answering again'); return res.status(200).json({ ok: true }); }
           var qid = session.fields.questionId && session.fields.questionId.stringValue;
           var ansText = session.fields.answerText && session.fields.answerText.stringValue;
           if (!qid || !ansText) { await clearPreviewSession(cbChatId); await answerCallback(callback.id, '\u26A0\uFE0F Session data missing'); return res.status(200).json({ ok: true }); }
@@ -1196,7 +1202,7 @@ module.exports = async function handler(req, res) {
       else if (action === 'previewedit') {
         try {
           var session = await getPreviewSession(cbChatId);
-          if (!session || !session.fields) { await answerCallback(callback.id, '\u26A0\uFE0F Session expired'); return res.status(200).json({ ok: true }); }
+          if (!session || !session.fields || isSessionExpired(session)) { await clearPreviewSession(cbChatId); await answerCallback(callback.id, '\u26A0\uFE0F Session expired'); return res.status(200).json({ ok: true }); }
           var qid = session.fields.questionId && session.fields.questionId.stringValue;
           await clearPreviewSession(cbChatId);
           await answerCallback(callback.id, '\u270F\uFE0F Send your revised answer');
@@ -1351,7 +1357,7 @@ module.exports = async function handler(req, res) {
 
     /* /help */
     if (command === '/help') {
-      await sendTelegram(chatId, HELP_TEXT, message.message_id);
+      await sendTelegram(chatId, HELP_TEXT, message.message_id, REPLY_KEYBOARD);
       return res.status(200).json({ ok: true });
     }
 
@@ -1361,6 +1367,24 @@ module.exports = async function handler(req, res) {
       var lookupSess = await getLookupSession(chatId);
       var previewSess = await getPreviewSession(chatId);
       var answerSess = await getAnswerSession(chatId);
+      var sessions = [];
+      if (editSess && !isSessionExpired(editSess)) sessions.push('edit');
+      if (lookupSess && !isSessionExpired(lookupSess)) sessions.push('lookup');
+      if (previewSess && !isSessionExpired(previewSess)) sessions.push('preview');
+      if (answerSess && !isSessionExpired(answerSess)) sessions.push('answer');
+      await clearEditSession(chatId);
+      await clearLookupSession(chatId);
+      await clearPreviewSession(chatId);
+      await clearAnswerSession(chatId);
+      if (sessions.length === 0) {
+        await sendTelegram(chatId,
+          cardTop('\u2705 <b>NO ACTIVE SESSION</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No session was running.\n' + BOX_V + ' You are already in normal mode.\n' + BOX_V + '\n' + cardBottom,
+          message.message_id, REPLY_KEYBOARD);
+      } else {
+        await sendTelegram(chatId,
+          cardTop('\u2705 <b>CANCELLED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Cleared: <b>' + sessions.join(', ') + '</b>\n' + BOX_V + ' session' + (sessions.length > 1 ? 's' : '') + '. You are back\n' + BOX_V + ' to normal mode.\n' + BOX_V + '\n' + cardBottom,
+          message.message_id, REPLY_KEYBOARD);
+      }
       var sessions = [];
       if (editSess && !isSessionExpired(editSess)) sessions.push('edit');
       if (lookupSess && !isSessionExpired(lookupSess)) sessions.push('lookup');
@@ -1396,7 +1420,7 @@ module.exports = async function handler(req, res) {
       if (!items.length) {
         await sendTelegram(chatId,
           cardTop('\u2705 <b>ALL CAUGHT UP</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No unanswered questions right now.\n' + BOX_V + ' Enjoy the peace while it lasts.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
         return res.status(200).json({ ok: true });
       }
       await sendQuestionsList(chatId, '\u23F3 <b>UNANSWERED QUESTIONS</b>', items, message.message_id);
@@ -1411,7 +1435,7 @@ module.exports = async function handler(req, res) {
       if (!items.length) {
         await sendTelegram(chatId,
           cardTop('\u2705 <b>QUEUE EMPTY</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No pending or dismissed questions.\n' + BOX_V + ' Everything is handled.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
         return res.status(200).json({ ok: true });
       }
       await sendQuestionsList(chatId, '\uD83D\uDCCB <b>PENDING &amp; DISMISSED</b>', items, message.message_id);
@@ -1564,7 +1588,7 @@ module.exports = async function handler(req, res) {
       await saveLookupSession(chatId);
       await sendTelegram(chatId,
         cardTop('\uD83D\uDD0D <b>LOOKUP MODE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Paste a question ID below.\n' + BOX_V + '\n' + BOX_V + ' Use /all to browse all IDs\n' + BOX_V + ' and find the one you need.\n' + BOX_V + '\n' + BOX_V + ' Send /cancel to exit.\n' + BOX_V + '\n' + cardBottom,
-        message.message_id);
+        message.message_id, REPLY_KEYBOARD);
       return res.status(200).json({ ok: true });
     }
 
@@ -1574,7 +1598,7 @@ module.exports = async function handler(req, res) {
       if (!all.length) {
         await sendTelegram(chatId,
           cardTop('\uD83D\uDCEC <b>NO QUESTIONS YET</b>') + '\n' + BOX_V + '\n' + BOX_V + ' The database is empty.\n' + BOX_V + ' Questions will appear here when\n' + BOX_V + ' visitors submit them.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
         return res.status(200).json({ ok: true });
       }
       var sorted = all.slice().sort(function(a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
@@ -1652,6 +1676,7 @@ module.exports = async function handler(req, res) {
             message.message_id,
             { inline_keyboard: [
               [{ text: '\u270F\uFE0F Edit', callback_data: 'edit:' + qid }],
+              [{ text: '\uD83D\uDCCD Pin', callback_data: 'pin:' + qid }],
               [
                 { text: '\uD83D\uDE48 Dismiss', callback_data: 'dismiss:' + qid },
                 { text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + qid }
@@ -1660,7 +1685,7 @@ module.exports = async function handler(req, res) {
           );
         } else {
           await sendTelegram(chatId,
-            cardTop('\u21A9\uFE0F <b>RETRIEVED TO PENDING</b>') + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:\n' + BOX_V + ' ' + esc(q.question).slice(0, 120) + '\n' + BOX_V + '\n' + BOX_V + ' \u23F3 Back in your pending queue.\n' + BOX_V + ' Reply to answer it.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + cardBottom,
+            cardTop('\u21A9\uFE0F <b>RETRIEVED TO PENDING</b>') + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:\n' + BOX_V + ' ' + esc(q.question).slice(0, 120) + '\n' + BOX_V + '\n' + BOX_V + ' \u23F3 Back in your pending queue.\n' + BOX_V + ' Tap Answer or reply to answer it.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + cardBottom,
             message.message_id,
             { inline_keyboard: [
               [{ text: '\uD83D\uDCAC Answer', callback_data: 'answer:' + qid }],
