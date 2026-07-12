@@ -12,7 +12,10 @@
     githubUser: 'YatinSharma1303',
     lastfmUser: 'YATINSHARMA',
     anilistUser: 'YatinSharma1303',
-    lastfmKey: 'ff50164039e4af6c3662d01fcb66877d', // ⚠️ Replace with YOUR Last.fm key (last.fm/api/account/create)
+    /* Last.fm API key is no longer exposed here — calls go through
+       /api/lastfm proxy which injects the key server-side.
+       Set LASTFM_API_KEY in Vercel environment variables. */
+    lastfmKey: '',
     ytVideoId: 'XtwqzajH_8A', // Fullmetal Alchemist Brotherhood OST (YouTube embed)
     amaLimit: 20,
     firebase: {
@@ -30,7 +33,9 @@
   const esc = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   // === Last.fm helpers (defined early so the intro can safely call fetchLastfm) ===
-  const lfmAPI = 'https://ws.audioscrobbler.com/2.0/';
+  /* All Last.fm calls now go through /api/lastfm proxy — the API key is
+     injected server-side and never exposed to the browser. */
+  const lfmAPI = '/api/lastfm';
   function lfmImg(images) {
     if (!images || !images.length) return '';
     const sizes = ['extralarge', 'large', 'medium', 'small', 'mega'];
@@ -499,7 +504,7 @@
      ============================================================ */
 
   function fetchLastfm() {
-    const u = CONFIG.lastfmUser, k = CONFIG.lastfmKey;
+    const u = CONFIG.lastfmUser;
 
     // Helper: load image safely — returns promise that resolves to URL or empty string
     function safeImg(url) {
@@ -529,7 +534,7 @@
     }
 
     // 1. User info + avatar
-    fetch(`${lfmAPI}?method=user.getinfo&user=${u}&api_key=${k}&format=json`).then(r => r.json()).then(function (d) {
+    fetch(`${lfmAPI}?method=user.getinfo&user=${u}`).then(r => r.json()).then(function (d) {
       const i = d && d.user; if (!i) return;
       const av = $('lfm-avatar');
       if (av) { const url = lfmImg(i.image); if (url) av.src = url; }
@@ -538,13 +543,13 @@
     }).catch(function () {});
 
     // 2. Top tracks — fetch art via track.getInfo, preload before rendering
-    fetch(`${lfmAPI}?method=user.gettoptracks&user=${u}&period=1month&limit=5&api_key=${k}&format=json`).then(r => r.json()).then(function (d) {
+    fetch(`${lfmAPI}?method=user.gettoptracks&user=${u}&period=1month&limit=5`).then(r => r.json()).then(function (d) {
       const wrap = $('lfm-tracks'); if (!wrap || !d.toptracks) return;
       const tracks = d.toptracks.track || [];
       var artPromises = tracks.map(function(tr) {
         var artistName = encodeURIComponent(tr.artist ? tr.artist.name : '');
         var trackName = encodeURIComponent(tr.name);
-        return fetch(`${lfmAPI}?method=track.getInfo&api_key=${k}&artist=${artistName}&track=${trackName}&format=json`)
+        return fetch(`${lfmAPI}?method=track.getInfo&artist=${artistName}&track=${trackName}`)
           .then(r => r.json())
           .then(info => { var url = lfmImg(info.track && info.track.album ? info.track.album.image : []); return safeImg(url); })
           .catch(() => '');
@@ -557,12 +562,12 @@
     }).catch(function () {});
 
     // 3. Top artists — preload images, render dark fallback with letter
-    fetch(`${lfmAPI}?method=user.gettopartists&user=${u}&period=1month&limit=5&api_key=${k}&format=json`).then(r => r.json()).then(function (d) {
+    fetch(`${lfmAPI}?method=user.gettopartists&user=${u}&period=1month&limit=5`).then(r => r.json()).then(function (d) {
       const wrap = $('lfm-artists'); if (!wrap || !d.topartists) return;
       const artists = d.topartists.artist || [];
       var artPromises = artists.map(function(ar) {
         var artistName = encodeURIComponent(ar.name);
-        return fetch(`${lfmAPI}?method=artist.getInfo&api_key=${k}&artist=${artistName}&format=json`)
+        return fetch(`${lfmAPI}?method=artist.getInfo&artist=${artistName}`)
           .then(r => r.json())
           .then(info => { var url = lfmImg(info.artist ? info.artist.image : []); return safeImg(url); })
           .catch(() => '');
@@ -591,7 +596,7 @@
 
     // 4. Recent tracks (now playing + ticker)
     function updateNowPlaying() {
-      fetch(`${lfmAPI}?method=user.getrecenttracks&user=${u}&limit=10&api_key=${k}&format=json`).then(r => r.json()).then(function (d) {
+      fetch(`${lfmAPI}?method=user.getrecenttracks&user=${u}&limit=10`).then(r => r.json()).then(function (d) {
         const tracks = (d.recenttracks && d.recenttracks.track) || [];
         if (!tracks.length) return;
         const first = tracks[0];
@@ -655,7 +660,7 @@
       if (!summaryEl) { summaryEl = document.createElement('div'); summaryEl.className = 'al-summary'; list.parentNode.insertBefore(summaryEl, list); }
       if (!pagerEl) { pagerEl = document.createElement('div'); pagerEl.className = 'al-pagination'; card.appendChild(pagerEl); }
     }
-    const query = `query{user:MediaListCollection(userName:"${CONFIG.anilistUser}",type:ANIME){lists{name status entries{media{id title{romaji english}coverImage{large}episodes meanScore}score progress updatedAt}}}}`;
+    const query = `query{user:MediaListCollection(userName:"${CONFIG.anilistUser}",type:ANIME){lists{name status entries{media{id title{romaji english}coverImage{large}episodes duration meanScore}score progress updatedAt}}}}`;
     fetch('https://graphql.anilist.co?_=' + Date.now(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query }) })
       .then(r => r.json()).then(d => {
         const lists = (d.data && d.data.user && d.data.user.lists) || [];
@@ -671,7 +676,7 @@
       ensureChrome();
       const total = allEntries.length;
       const eps = allEntries.reduce((s, e) => s + (Number(e.progress) || 0), 0);
-      const hrs = Math.round(allEntries.reduce((s, e) => s + (Number(e.progress) || 0) * 24, 0) / 60);
+      const hrs = Math.round(allEntries.reduce((s, e) => s + (Number(e.progress) || 0) * (e.media.duration || 24), 0) / 60);
       summaryEl.textContent = total ? `${total} anime · ${eps.toLocaleString()} episodes · ${hrs.toLocaleString()} hrs watched` : '';
     }
     function renderBanner(entries) {

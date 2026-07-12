@@ -27,6 +27,11 @@ var PREVIEW_SESSION_COLLECTION = 'telegramPreviewSessions';
 var ANSWER_SESSION_COLLECTION = 'telegramAnswerSessions';
 var SESSION_TTL_MS = 10 * 60 * 1000;
 
+/* Per-invocation caches — cleared at the start of each webhook request.
+   - _questionsCache avoids redundant listAllQuestions() calls within one request.
+   - _cachedToken / _cachedTokenExpiry reuse the Google OAuth token across Firestore calls. */
+var _questionsCache = null;
+
 function isSessionExpired(sessionDoc) {
   if (!sessionDoc || !sessionDoc.fields) return true;
   var createdAt = sessionDoc.fields.createdAt && sessionDoc.fields.createdAt.stringValue;
@@ -74,8 +79,17 @@ function docPath(collection, id) {
   return 'https://firestore.googleapis.com/v1/projects/' + projectId() + '/databases/(default)/documents/' + collection + '/' + encodeURIComponent(id);
 }
 
-/* -- Google OAuth: mint a service-account JWT -- */
+/* -- Google OAuth: mint a service-account JWT (cached per invocation) -- */
+var _cachedToken = null;
+var _cachedTokenExpiry = 0;
+
 async function googleAccessToken() {
+  /* Reuse token if still valid for at least 60 more seconds.
+     This avoids minting a new JWT for every Firestore call within
+     a single webhook invocation (typically 2-5 calls). */
+  if (_cachedToken && Date.now() < _cachedTokenExpiry - 60000) {
+    return _cachedToken;
+  }
   var sa = serviceAccount();
   var now = Math.floor(Date.now() / 1000);
   var header = { alg: 'RS256', typ: 'JWT' };
@@ -96,7 +110,9 @@ async function googleAccessToken() {
   if (!response.ok || !data || !data.access_token) {
     throw new Error((data && data.error_description) || (data && data.error) || 'Google token error ' + response.status);
   }
-  return data.access_token;
+  _cachedToken = data.access_token;
+  _cachedTokenExpiry = Date.now() + ((data.expires_in || 3600) * 1000);
+  return _cachedToken;
 }
 
 /* -- Firestore REST wrapper -- */
@@ -327,9 +343,24 @@ function questionState(q) {
 }
 
 async function listAllQuestions() {
+  /* Per-request cache: if already fetched within this webhook
+     invocation, return the same array. Cleared at handler start. */
+  if (_questionsCache) return _questionsCache;
+  var allDocs = [];
   var url = 'https://firestore.googleapis.com/v1/projects/' + projectId() + '/databases/(default)/documents/' + COLLECTION + '?pageSize=200';
-  var data = await firestore('GET', url);
-  return (data.documents || []).map(fromFirestoreDoc);
+  while (url) {
+    var data = await firestore('GET', url);
+    if (data.documents) {
+      allDocs = allDocs.concat(data.documents.map(fromFirestoreDoc));
+    }
+    if (data.nextPageToken) {
+      url = 'https://firestore.googleapis.com/v1/projects/' + projectId() + '/databases/(default)/documents/' + COLLECTION + '?pageSize=200&pageToken=' + data.nextPageToken;
+    } else {
+      url = null;
+    }
+  }
+  _questionsCache = allDocs;
+  return allDocs;
 }
 
 async function getQuestion(id) {
@@ -1085,6 +1116,13 @@ async function sendQuestionsList(chatId, title, items, replyToId) {
  HANDLER
  ============================================================ */
 module.exports = async function handler(req, res) {
+  /* Clear per-invocation caches for fresh data on each webhook request.
+     The JWT token cache is also cleared so a stale token from a
+     previous invocation never leaks into a new cold-start. */
+  _questionsCache = null;
+  _cachedToken = null;
+  _cachedTokenExpiry = 0;
+
   if (req.method !== 'POST') {
     return res.status(200).json({ ok: true, message: 'Telegram webhook endpoint is live.' });
   }
