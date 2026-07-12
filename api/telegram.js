@@ -64,7 +64,7 @@ module.exports = async function handler(req, res) {
       BOX_V,
       BOX_V + ' \uD83D\uDC64 <b>' + escapeHtml(name) + '</b>',
       BOX_V,
-      BOX_V + ' \uD83D\uDCAC\n> ' + escapeHtml(question) + '\n' + BOX_V,
+      BOX_V + ' \uD83D\uDCAC\n&gt; ' + escapeHtml(question) + '\n' + BOX_V,
       BOX_V + ' \uD83D\uDD50 ' + escapeHtml(timeStr) + ' IST',
       BOX_V + ' \uD83C\uDD94 <code>' + escapeHtml(questionId) + '</code>',
       BOX_V,

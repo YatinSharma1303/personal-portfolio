@@ -1,0 +1,24 @@
+start - Welcome message with live stats & quick command reference.
+help - Lists every command with description & usage.
+pending - List all unanswered questions waiting for your reply.
+answer - Answer a question. Reply to a bot message or use /answer <id> <text>
+edit - Edit answer to a question. Usage: /edit <id> then send new text.
+recent - Last 5 answered questions with response times.
+all - Browse every question (paginated). Shows state, preview & ID.
+get - Full detail card for a question. Usage: /get <id>
+search - Search Q&A by keyword. Matches question, answer & name. Usage: /search <text>
+lookup - Interactive ID lookup mode. Paste an ID to get details. /cancel to exit.
+pin - Pin question to top of site AMA. Usage: /pin <id>
+unpin - Remove pin from question. Returns to normal sort. Usage: /unpin <id>
+pinned - List all currently pinned questions with previews.
+delete - Delete a single question. Confirms first. Usage: /delete <id>
+deleteall - Permanently delete ALL questions. Confirms first. Cannot be undone.
+dismiss - Hide a question from your site. Data preserved. Usage: /dismiss <id>
+dismissall - Hide ALL active questions from your site at once. Confirms first. Retrieve later.
+dismissed - Browse all dismissed (hidden) questions with state info.
+retrieve - Restore one dismissed question. Usage: /retrieve <id>
+retrieveall - Restore ALL dismissed questions at once. Confirms first.
+export - Download all Q&A as formatted text with votes, reactions & timestamps.
+stats - Full dashboard: totals, pinned count, avg response time & top question.
+refresh - Combined view: unanswered + dismissed. Everything needing attention.
+cancel - Abort active session (answer, edit, lookup). Returns to normal mode.

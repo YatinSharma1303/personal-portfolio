@@ -1230,9 +1230,10 @@
           return;
         }
         /* Parse docs and filter out dismissed questions.
-           Dismissed answered questions have answered=true but dismissed=true —
-           the bot sets dismissed without changing answered, so we must exclude
-           them here to keep them hidden from the site. */
+           Dismissed questions have answered=false (bot sets it on dismiss)
+           but the Firestore query returns answered==true docs only,
+           so dismissed answered Qs are already excluded by the query.
+           This .filter is an extra safety net for any edge case. */
         answeredDocs = (data || []).filter(d => d.document).map(d => fromDoc(d.document)).filter(q => !q.dismissed);
         answeredDocs.sort((a, b) => new Date(b.answeredAt || 0) - new Date(a.answeredAt || 0));
         render();
