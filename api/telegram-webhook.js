@@ -1381,26 +1381,39 @@ module.exports = async function handler(req, res) {
         );
       }
       // DISMISS ALL confirmation flow
-      else if (action === 'confirmdismissall') {
+            else if (action === 'confirmdismissall') {
         try {
+          await answerCallback(callback.id, "\\uD83D\\uDE48 Dismissing all...");
+          await editMessage(cbChatId, cbMessageId,
+            cardTop("\\uD83D\\uDE48 <b>DISMISSING ALL\\u2026</b>") + "\\n" + BOX_V + "\\n" + BOX_V + " Hiding active questions from site...\\n" + BOX_V + "\\n" + cardBottom
+          );
+
           var all = await listAllQuestions();
-          var active = all.filter(function(q) { return questionState(q) !== 'DISMISSED'; });
+          var active = all.filter(function(q) { return questionState(q) !== "DISMISSED"; });
           var answeredCount = 0, unansweredCount = 0;
+          var dismissedCount = 0;
           for (var di = 0; di < active.length; di++) {
             var st = questionState(active[di]);
-            if (st === 'ANSWERED') answeredCount++; else unansweredCount++;
-            try { await dismissQuestion(active[di].id); } catch (e) {}
+            if (st === "ANSWERED") answeredCount++; else unansweredCount++;
+            try { 
+              await dismissQuestion(active[di].id); 
+              dismissedCount++;
+            } catch (e) {}
           }
-          await answerCallback(callback.id, '\uD83D\uDE48 All dismissed!');
-          var detailLines = BOX_V + ' All active questions hidden from your site.\n';
-          if (answeredCount > 0) detailLines += BOX_V + ' \u2705 <b>' + answeredCount + '</b> answered \u2192 hidden (retrieve \u2192 back on site)\n';
-          if (unansweredCount > 0) detailLines += BOX_V + ' \u23F3 <b>' + unansweredCount + '</b> unanswered \u2192 hidden (retrieve \u2192 back to pending)\n';
-          detailLines += BOX_V + '\n' + BOX_V + ' Use /retrieveall or /retrieve <id>\n';
-          detailLines += BOX_V + ' to restore any question.\n';
+          await answerCallback(callback.id, "\\uD83D\\uDE48 All dismissed!");
+          var detailLines = BOX_V + " Successfully dismissed <b>" + dismissedCount + "</b> question" + (dismissedCount === 1 ? "" : "s") + ".\\n";
+          if (answeredCount > 0) detailLines += BOX_V + " \\u2705 <b>" + answeredCount + "</b> answered \\u2192 hidden (retrieve \\u2192 back on site)\\n";
+          if (unansweredCount > 0) detailLines += BOX_V + " \\u23F3 <b>" + unansweredCount + "</b> unanswered \\u2192 hidden (retrieve \\u2192 back to pending)\\n";
+          detailLines += BOX_V + "\\n" + BOX_V + " Use /retrieveall or /retrieve <id>\\n";
+          detailLines += BOX_V + " to restore any question.\\n";
           await editMessage(cbChatId, cbMessageId,
-            cardTop('\uD83D\uDE48 <b>ALL DISMISSED</b>') + '\n' + BOX_V + '\n' + detailLines + BOX_V + '\n' + BOX_V + ' \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n' + BOX_V + '\n' + cardBottom
+            cardTop("\\uD83D\\uDE48 <b>ALL DISMISSED</b>") + "\\n" + BOX_V + "\\n" + detailLines + BOX_V + "\\n" + BOX_V + " \\uD83D\\uDD50 " + formatTime(new Date().toISOString()) + " IST\\n" + BOX_V + "\\n" + cardBottom
           );
-        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Dismiss all failed - try again'); }
+          return res.status(200).json({ ok: true, callback: "confirmdismissall" });
+        } catch (e) { 
+          await answerCallback(callback.id, "\\u26A0\\uFE0F Dismiss all failed - try again"); 
+          return res.status(200).json({ ok: true, error: e.message });
+        }
       }
       else if (action === 'canceldismissall') {
         await answerCallback(callback.id, 'Dismiss all cancelled');
