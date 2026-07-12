@@ -8,14 +8,14 @@ service cloud.firestore {
     }
 
     match /amaQuestions/{questionId} {
-      // Anyone can read answered questions; admin can read all
-      allow read: if isAdmin() || resource.data.answered == true;
+      // Anyone can read answered questions that are not dismissed; admin can read all
+      allow read: if isAdmin() || (resource.data.answered == true && resource.data.dismissed != true);
 
       // Visitors create questions from the site (unauthenticated).
       // Pinned defaults to false — admin can set it later via the bot (service account bypasses rules).
       allow create: if request.resource.data.keys().hasOnly([
         "id", "name", "question", "answer", "answered",
-        "createdAt", "answeredAt", "votes", "pinned"
+        "createdAt", "answeredAt", "votes", "pinned", "dismissed"
       ])
         && request.resource.data.id is string
         && request.resource.data.name is string
@@ -30,7 +30,9 @@ service cloud.firestore {
         && request.resource.data.votes is int
         && request.resource.data.votes == 0
         && request.resource.data.pinned is bool
-        && request.resource.data.pinned == false;
+        && request.resource.data.pinned == false
+        && request.resource.data.dismissed is bool
+        && request.resource.data.dismissed == false;
 
       // Only admin can update/delete directly. Reactions + votes are handled
       // server-side by the service account (bypasses these rules entirely).

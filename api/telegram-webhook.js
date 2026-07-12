@@ -205,8 +205,12 @@ async function editAnswer(id, answer) {
 }
 
 async function dismissQuestion(id) {
-  return firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['dismissed']), {
-    fields: { dismissed: { booleanValue: true } }
+  /* Set dismissed=true AND answered=false so the site's Firestore query
+     (answered == true) naturally excludes dismissed questions.
+     The bot's questionState() checks dismissed first, so the card
+     still shows as DISMISSED regardless of answered value. */
+  return firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['dismissed', 'answered']), {
+    fields: { dismissed: { booleanValue: true }, answered: { booleanValue: false } }
   });
 }
 
@@ -223,8 +227,8 @@ async function retrieveQuestion(id) {
     });
     return { restoredAs: 'answered', question: q };
   } else {
-    await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['dismissed']), {
-      fields: { dismissed: { booleanValue: false } }
+    await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['dismissed', 'answered']), {
+      fields: { dismissed: { booleanValue: false }, answered: { booleanValue: false } }
     });
     return { restoredAs: 'unanswered', question: q };
   }

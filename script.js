@@ -1103,7 +1103,8 @@
         editedAt: f.editedAt?.stringValue || '',
         votes: Number(f.votes?.integerValue || f.votes?.doubleValue || 0),
         reactions: reactions,
-        pinned: !!f.pinned?.booleanValue
+        pinned: !!f.pinned?.booleanValue,
+        dismissed: !!(f.dismissed && f.dismissed.booleanValue)
       };
     }
     function sorted() {
@@ -1220,7 +1221,7 @@
         body: JSON.stringify({ structuredQuery: {
           from: [{ collectionId: COL }],
           where: { fieldFilter: { field: { fieldPath: 'answered' }, op: 'EQUAL', value: { booleanValue: true } } },
-          limit: 50
+          limit: 200
         } })
       }).then(r => r.json()).then(data => {
         if (data && data.length && data[0].error) {
@@ -1228,7 +1229,11 @@
           if (listWrap) { listWrap.hidden = false; list.innerHTML = '<div style="color:#ff6b6b;padding:12px;font-family:monospace;font-size:12px;">Error: ' + esc(data[0].error.message) + '</div>'; }
           return;
         }
-        answeredDocs = (data || []).filter(d => d.document).map(d => fromDoc(d.document));
+        /* Parse docs and filter out dismissed questions.
+           Dismissed answered questions have answered=true but dismissed=true —
+           the bot sets dismissed without changing answered, so we must exclude
+           them here to keep them hidden from the site. */
+        answeredDocs = (data || []).filter(d => d.document).map(d => fromDoc(d.document)).filter(q => !q.dismissed);
         answeredDocs.sort((a, b) => new Date(b.answeredAt || 0) - new Date(a.answeredAt || 0));
         render();
       }).catch((err) => { console.warn('AMA load failed:', err); });
@@ -1245,7 +1250,7 @@
         id: { stringValue: id }, name: { stringValue: name }, question: { stringValue: text },
         answer: { stringValue: '' }, answered: { booleanValue: false },
         createdAt: { stringValue: createdAt }, answeredAt: { nullValue: null }, votes: { integerValue: 0 },
-        pinned: { booleanValue: false }
+        pinned: { booleanValue: false }, dismissed: { booleanValue: false }
       };
       status.textContent = 'Sending…'; status.className = 'ama-status';
       const notify = () => fetch('/api/telegram', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, question: text, id, createdAt }) }).catch(() => {});
@@ -1273,6 +1278,29 @@
       sortWrap.querySelectorAll('.ama-sort-btn').forEach(b => b.classList.remove('active'));
       t.classList.add('active'); activeSort = t.dataset.sort; page = 1; render();
     });
+
+    /* Refresh button — manual reload of answered questions */
+    const refreshBtn = $('ama-refresh');
+    if (refreshBtn) refreshBtn.addEventListener('click', () => {
+      refreshBtn.classList.add('ama-refresh-spin');
+      loadAnswered();
+      setTimeout(() => refreshBtn.classList.remove('ama-refresh-spin'), 600);
+    });
+
+    /* Auto-refresh every 60s when AMA section is visible.
+       Uses IntersectionObserver to pause when off-screen (saves API calls). */
+    let amaVisible = false;
+    const amaSection = document.getElementById('ama');
+    if (amaSection) {
+      const amaObs = new IntersectionObserver((entries) => {
+        amaVisible = entries[0].isIntersecting;
+      }, { threshold: 0 });
+      amaObs.observe(amaSection);
+    }
+    setInterval(() => {
+      if (amaVisible) loadAnswered();
+    }, 60000);
+
     loadAnswered();
   })();
 
