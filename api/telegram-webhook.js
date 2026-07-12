@@ -1240,6 +1240,7 @@ module.exports = async function handler(req, res) {
         try {
           var q = await getQuestion(questionId);
           if (!q) { await answerCallback(callback.id, '\u26A0\uFE0F Question not found'); return res.status(200).json({ ok: true }); }
+          if (q.dismissed) { await answerCallback(callback.id, '\u26A0\uFE0F Cannot pin — question is dismissed. Retrieve it first.'); return res.status(200).json({ ok: true }); }
           if (q.pinned) { await answerCallback(callback.id, '\uD83D\uDCCD Already pinned'); return res.status(200).json({ ok: true }); }
           await pinQuestion(questionId);
           await answerCallback(callback.id, '\uD83D\uDCCD Pinned to top on site');
@@ -1250,6 +1251,7 @@ module.exports = async function handler(req, res) {
         try {
           var q = await getQuestion(questionId);
           if (!q) { await answerCallback(callback.id, '\u26A0\uFE0F Question not found'); return res.status(200).json({ ok: true }); }
+          if (q.dismissed) { await answerCallback(callback.id, '\u26A0\uFE0F Cannot unpin — question is dismissed. Retrieve it first.'); return res.status(200).json({ ok: true }); }
           if (!q.pinned) { await answerCallback(callback.id, '\uD83D\uDCCD Not pinned'); return res.status(200).json({ ok: true }); }
           await unpinQuestion(questionId);
           await answerCallback(callback.id, '\uD83D\uDCCD Unpinned');
@@ -1988,10 +1990,18 @@ module.exports = async function handler(req, res) {
       await clearEditSession(chatId);
     }
     if (pendingQuestionId && !text.startsWith('/')) {
-      await editAnswer(pendingQuestionId, text);
-      await clearEditSession(chatId);
-      await sendAnsweredCard(chatId, pendingQuestionId, text, message.message_id, true);
-      return res.status(200).json({ ok: true, edited: pendingQuestionId });
+      try {
+        await editAnswer(pendingQuestionId, text);
+        await clearEditSession(chatId);
+        await sendAnsweredCard(chatId, pendingQuestionId, text, message.message_id, true);
+        return res.status(200).json({ ok: true, edited: pendingQuestionId });
+      } catch (e) {
+        await clearEditSession(chatId);
+        await sendTelegram(chatId,
+          cardTop('\u26A0\uFE0F <b>EDIT FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not save the edit.\n' + BOX_V + ' The question may have been deleted.\n' + BOX_V + '\n' + BOX_V + ' Edit session cleared. Try /pending\n' + BOX_V + ' to check current questions.\n' + BOX_V + '\n' + cardBottom,
+          message.message_id, REPLY_KEYBOARD);
+        return res.status(200).json({ ok: true, editError: e.message });
+      }
     }
 
     /* Lookup session */
