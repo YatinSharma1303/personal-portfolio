@@ -1054,6 +1054,15 @@
           list = $('ama-list'), sortWrap = $('ama-sort'), pager = $('ama-pager');
     if (!input) return;
 
+    const nameInput = $('ama-name-input');
+    let nameTouched = false;
+    try { localStorage.removeItem('yatin_ama_name'); } catch (e) {}
+    if (nameInput) {
+      nameInput.value = '';
+      nameInput.setAttribute('autocomplete', 'off');
+      nameInput.addEventListener('input', () => { nameTouched = true; });
+    }
+
     const fb = CONFIG.firebase;
     const FIREBASE_READY = fb && fb.apiKey && fb.projectId &&
       fb.apiKey !== 'YOUR_FIREBASE_WEB_API_KEY' && fb.projectId !== 'YOUR_FIREBASE_PROJECT_ID';
@@ -1243,14 +1252,10 @@
       const text = input.value.trim();
       if (!text) { status.textContent = 'Please type a question first.'; status.className = 'ama-status err'; return; }
       if (todayCount >= CONFIG.amaLimit) { status.textContent = 'Daily limit reached.'; status.className = 'ama-status err'; return; }
-      const nameInput = $('ama-name-input');
-      const typedName = nameInput ? nameInput.value.trim() : '';
-      // Empty name should always be anonymous. Do not reuse an old saved name
-      // from localStorage, otherwise a previous visitor/name can leak into
-      // new anonymous submissions on the same browser.
+      const typedName = (nameTouched && nameInput) ? nameInput.value.trim() : '';
+      // Empty/untouched name should always be anonymous. We intentionally do
+      // not reuse localStorage or browser-autofilled values here.
       const name = (typedName || 'Anonymous').slice(0, 60);
-      if (typedName) localStorage.setItem('yatin_ama_name', typedName);
-      else localStorage.removeItem('yatin_ama_name');
       const id = uuid(), createdAt = new Date().toISOString();
       const question = {
         id: { stringValue: id }, name: { stringValue: name }, question: { stringValue: text },
@@ -1262,6 +1267,9 @@
       const notify = () => fetch('/api/telegram', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, question: text, id, createdAt }) }).catch(() => {});
       const afterSubmit = (ok) => {
         todayCount++; localStorage.setItem(LIMIT_KEY, JSON.stringify({ date: today, count: todayCount })); countEl.textContent = todayCount; input.value = '';
+        if (nameInput) nameInput.value = '';
+        nameTouched = false;
+        try { localStorage.removeItem('yatin_ama_name'); } catch (e) {}
         if (ok) {
           status.textContent = '✅ Sent! Yatin will reply soon — check back here.';
           if (window.unlockAchievement) window.unlockAchievement('asked', 'Inquisitive Mind', 'Asked a question!');
