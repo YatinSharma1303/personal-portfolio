@@ -649,7 +649,7 @@ async function sendAnsweredCard(chatId, questionId, answerText, replyToId, isUpd
     BOX_V,
     BOX_V + ' \uD83D\uDC64 <b>' + esc(qName) + '</b> asked:',
     BOX_V + '\n&gt; ' + esc(qText) + '\n' + BOX_V,
-    BOX_V + ' \uD83D\uDCAC <b>Your answer:</b>',
+    BOX_V + ' \uD83D\uDCAC <b>Answer:</b>',
     BOX_V + '\n&gt; ' + esc(answerText) + '\n' + BOX_V,
     BOX_V + metaLine,
     BOX_V,
@@ -737,6 +737,7 @@ function buildCardForQuestion(q) {
       inline_keyboard: [
         [{ text: '\u21A9\uFE0F Retrieve', callback_data: 'retrieve:' + q.id }],
         [{ text: '\uD83D\uDCAC Answer', callback_data: 'answer:' + q.id }],
+        [{ text: q.pinned ? '\uD83D\uDCCD Unpin' : '\uD83D\uDCCD Pin', callback_data: (q.pinned ? 'unpin:' : 'pin:') + q.id }],
         [{ text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + q.id }]
       ]
     };
@@ -745,13 +746,15 @@ function buildCardForQuestion(q) {
 
   // UNANSWERED - incoming question
   var qAge = timeAgo(q.createdAt);
+  var pinnedLine = '';
+  if (q.pinned) pinnedLine = '\n' + BOX_V + ' \uD83D\uDCCD Pinned to top';
   var text = [
     cardTop('\uD83D\uDCD8 <b>NEW QUESTION</b>'),
     BOX_V,
     BOX_V + ' \uD83D\uDC64 <b>' + esc(q.name) + '</b>',
     BOX_V,
     BOX_V + ' \uD83D\uDCAC\n&gt; ' + esc(q.question) + '\n' + BOX_V,
-    BOX_V + ' \uD83D\uDD50 ' + esc(formatTime(q.createdAt)) + ' IST' + (qAge ? ' \u00B7 ' + esc(qAge) : ''),
+    BOX_V + ' \uD83D\uDD50 ' + esc(formatTime(q.createdAt)) + ' IST' + (qAge ? ' \u00B7 ' + esc(qAge) : '') + pinnedLine,
     BOX_V + ' \uD83C\uDD94 <code>' + esc(q.id) + '</code>',
     BOX_V,
     BOX_BL + BOX_H + '\u26A1 <i>tap Answer or reply</i>' + BOX_H.repeat(10) + BOX_BR
@@ -759,6 +762,7 @@ function buildCardForQuestion(q) {
   var replyMarkup = {
     inline_keyboard: [
       [{ text: '\uD83D\uDCAC Answer', callback_data: 'answer:' + q.id }],
+      [{ text: q.pinned ? '\uD83D\uDCCD Unpin' : '\uD83D\uDCCD Pin', callback_data: (q.pinned ? 'unpin:' : 'pin:') + q.id }],
       [
         { text: '\uD83D\uDE48 Dismiss', callback_data: 'dismiss:' + q.id },
         { text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + q.id }
@@ -774,7 +778,7 @@ async function sendFullDetailCard(chatId, questionId, replyToId) {
   if (!q) {
     await sendTelegram(chatId,
       cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question with that ID exists.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(questionId) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Try /all to browse all IDs.\n' + BOX_V + '\n' + cardBottom,
-      replyToId);
+      replyToId, REPLY_KEYBOARD);
     return;
   }
   var state = questionState(q);
@@ -812,8 +816,10 @@ async function sendFullDetailCard(chatId, questionId, replyToId) {
   if (state === 'DISMISSED') {
     buttons.push([{ text: '\u21A9\uFE0F Retrieve', callback_data: 'retrieve:' + q.id }]);
     buttons.push([{ text: '\uD83D\uDCAC Answer', callback_data: 'answer:' + q.id }]);
+    buttons.push([{ text: q.pinned ? '\uD83D\uDCCD Unpin' : '\uD83D\uDCCD Pin', callback_data: (q.pinned ? 'unpin:' : 'pin:') + q.id }]);
   } else if (state === 'UNANSWERED') {
     buttons.push([{ text: '\uD83D\uDCAC Answer', callback_data: 'answer:' + q.id }]);
+    buttons.push([{ text: q.pinned ? '\uD83D\uDCCD Unpin' : '\uD83D\uDCCD Pin', callback_data: (q.pinned ? 'unpin:' : 'pin:') + q.id }]);
   }
   if (state === 'ANSWERED') {
     buttons.push([{ text: '\u270F\uFE0F Edit Answer', callback_data: 'edit:' + q.id }]);
@@ -838,7 +844,7 @@ async function sendRecent(chatId, replyToId) {
   if (!answered.length) {
     await sendTelegram(chatId,
       cardTop('\uD83D\uDCCB <b>NO ANSWERED QUESTIONS</b>') + '\n' + BOX_V + '\n' + BOX_V + ' You haven\'t answered anything yet.\n' + BOX_V + ' When you do, they\'ll show up here.\n' + BOX_V + '\n' + cardBottom,
-      replyToId);
+      replyToId, REPLY_KEYBOARD);
     return;
   }
 
@@ -859,10 +865,10 @@ async function sendRecent(chatId, replyToId) {
     lines.push(BOX_V);
   }
 
-  lines.push(BOX_V + ' \uD83C\uDD94 Use /get id for full details');
+  lines.push(BOX_V + ' \uD83C\uDD94 Use /get id for full details + actions');
   lines.push(cardBottom);
 
-  await sendTelegram(chatId, lines.join('\n'), replyToId);
+  await sendTelegram(chatId, lines.join('\n'), replyToId, REPLY_KEYBOARD);
 }
 
 /* -- /search <text> -- */
@@ -870,7 +876,7 @@ async function searchQuestions(chatId, searchText, replyToId) {
   if (!searchText || searchText.length < 2) {
     await sendTelegram(chatId,
       cardTop('\uD83D\uDD0D <b>SEARCH</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Type at least 2 characters.\n' + BOX_V + '\n' + BOX_V + ' Example:\n' + BOX_V + ' /search react\n' + BOX_V + ' /search healthcare\n' + BOX_V + '\n' + cardBottom,
-      replyToId);
+      replyToId, REPLY_KEYBOARD);
     return;
   }
 
@@ -885,7 +891,7 @@ async function searchQuestions(chatId, searchText, replyToId) {
   if (!results.length) {
     await sendTelegram(chatId,
       cardTop('\uD83D\uDD0D <b>NO RESULTS</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Nothing found for "' + esc(searchText) + '".\n' + BOX_V + '\n' + BOX_V + ' Try different keywords, or\n' + BOX_V + ' use /all to browse everything.\n' + BOX_V + '\n' + cardBottom,
-      replyToId);
+      replyToId, REPLY_KEYBOARD);
     return;
   }
 
@@ -936,6 +942,7 @@ async function exportQuestions(chatId, replyToId) {
     if (q.answer) {
       lines.push('A: ' + q.answer);
       lines.push('Answered: ' + formatTime(q.answeredAt));
+    if (q.editedAt) lines.push('Edited: ' + formatTime(q.editedAt));
     }
     if (q.votes > 0) lines.push('Votes: ' + q.votes);
     var rLine = reactionLine(q.reactions);
@@ -1071,7 +1078,7 @@ async function sendQuestionsList(chatId, title, items, replyToId) {
     chunk += line + '\n';
   }
   if (chunk.trim()) { await sendTelegram(chatId, chunk.trim(), sent === 0 ? replyToId : undefined); sent++; }
-  await sendTelegram(chatId, ' <i>' + items.length + ' question' + (items.length === 1 ? '' : 's') + ' listed.\nReply to any question message to answer it.</i>', undefined, REPLY_KEYBOARD);
+  await sendTelegram(chatId, ' <i>' + items.length + ' question' + (items.length === 1 ? '' : 's') + ' listed.\nTap Answer or reply to answer one.</i>', undefined, REPLY_KEYBOARD);
 }
 
 /* ============================================================
@@ -1162,11 +1169,14 @@ module.exports = async function handler(req, res) {
         try {
           await dismissQuestion(questionId);
           await answerCallback(callback.id, '\uD83D\uDE48 Dismissed');
+          var dq = await getQuestion(questionId);
+          var dPinned = dq && dq.pinned;
           await editMessage(cbChatId, cbMessageId,
             cardTop('\uD83D\uDE48 <b>DISMISSED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Question hidden from your site.\n' + BOX_V + ' Data preserved safely.\n' + BOX_V + '\n' + BOX_V + ' \u21A9\uFE0F Use Retrieve to restore it.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(questionId) + '</code>\n' + BOX_V + ' \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n' + BOX_V + '\n' + cardBottom,
             { inline_keyboard: [
               [{ text: '\u21A9\uFE0F Retrieve', callback_data: 'retrieve:' + questionId }],
               [{ text: '\uD83D\uDCAC Answer', callback_data: 'answer:' + questionId }],
+              [{ text: dPinned ? '\uD83D\uDCCD Unpin' : '\uD83D\uDCCD Pin', callback_data: (dPinned ? 'unpin:' : 'pin:') + questionId }],
               [{ text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + questionId }]
             ] }
           );
@@ -1235,7 +1245,7 @@ module.exports = async function handler(req, res) {
         await clearPreviewSession(cbChatId);
         await answerCallback(callback.id, 'Answer cancelled');
         await editMessage(cbChatId, cbMessageId,
-          cardTop('\u274C <b>ANSWER CANCELLED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Your answer was not published.\n' + BOX_V + ' The question remains unanswered.\n' + BOX_V + '\n' + cardBottom
+          cardTop('\u274C <b>ANSWER CANCELLED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Your answer was not published.\n' + BOX_V + ' The question is unchanged.\n' + BOX_V + '\n' + cardBottom
         );
       }
       else if (action === 'retrieve') {
@@ -1468,7 +1478,7 @@ module.exports = async function handler(req, res) {
       if (!qid) {
         await sendTelegram(chatId,
           cardTop('\u270F\uFE0F <b>EDIT</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Edit the answer to a question.\n' + BOX_V + ' Only works on answered questions.\n' + BOX_V + '\n' + BOX_V + ' <code>/edit &lt;id&gt;</code>\n' + BOX_V + '\n' + BOX_V + ' Then send the new answer text.\n' + BOX_V + ' /cancel to abort.\n' + BOX_V + '\n' + BOX_V + ' Use /all or /recent to find IDs.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
         return res.status(200).json({ ok: true });
       }
       try {
@@ -1476,13 +1486,13 @@ module.exports = async function handler(req, res) {
         if (!q) {
           await sendTelegram(chatId,
             cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question with that ID exists.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all to browse IDs.\n' + BOX_V + '\n' + cardBottom,
-            message.message_id);
+            message.message_id, REPLY_KEYBOARD);
           return res.status(200).json({ ok: true });
         }
         if (questionState(q) !== 'ANSWERED') {
           await sendTelegram(chatId,
             cardTop('\u26A0\uFE0F <b>CANNOT EDIT</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This question is <b>' + questionState(q) + '</b>.\n' + BOX_V + ' Only answered questions can be edited.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /answer ' + esc(qid) + ' to answer it first.\n' + BOX_V + '\n' + cardBottom,
-            message.message_id);
+            message.message_id, REPLY_KEYBOARD);
           return res.status(200).json({ ok: true });
         }
         await clearAnswerSession(chatId);
@@ -1495,7 +1505,7 @@ module.exports = async function handler(req, res) {
       } catch (e) {
         await sendTelegram(chatId,
           cardTop('\u26A0\uFE0F <b>EDIT FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not start edit. Check the ID.\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
       }
       return res.status(200).json({ ok: true });
     }
@@ -1508,7 +1518,7 @@ module.exports = async function handler(req, res) {
       if (!qid || !answerText) {
         await sendTelegram(chatId,
           cardTop('\uD83D\uDCA1 <b>TIP</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Answer a question in one shot:\n' + BOX_V + '\n' + BOX_V + ' <code>/answer &lt;id&gt; &lt;your answer&gt;</code>\n' + BOX_V + '\n' + BOX_V + ' Example:\n' + BOX_V + ' <code>/answer abc123 Yes, I use React!</code>\n' + BOX_V + '\n' + BOX_V + ' Or reply to a question message\n' + BOX_V + ' to answer it directly.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
         return res.status(200).json({ ok: true });
       }
       try {
@@ -1516,7 +1526,13 @@ module.exports = async function handler(req, res) {
         if (!q) {
           await sendTelegram(chatId,
             cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question with that ID exists.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /pending or /all to find IDs.\n' + BOX_V + '\n' + cardBottom,
-            message.message_id);
+            message.message_id, REPLY_KEYBOARD);
+          return res.status(200).json({ ok: true });
+        }
+        if (questionState(q) === 'ANSWERED') {
+          await sendTelegram(chatId,
+            cardTop('\u270F\uFE0F <b>ALREADY ANSWERED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This question already has an answer.\n' + BOX_V + ' Use /edit to revise the existing one.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' <code>/edit ' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
+            message.message_id, REPLY_KEYBOARD);
           return res.status(200).json({ ok: true });
         }
         await savePreviewSession(chatId, qid, answerText);
@@ -1524,7 +1540,7 @@ module.exports = async function handler(req, res) {
         var qText = q ? q.question : 'Question unavailable';
 
         await sendTelegram(chatId,
-          cardTop('\uD83D\uDC41 <b>ANSWER PREVIEW</b>') + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(qName) + '</b> asked:\n' + BOX_V + ' ' + esc(qText).slice(0, 100) + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDCAC <b>Your answer:</b>\n' + BOX_V + ' ' + esc(answerText) + '\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' <i>Review before publishing.</i>\n' + BOX_V + '\n' + cardBottom,
+          cardTop('\uD83D\uDC41 <b>ANSWER PREVIEW</b>') + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(qName) + '</b> asked:\n' + BOX_V + ' ' + esc(qText).slice(0, 100) + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDCAC <b>Answer:</b>\n' + BOX_V + ' ' + esc(answerText) + '\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' <i>Review before publishing.</i>\n' + BOX_V + '\n' + cardBottom,
           message.message_id,
           { inline_keyboard: [
             [{ text: '\u2705 Publish', callback_data: 'previewconfirm' }, { text: '\u270F\uFE0F Revise', callback_data: 'previewedit' }],
@@ -1534,7 +1550,7 @@ module.exports = async function handler(req, res) {
       } catch (e) {
         await sendTelegram(chatId,
           cardTop('\u26A0\uFE0F <b>ANSWER FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not process your answer.\n' + BOX_V + ' Check the ID and try again.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
       }
       return res.status(200).json({ ok: true });
     }
@@ -1545,7 +1561,7 @@ module.exports = async function handler(req, res) {
       if (!qid) {
         await sendTelegram(chatId,
           cardTop('\uD83D\uDCCD <b>PIN</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Pin a question to the top of\n' + BOX_V + ' your site\'s AMA section.\n' + BOX_V + '\n' + BOX_V + ' <code>/pin &lt;id&gt;</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all to find IDs.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
         return res.status(200).json({ ok: true });
       }
       try {
@@ -1553,23 +1569,29 @@ module.exports = async function handler(req, res) {
         if (!q) {
           await sendTelegram(chatId,
             cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question with that ID exists.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all to browse IDs.\n' + BOX_V + '\n' + cardBottom,
-            message.message_id);
+            message.message_id, REPLY_KEYBOARD);
+          return res.status(200).json({ ok: true });
+        }
+        if (q.dismissed) {
+          await sendTelegram(chatId,
+            cardTop('\u26A0\uFE0F <b>CANNOT PIN</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Dismissed questions are hidden\n' + BOX_V + ' from your site. Retrieve it first.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /retrieve ' + esc(qid) + ' first.\n' + BOX_V + '\n' + cardBottom,
+            message.message_id, REPLY_KEYBOARD);
           return res.status(200).json({ ok: true });
         }
         if (q.pinned) {
           await sendTelegram(chatId,
             cardTop('\uD83D\uDCCD <b>ALREADY PINNED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This question is already pinned\n' + BOX_V + ' to the top of your site.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /unpin ' + esc(qid) + ' to remove.\n' + BOX_V + '\n' + cardBottom,
-            message.message_id);
+            message.message_id, REPLY_KEYBOARD);
           return res.status(200).json({ ok: true });
         }
         await pinQuestion(qid);
         await sendTelegram(chatId,
           cardTop('\uD83D\uDCCD <b>PINNED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This question is now pinned to\n' + BOX_V + ' the top of your site\'s AMA section.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /unpin ' + esc(qid) + ' to remove.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
       } catch (e) {
         await sendTelegram(chatId,
           cardTop('\u26A0\uFE0F <b>PIN FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not pin. Check the ID.\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
       }
       return res.status(200).json({ ok: true });
     }
@@ -1580,7 +1602,7 @@ module.exports = async function handler(req, res) {
       if (!qid) {
         await sendTelegram(chatId,
           cardTop('\uD83D\uDCCD <b>UNPIN</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Remove pin from a question.\n' + BOX_V + ' It returns to normal sort order.\n' + BOX_V + '\n' + BOX_V + ' <code>/unpin &lt;id&gt;</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all to find IDs.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
         return res.status(200).json({ ok: true });
       }
       try {
@@ -1588,23 +1610,29 @@ module.exports = async function handler(req, res) {
         if (!q) {
           await sendTelegram(chatId,
             cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question with that ID exists.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all to browse IDs.\n' + BOX_V + '\n' + cardBottom,
-            message.message_id);
+            message.message_id, REPLY_KEYBOARD);
+          return res.status(200).json({ ok: true });
+        }
+        if (q.dismissed) {
+          await sendTelegram(chatId,
+            cardTop('\u26A0\uFE0F <b>CANNOT UNPIN</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Dismissed questions are hidden\n' + BOX_V + ' from your site. Retrieve it first.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /retrieve ' + esc(qid) + ' first.\n' + BOX_V + '\n' + cardBottom,
+            message.message_id, REPLY_KEYBOARD);
           return res.status(200).json({ ok: true });
         }
         if (!q.pinned) {
           await sendTelegram(chatId,
             cardTop('\uD83D\uDCCD <b>NOT PINNED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This question is not pinned.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
-            message.message_id);
+            message.message_id, REPLY_KEYBOARD);
           return res.status(200).json({ ok: true });
         }
         await unpinQuestion(qid);
         await sendTelegram(chatId,
           cardTop('\uD83D\uDCCD <b>UNPINNED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Pin removed. Question is back\n' + BOX_V + ' in normal order on your site.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
       } catch (e) {
         await sendTelegram(chatId,
           cardTop('\u26A0\uFE0F <b>UNPIN FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not unpin. Check the ID.\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
       }
       return res.status(200).json({ ok: true });
     }
@@ -1612,7 +1640,7 @@ module.exports = async function handler(req, res) {
     /* /pinned - list all pinned questions */
     if (command === '/pinned') {
       var all = await listAllQuestions();
-      var pinned = all.filter(function(q) { return q.pinned; })
+      var pinned = all.filter(function(q) { return q.pinned && questionState(q) !== 'DISMISSED'; })
         .sort(function(a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
       if (!pinned.length) {
         await sendTelegram(chatId,
@@ -1650,7 +1678,7 @@ module.exports = async function handler(req, res) {
       if (!qid) {
         await sendTelegram(chatId,
           cardTop('\uD83D\uDCA1 <b>TIP</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Look up a question by ID.\n' + BOX_V + '\n' + BOX_V + ' <code>/get &lt;id&gt;</code>\n' + BOX_V + '\n' + BOX_V + ' Example:\n' + BOX_V + ' <code>/get abc123-def456</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all to browse all IDs.\n' + BOX_V + ' Use /lookup for interactive mode.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
         return res.status(200).json({ ok: true });
       }
       await sendFullDetailCard(chatId, qid, message.message_id);
@@ -1688,7 +1716,7 @@ module.exports = async function handler(req, res) {
       if (!qid) {
         await sendTelegram(chatId,
           cardTop('\uD83D\uDDD1\uFE0F <b>DELETE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Delete a single question permanently.\n' + BOX_V + '\n' + BOX_V + ' <code>/delete &lt;id&gt;</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all or /pending to find IDs.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
         return res.status(200).json({ ok: true });
       }
       try {
@@ -1696,7 +1724,7 @@ module.exports = async function handler(req, res) {
         if (!q) {
           await sendTelegram(chatId,
             cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question with that ID exists.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all to browse IDs.\n' + BOX_V + '\n' + cardBottom,
-            message.message_id);
+            message.message_id, REPLY_KEYBOARD);
           return res.status(200).json({ ok: true });
         }
         await sendTelegram(chatId,
@@ -1710,7 +1738,7 @@ module.exports = async function handler(req, res) {
       } catch (e) {
         await sendTelegram(chatId,
           cardTop('\u26A0\uFE0F <b>DELETE FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not look up the question.\n' + BOX_V + ' Check the ID and try again.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
       }
       return res.status(200).json({ ok: true });
     }
@@ -1721,7 +1749,7 @@ module.exports = async function handler(req, res) {
       if (!all.length) {
         await sendTelegram(chatId,
           cardTop('\uD83D\uDCEC <b>NOTHING TO DELETE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No questions in the database.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
         return res.status(200).json({ ok: true });
       }
       var count = all.length;
@@ -1742,7 +1770,7 @@ module.exports = async function handler(req, res) {
       if (!qid) {
         await sendTelegram(chatId,
           cardTop('\uD83D\uDE48 <b>DISMISS</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Hide a question from your site.\n' + BOX_V + ' Data is preserved safely.\n' + BOX_V + '\n' + BOX_V + ' <code>/dismiss &lt;id&gt;</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all or /pending to find IDs.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
         return res.status(200).json({ ok: true });
       }
       try {
@@ -1750,30 +1778,30 @@ module.exports = async function handler(req, res) {
         if (!q) {
           await sendTelegram(chatId,
             cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question with that ID exists.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all to browse IDs.\n' + BOX_V + '\n' + cardBottom,
-            message.message_id);
+            message.message_id, REPLY_KEYBOARD);
           return res.status(200).json({ ok: true });
         }
         if (q.dismissed) {
           await sendTelegram(chatId,
             cardTop('\uD83D\uDE48 <b>ALREADY DISMISSED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This question is already dismissed.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /retrieve ' + esc(qid) + ' to restore.\n' + BOX_V + '\n' + cardBottom,
-            message.message_id);
+            message.message_id, REPLY_KEYBOARD);
           return res.status(200).json({ ok: true });
         }
         await dismissQuestion(qid);
-        var card = buildCardForQuestion({ id: q.id, name: q.name, question: q.question, answer: q.answer, answered: q.answered, dismissed: true, pinned: q.pinned, createdAt: q.createdAt, answeredAt: q.answeredAt, editedAt: q.editedAt, votes: q.votes, reactions: q.reactions });
         await sendTelegram(chatId,
-          cardTop('\uD83D\uDE48 <b>DISMISSED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:\n' + BOX_V + ' ' + esc(q.question).slice(0, 120) + '\n' + BOX_V + '\n' + BOX_V + ' Hidden from your site.\n' + BOX_V + ' \u21A9\uFE0F Use Retrieve to restore it.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + ' \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n' + BOX_V + '\n' + cardBottom,
+          cardTop('\uD83D\uDE48 <b>DISMISSED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:\n' + BOX_V + ' ' + esc(q.question).slice(0, 120) + '\n' + BOX_V + '\n' + BOX_V + ' Hidden from your site.\n' + BOX_V + ' Data preserved safely.\n' + BOX_V + ' \u21A9\uFE0F Use Retrieve to restore it.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + ' \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n' + BOX_V + '\n' + cardBottom,
           message.message_id,
           { inline_keyboard: [
             [{ text: '\u21A9\uFE0F Retrieve', callback_data: 'retrieve:' + qid }],
             [{ text: '\uD83D\uDCAC Answer', callback_data: 'answer:' + qid }],
+            [{ text: q.pinned ? '\uD83D\uDCCD Unpin' : '\uD83D\uDCCD Pin', callback_data: (q.pinned ? 'unpin:' : 'pin:') + qid }],
             [{ text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + qid }]
           ] }
         );
       } catch (e) {
         await sendTelegram(chatId,
           cardTop('\u26A0\uFE0F <b>DISMISS FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not dismiss. Check the ID.\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
       }
       return res.status(200).json({ ok: true });
     }
@@ -1786,7 +1814,7 @@ module.exports = async function handler(req, res) {
       if (!dismissed.length) {
         await sendTelegram(chatId,
           cardTop('\u2705 <b>NO DISMISSED QUESTIONS</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Nothing has been dismissed.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
         return res.status(200).json({ ok: true });
       }
       var result = buildDismissedPageText(dismissed, 1);
@@ -1801,7 +1829,7 @@ module.exports = async function handler(req, res) {
       if (!qid) {
         await sendTelegram(chatId,
           cardTop('\uD83D\uDCA1 <b>TIP</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Restore a dismissed question.\n' + BOX_V + '\n' + BOX_V + ' <code>/retrieve &lt;id&gt;</code>\n' + BOX_V + '\n' + BOX_V + ' Use /dismissed to browse all\n' + BOX_V + ' dismissed question IDs.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
         return res.status(200).json({ ok: true });
       }
       try {
@@ -1809,13 +1837,13 @@ module.exports = async function handler(req, res) {
         if (!q) {
           await sendTelegram(chatId,
             cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question with that ID exists.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /dismissed to browse IDs.\n' + BOX_V + '\n' + cardBottom,
-            message.message_id);
+            message.message_id, REPLY_KEYBOARD);
           return res.status(200).json({ ok: true });
         }
         if (questionState(q) !== 'DISMISSED') {
           await sendTelegram(chatId,
             cardTop('\u26A0\uFE0F <b>NOT DISMISSED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This question is currently\n' + BOX_V + ' <b>' + questionState(q) + '</b> - only dismissed\n' + BOX_V + ' questions can be retrieved.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
-            message.message_id);
+            message.message_id, REPLY_KEYBOARD);
           return res.status(200).json({ ok: true });
         }
         var result = await retrieveQuestion(qid);
@@ -1825,7 +1853,7 @@ module.exports = async function handler(req, res) {
             message.message_id,
             { inline_keyboard: [
               [{ text: '\u270F\uFE0F Edit', callback_data: 'edit:' + qid }],
-              [{ text: '\uD83D\uDCCD Pin', callback_data: 'pin:' + qid }],
+              [{ text: q.pinned ? '\uD83D\uDCCD Unpin' : '\uD83D\uDCCD Pin', callback_data: (q.pinned ? 'unpin:' : 'pin:') + qid }],
               [
                 { text: '\uD83D\uDE48 Dismiss', callback_data: 'dismiss:' + qid },
                 { text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + qid }
@@ -1838,6 +1866,7 @@ module.exports = async function handler(req, res) {
             message.message_id,
             { inline_keyboard: [
               [{ text: '\uD83D\uDCAC Answer', callback_data: 'answer:' + qid }],
+              [{ text: q.pinned ? '\uD83D\uDCCD Unpin' : '\uD83D\uDCCD Pin', callback_data: (q.pinned ? 'unpin:' : 'pin:') + qid }],
               [
                 { text: '\uD83D\uDE48 Dismiss', callback_data: 'dismiss:' + qid },
                 { text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + qid }
@@ -1849,7 +1878,7 @@ module.exports = async function handler(req, res) {
       } catch (e) {
         await sendTelegram(chatId,
           cardTop('\u26A0\uFE0F <b>RETRIEVE FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not retrieve the question.\n' + BOX_V + ' Check the ID and try again.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
         return res.status(200).json({ ok: true });
       }
     }
@@ -1861,7 +1890,7 @@ module.exports = async function handler(req, res) {
       if (!dismissed.length) {
         await sendTelegram(chatId,
           cardTop('\u2705 <b>NOTHING TO RETRIEVE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No dismissed questions found.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
+          message.message_id, REPLY_KEYBOARD);
         return res.status(200).json({ ok: true });
       }
       var withAnswer = dismissed.filter(function(q) { return q.answer && String(q.answer).trim().length > 0; }).length;
@@ -1896,7 +1925,7 @@ module.exports = async function handler(req, res) {
           var qText = q ? q.question : 'Question unavailable';
 
           await sendTelegram(chatId,
-            cardTop('\uD83D\uDC41 <b>ANSWER PREVIEW</b>') + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(qName) + '</b> asked:\n' + BOX_V + ' ' + esc(qText).slice(0, 100) + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDCAC <b>Your answer:</b>\n' + BOX_V + ' ' + esc(text) + '\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(answerQid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' <i>Review before publishing.</i>\n' + BOX_V + '\n' + cardBottom,
+            cardTop('\uD83D\uDC41 <b>ANSWER PREVIEW</b>') + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(qName) + '</b> asked:\n' + BOX_V + ' ' + esc(qText).slice(0, 100) + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDCAC <b>Answer:</b>\n' + BOX_V + ' ' + esc(text) + '\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(answerQid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' <i>Review before publishing.</i>\n' + BOX_V + '\n' + cardBottom,
             message.message_id,
             { inline_keyboard: [
               [{ text: '\u2705 Publish', callback_data: 'previewconfirm' }, { text: '\u270F\uFE0F Revise', callback_data: 'previewedit' }],
@@ -1936,7 +1965,7 @@ module.exports = async function handler(req, res) {
         } else {
           await sendTelegram(chatId,
             cardTop('\u26A0\uFE0F <b>INVALID ID</b>') + '\n' + BOX_V + '\n' + BOX_V + ' That ID looks too short.\n' + BOX_V + ' Try /lookup again with a full ID.\n' + BOX_V + '\n' + cardBottom,
-            message.message_id);
+            message.message_id, REPLY_KEYBOARD);
         }
         return res.status(200).json({ ok: true, lookup: pastedId });
       }
@@ -1946,7 +1975,7 @@ module.exports = async function handler(req, res) {
     if (text.startsWith('/')) {
       await sendTelegram(chatId,
         cardTop('\u2753 <b>UNKNOWN COMMAND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' That command doesn\'t exist.\n' + BOX_V + '\n' + BOX_V + ' Type /help to see all commands.\n' + BOX_V + '\n' + cardBottom,
-        message.message_id);
+        message.message_id, REPLY_KEYBOARD);
       return res.status(200).json({ ok: true });
     }
 
@@ -1957,7 +1986,7 @@ module.exports = async function handler(req, res) {
     if (!questionId) {
       await sendTelegram(chatId,
         cardTop('\uD83D\uDCA1 <b>TIP</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Tap Answer or reply to a bot\n' + BOX_V + ' message to answer a question.\n' + BOX_V + '\n' + BOX_V + ' Or type /help for all commands.\n' + BOX_V + '\n' + cardBottom,
-        message.message_id);
+        message.message_id, REPLY_KEYBOARD);
       return res.status(200).json({ ok: true, ignored: 'no question id' });
     }
 
@@ -1968,7 +1997,7 @@ module.exports = async function handler(req, res) {
     var qText = q ? q.question : 'Question unavailable';
 
     await sendTelegram(chatId,
-      cardTop('\uD83D\uDC41 <b>ANSWER PREVIEW</b>') + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(qName) + '</b> asked:\n' + BOX_V + ' ' + esc(qText).slice(0, 100) + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDCAC <b>Your answer:</b>\n' + BOX_V + ' ' + esc(text) + '\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(questionId) + '</code>\n' + BOX_V + '\n' + BOX_V + ' <i>Review before publishing.</i>\n' + BOX_V + '\n' + cardBottom,
+      cardTop('\uD83D\uDC41 <b>ANSWER PREVIEW</b>') + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(qName) + '</b> asked:\n' + BOX_V + ' ' + esc(qText).slice(0, 100) + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDCAC <b>Answer:</b>\n' + BOX_V + ' ' + esc(text) + '\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(questionId) + '</code>\n' + BOX_V + '\n' + BOX_V + ' <i>Review before publishing.</i>\n' + BOX_V + '\n' + cardBottom,
       message.message_id,
       { inline_keyboard: [
         [{ text: '\u2705 Publish', callback_data: 'previewconfirm' }, { text: '\u270F\uFE0F Revise', callback_data: 'previewedit' }],

@@ -71,10 +71,11 @@ module.exports = async function handler(req, res) {
       BOX_BL + BOX_H + '\u26A1 <i>tap Answer or reply</i>' + BOX_H.repeat(10) + BOX_BR
     ].join('\n');
 
-    // Action buttons - clean 2-row layout
+    // Action buttons - matches buildCardForQuestion() UNANSWERED layout
     var replyMarkup = {
       inline_keyboard: [
         [{ text: '\uD83D\uDCAC Answer', callback_data: 'answer:' + questionId }],
+        [{ text: '\uD83D\uDCCD Pin', callback_data: 'pin:' + questionId }],
         [
           { text: '\uD83D\uDE48 Dismiss', callback_data: 'dismiss:' + questionId },
           { text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + questionId }
