@@ -1,5 +1,5 @@
 /* ============================================================
- api/telegram-webhook.js - Vercel serverless function v4.1
+ api/telegram-webhook.js - Vercel serverless function v4.2
  The brain of the AMA Telegram interaction.
 
  Handles:
@@ -8,7 +8,8 @@
  - Reply-to-message answers (free-form text)
  - /start, /help, /stats, /pending, /refresh, /recent
  - /search, /export, /pin, /answer, /get, /lookup, /all
- - /dismissed, /retrieve, /retrieveall, /deleteall
+ - /dismiss, /dismissed, /retrieve, /retrieveall
+ - /delete, /deleteall, /edit, /pinned
  - Answer preview flow (preview -> confirm -> publish)
  - Reaction summary in detail cards
  - Telegram Reply Keyboard for quick actions
@@ -448,7 +449,7 @@ async function buildWelcomeText() {
   } catch (e) {}
 
   return [
-    cardTop('\uD83E\uDD16 <b>AMA BOT v4.1</b>'),
+    cardTop('\uD83E\uDD16 <b>AMA BOT v4.2</b>'),
     BOX_V,
     BOX_V + ' Your portfolio AMA is live.',
     BOX_V + ' Every visitor question arrives here',
@@ -486,9 +487,24 @@ var HELP_TEXT = [
   BOX_V + '     Abort active session (answer, edit,',
   BOX_V + '     lookup). Returns to normal mode.',
   BOX_V,
+  BOX_V + ' <b>\u270F\uFE0F /edit &lt;id&gt;</b>',
+  BOX_V + ' Edit the answer to a question.',
+  BOX_V + ' Only works on answered questions.',
+  BOX_V + ' Send new answer as next message.',
+  BOX_V + '   \u21B3 <b>/cancel</b>',
+  BOX_V + '     Abort the edit session.',
+  BOX_V,
+  BOX_V + ' <b>\uD83D\uDDD1 /delete &lt;id&gt;</b>',
+  BOX_V + ' Delete a single question permanently.',
+  BOX_V + ' \u26A0\uFE0F Confirms first. Cannot be undone.',
+  BOX_V,
   BOX_V + ' <b>\uD83D\uDDD1 /deleteall</b>',
   BOX_V + ' Permanently delete ALL questions.',
   BOX_V + ' \u26A0\uFE0F Confirms first. Cannot be undone.',
+  BOX_V,
+  BOX_V + ' <b>\uD83D\uDE48 /dismiss &lt;id&gt;</b>',
+  BOX_V + ' Hide one question from your site.',
+  BOX_V + ' Data preserved. Retrieve later.',
   BOX_V,
   BOX_V + ' <b>\uD83D\uDE48 /dismissed [page]</b>',
   BOX_V + ' Browse all dismissed (hidden) questions.',
@@ -522,6 +538,8 @@ var HELP_TEXT = [
   BOX_V + '   \u21B3 <b>/unpin &lt;id&gt;</b>',
   BOX_V + '     Remove pin. Question returns to',
   BOX_V + '     normal sort order on your site.',
+  BOX_V + '   \u21B3 <b>/pinned</b>',
+  BOX_V + '     List all currently pinned questions.',
   BOX_V,
   BOX_V + ' <b>\u23F3 /pending</b>',
   BOX_V + ' List all unanswered questions waiting',
@@ -1386,24 +1404,6 @@ module.exports = async function handler(req, res) {
           cardTop('\u2705 <b>CANCELLED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Cleared: <b>' + sessions.join(', ') + '</b>\n' + BOX_V + ' session' + (sessions.length > 1 ? 's' : '') + '. You are back\n' + BOX_V + ' to normal mode.\n' + BOX_V + '\n' + cardBottom,
           message.message_id, REPLY_KEYBOARD);
       }
-      var sessions = [];
-      if (editSess && !isSessionExpired(editSess)) sessions.push('edit');
-      if (lookupSess && !isSessionExpired(lookupSess)) sessions.push('lookup');
-      if (previewSess && !isSessionExpired(previewSess)) sessions.push('preview');
-      if (answerSess && !isSessionExpired(answerSess)) sessions.push('answer');
-      await clearEditSession(chatId);
-      await clearLookupSession(chatId);
-      await clearPreviewSession(chatId);
-      await clearAnswerSession(chatId);
-      if (sessions.length === 0) {
-        await sendTelegram(chatId,
-          cardTop('\u2705 <b>NO ACTIVE SESSION</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No session was running.\n' + BOX_V + ' You are already in normal mode.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
-      } else {
-        await sendTelegram(chatId,
-          cardTop('\u2705 <b>CANCELLED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Cleared: <b>' + sessions.join(', ') + '</b>\n' + BOX_V + ' session' + (sessions.length > 1 ? 's' : '') + '. You are back\n' + BOX_V + ' to normal mode.\n' + BOX_V + '\n' + cardBottom,
-          message.message_id);
-      }
       return res.status(200).json({ ok: true });
     }
 
@@ -1459,6 +1459,44 @@ module.exports = async function handler(req, res) {
     /* /export */
     if (command === '/export') {
       await exportQuestions(chatId, message.message_id);
+      return res.status(200).json({ ok: true });
+    }
+
+    /* /edit <id> - enter edit mode for an answered question */
+    if (command === '/edit') {
+      var qid = text.split(/\s+/)[1];
+      if (!qid) {
+        await sendTelegram(chatId,
+          cardTop('\u270F\uFE0F <b>EDIT</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Edit the answer to a question.\n' + BOX_V + ' Only works on answered questions.\n' + BOX_V + '\n' + BOX_V + ' <code>/edit &lt;id&gt;</code>\n' + BOX_V + '\n' + BOX_V + ' Then send the new answer text.\n' + BOX_V + ' /cancel to abort.\n' + BOX_V + '\n' + BOX_V + ' Use /all or /recent to find IDs.\n' + BOX_V + '\n' + cardBottom,
+          message.message_id);
+        return res.status(200).json({ ok: true });
+      }
+      try {
+        var q = await getQuestion(qid);
+        if (!q) {
+          await sendTelegram(chatId,
+            cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question with that ID exists.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all to browse IDs.\n' + BOX_V + '\n' + cardBottom,
+            message.message_id);
+          return res.status(200).json({ ok: true });
+        }
+        if (questionState(q) !== 'ANSWERED') {
+          await sendTelegram(chatId,
+            cardTop('\u26A0\uFE0F <b>CANNOT EDIT</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This question is <b>' + questionState(q) + '</b>.\n' + BOX_V + ' Only answered questions can be edited.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /answer ' + esc(qid) + ' to answer it first.\n' + BOX_V + '\n' + cardBottom,
+            message.message_id);
+          return res.status(200).json({ ok: true });
+        }
+        await clearAnswerSession(chatId);
+        await clearLookupSession(chatId);
+        await clearPreviewSession(chatId);
+        await saveEditSession(chatId, qid);
+        await sendTelegram(chatId,
+          cardTop('\u270F\uFE0F <b>EDIT MODE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Send the new answer text for:\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:\n' + BOX_V + ' ' + esc(q.question).slice(0, 120) + '\n' + BOX_V + '\n' + BOX_V + ' <i>Type your new answer as\n' + BOX_V + ' your next message.</i>\n' + BOX_V + '\n' + BOX_V + ' Send /cancel to abort.\n' + BOX_V + '\n' + cardBottom,
+          message.message_id, REPLY_KEYBOARD);
+      } catch (e) {
+        await sendTelegram(chatId,
+          cardTop('\u26A0\uFE0F <b>EDIT FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not start edit. Check the ID.\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
+          message.message_id);
+      }
       return res.status(200).json({ ok: true });
     }
 
@@ -1571,6 +1609,41 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    /* /pinned - list all pinned questions */
+    if (command === '/pinned') {
+      var all = await listAllQuestions();
+      var pinned = all.filter(function(q) { return q.pinned; })
+        .sort(function(a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
+      if (!pinned.length) {
+        await sendTelegram(chatId,
+          cardTop('\uD83D\uDCCD <b>NO PINNED QUESTIONS</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Nothing is pinned right now.\n' + BOX_V + '\n' + BOX_V + ' Use /pin &lt;id&gt; to pin a question\n' + BOX_V + ' to the top of your site.\n' + BOX_V + '\n' + cardBottom,
+          message.message_id, REPLY_KEYBOARD);
+        return res.status(200).json({ ok: true });
+      }
+      var lines = [
+        cardTop('\uD83D\uDCCD <b>PINNED QUESTIONS</b> (' + pinned.length + ')'),
+        BOX_V
+      ];
+      for (var idx = 0; idx < pinned.length; idx++) {
+        var q = pinned[idx];
+        var st = questionState(q);
+        var stateEmoji = st === 'ANSWERED' ? '\u2705' : st === 'DISMISSED' ? '\uD83D\uDE48' : '\u23F3';
+        var qAge = timeAgo(q.createdAt);
+        lines.push(BOX_V + ' ' + stateEmoji + ' <b>' + esc(q.name) + '</b>' + (qAge ? ' \u00B7 ' + esc(qAge) : ''));
+        lines.push(BOX_V + ' \uD83D\uDCAC ' + esc(q.question).slice(0, 120));
+        if (st === 'ANSWERED' && q.answer) {
+          lines.push(BOX_V + ' \u2192 ' + esc(q.answer).slice(0, 80));
+        }
+        if (q.votes > 0) lines.push(BOX_V + ' \uD83D\uDC4D ' + q.votes + ' votes');
+        lines.push(BOX_V + ' \uD83C\uDD94 <code>' + esc(q.id) + '</code>');
+        lines.push(BOX_V);
+      }
+      lines.push(BOX_V + ' /unpin &lt;id&gt; to remove a pin');
+      lines.push(cardBottom);
+      await sendTelegram(chatId, lines.join('\n'), message.message_id, REPLY_KEYBOARD);
+      return res.status(200).json({ ok: true });
+    }
+
     /* /get <id> */
     if (command === '/get') {
       var qid = text.split(/\s+/)[1];
@@ -1609,6 +1682,39 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    /* /delete <id> - delete a single question with confirmation */
+    if (command === '/delete') {
+      var qid = text.split(/\s+/)[1];
+      if (!qid) {
+        await sendTelegram(chatId,
+          cardTop('\uD83D\uDDD1\uFE0F <b>DELETE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Delete a single question permanently.\n' + BOX_V + '\n' + BOX_V + ' <code>/delete &lt;id&gt;</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all or /pending to find IDs.\n' + BOX_V + '\n' + cardBottom,
+          message.message_id);
+        return res.status(200).json({ ok: true });
+      }
+      try {
+        var q = await getQuestion(qid);
+        if (!q) {
+          await sendTelegram(chatId,
+            cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question with that ID exists.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all to browse IDs.\n' + BOX_V + '\n' + cardBottom,
+            message.message_id);
+          return res.status(200).json({ ok: true });
+        }
+        await sendTelegram(chatId,
+          cardTop('\u26A0\uFE0F <b>CONFIRM DELETE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Permanently delete this question?\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:\n' + BOX_V + ' ' + esc(q.question).slice(0, 120) + '\n' + BOX_V + '\n' + BOX_V + ' \u26A0\uFE0F <i>This cannot be undone.</i>\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
+          message.message_id,
+          { inline_keyboard: [[
+            { text: '\u2705 Yes, Delete', callback_data: 'confirmdelete:' + qid },
+            { text: '\u274C Cancel', callback_data: 'canceldelete:' + qid }
+          ]] }
+        );
+      } catch (e) {
+        await sendTelegram(chatId,
+          cardTop('\u26A0\uFE0F <b>DELETE FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not look up the question.\n' + BOX_V + ' Check the ID and try again.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
+          message.message_id);
+      }
+      return res.status(200).json({ ok: true });
+    }
+
     /* /deleteall */
     if (command === '/deleteall') {
       var all = await listAllQuestions();
@@ -1627,6 +1733,48 @@ module.exports = async function handler(req, res) {
           { text: '\u274C Cancel', callback_data: 'canceldeleteall' }
         ]] }
       );
+      return res.status(200).json({ ok: true });
+    }
+
+    /* /dismiss <id> - dismiss a single question by ID */
+    if (command === '/dismiss') {
+      var qid = text.split(/\s+/)[1];
+      if (!qid) {
+        await sendTelegram(chatId,
+          cardTop('\uD83D\uDE48 <b>DISMISS</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Hide a question from your site.\n' + BOX_V + ' Data is preserved safely.\n' + BOX_V + '\n' + BOX_V + ' <code>/dismiss &lt;id&gt;</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all or /pending to find IDs.\n' + BOX_V + '\n' + cardBottom,
+          message.message_id);
+        return res.status(200).json({ ok: true });
+      }
+      try {
+        var q = await getQuestion(qid);
+        if (!q) {
+          await sendTelegram(chatId,
+            cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question with that ID exists.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /all to browse IDs.\n' + BOX_V + '\n' + cardBottom,
+            message.message_id);
+          return res.status(200).json({ ok: true });
+        }
+        if (q.dismissed) {
+          await sendTelegram(chatId,
+            cardTop('\uD83D\uDE48 <b>ALREADY DISMISSED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This question is already dismissed.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' Use /retrieve ' + esc(qid) + ' to restore.\n' + BOX_V + '\n' + cardBottom,
+            message.message_id);
+          return res.status(200).json({ ok: true });
+        }
+        await dismissQuestion(qid);
+        var card = buildCardForQuestion({ id: q.id, name: q.name, question: q.question, answer: q.answer, answered: q.answered, dismissed: true, pinned: q.pinned, createdAt: q.createdAt, answeredAt: q.answeredAt, editedAt: q.editedAt, votes: q.votes, reactions: q.reactions });
+        await sendTelegram(chatId,
+          cardTop('\uD83D\uDE48 <b>DISMISSED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 <b>' + esc(q.name) + '</b> asked:\n' + BOX_V + ' ' + esc(q.question).slice(0, 120) + '\n' + BOX_V + '\n' + BOX_V + ' Hidden from your site.\n' + BOX_V + ' \u21A9\uFE0F Use Retrieve to restore it.\n' + BOX_V + '\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + ' \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n' + BOX_V + '\n' + cardBottom,
+          message.message_id,
+          { inline_keyboard: [
+            [{ text: '\u21A9\uFE0F Retrieve', callback_data: 'retrieve:' + qid }],
+            [{ text: '\uD83D\uDCAC Answer', callback_data: 'answer:' + qid }],
+            [{ text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + qid }]
+          ] }
+        );
+      } catch (e) {
+        await sendTelegram(chatId,
+          cardTop('\u26A0\uFE0F <b>DISMISS FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not dismiss. Check the ID.\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
+          message.message_id);
+      }
       return res.status(200).json({ ok: true });
     }
 
