@@ -1286,7 +1286,7 @@ module.exports = async function handler(req, res) {
           await sendTelegram(cbChatId,
             cardTop('\u270F\uFE0F <b>REVISE ANSWER</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Send the corrected answer for:\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' <i>Type your revised answer as\n' + BOX_V + ' your next message.</i>\n' + BOX_V + '\n' + cardBottom
           );
-        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not enter edit mode \u2014 use /edit <id>'); }
+        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not enter edit mode \u2014 use /edit id'); }
       }
       else if (action === 'previewcancel') {
         await clearPreviewSession(cbChatId);
@@ -1404,7 +1404,7 @@ module.exports = async function handler(req, res) {
           var detailLines = BOX_V + ' Successfully dismissed <b>' + dismissedCount + '</b> question' + (dismissedCount === 1 ? '' : 's') + '.\n';
           if (answeredCount > 0) detailLines += BOX_V + ' \u2705 <b>' + answeredCount + '</b> answered \u2192 hidden (retrieve \u2192 back on site)\n';
           if (unansweredCount > 0) detailLines += BOX_V + ' \u23F3 <b>' + unansweredCount + '</b> unanswered \u2192 hidden (retrieve \u2192 back to pending)\n';
-          detailLines += BOX_V + '\n' + BOX_V + ' Use /retrieveall or /retrieve <id>\n';
+          detailLines += BOX_V + '\n' + BOX_V + ' Use /retrieveall or /retrieve &lt;id&gt;\n';
           detailLines += BOX_V + ' to restore any question.\n';
           await editMessage(cbChatId, cbMessageId,
             cardTop('\uD83D\uDE48 <b>ALL DISMISSED</b>') + '\n' + BOX_V + '\n' + detailLines + BOX_V + '\n' + BOX_V + ' \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n' + BOX_V + '\n' + cardBottom
@@ -1876,7 +1876,7 @@ module.exports = async function handler(req, res) {
         if (unansweredCount > 0) detailLine += '\n' + BOX_V + ' \u23F3 ' + unansweredCount + ' unanswered \u2192 retrieve restores to pending';
 
         await sendTelegram(chatId,
-          cardTop('\uD83D\uDE48 <b>CONFIRM DISMISS ALL</b>') + '\n' + BOX_V + '\n' + detailLine + '\n' + BOX_V + '\n' + BOX_V + ' Data is preserved safely.\n' + BOX_V + ' Retrieve any question later with\n' + BOX_V + ' /retrieveall or /retrieve <id>.\n' + BOX_V + '\n' + cardBottom,
+          cardTop('\uD83D\uDE48 <b>CONFIRM DISMISS ALL</b>') + '\n' + BOX_V + '\n' + detailLine + '\n' + BOX_V + '\n' + BOX_V + ' Data is preserved safely.\n' + BOX_V + ' Retrieve any question later with\n' + BOX_V + ' /retrieveall or /retrieve &lt;id&gt;.\n' + BOX_V + '\n' + cardBottom,
           message.message_id,
           { inline_keyboard: [[
             { text: '\uD83D\uDE48 Yes, Dismiss All', callback_data: 'confirmdismissall' },
