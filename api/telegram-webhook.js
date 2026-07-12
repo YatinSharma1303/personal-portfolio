@@ -8,7 +8,7 @@
  - Reply-to-message answers (free-form text)
  - /start, /help, /stats, /pending, /refresh, /recent
  - /search, /export, /pin, /answer, /get, /lookup, /all
- - /dismiss, /dismissed, /retrieve, /retrieveall
+ - /dismiss, /dismissall, /dismissed, /retrieve, /retrieveall
  - /delete, /deleteall, /edit, /pinned
  - Answer preview flow (preview -> confirm -> publish)
  - Reaction summary in detail cards
@@ -540,6 +540,9 @@ var HELP_TEXT = [
   BOX_V + ' <b>\uD83D\uDE48 /dismiss &lt;id&gt;</b>',
   BOX_V + ' Hide one question from your site.',
   BOX_V + ' Data preserved. Retrieve later.',
+  BOX_V + '   \u21B3 <b>/dismissall</b>',
+  BOX_V + '     Hide ALL active questions at once.',
+  BOX_V + '     Confirms first. Shows answered vs pending.',
   BOX_V,
   BOX_V + ' <b>\uD83D\uDE48 /dismissed [page]</b>',
   BOX_V + ' Browse all dismissed (hidden) questions.',
@@ -1239,8 +1242,8 @@ module.exports = async function handler(req, res) {
       else if (action === 'pin') {
         try {
           var q = await getQuestion(questionId);
-          if (!q) { await answerCallback(callback.id, '\u26A0\uFE0F Question not found'); return res.status(200).json({ ok: true }); }
-          if (q.dismissed) { await answerCallback(callback.id, '\u26A0\uFE0F Cannot pin — question is dismissed. Retrieve it first.'); return res.status(200).json({ ok: true }); }
+          if (!q) { await answerCallback(callback.id, '\u26A0\uFE0F Question not found \u2014 it may have been deleted'); return res.status(200).json({ ok: true }); }
+          if (q.dismissed) { await answerCallback(callback.id, '\u26A0\uFE0F Cannot pin \u2014 question is dismissed. Retrieve it first.'); return res.status(200).json({ ok: true }); }
           if (q.pinned) { await answerCallback(callback.id, '\uD83D\uDCCD Already pinned'); return res.status(200).json({ ok: true }); }
           await pinQuestion(questionId);
           await answerCallback(callback.id, '\uD83D\uDCCD Pinned to top on site');
@@ -1250,8 +1253,8 @@ module.exports = async function handler(req, res) {
       else if (action === 'unpin') {
         try {
           var q = await getQuestion(questionId);
-          if (!q) { await answerCallback(callback.id, '\u26A0\uFE0F Question not found'); return res.status(200).json({ ok: true }); }
-          if (q.dismissed) { await answerCallback(callback.id, '\u26A0\uFE0F Cannot unpin — question is dismissed. Retrieve it first.'); return res.status(200).json({ ok: true }); }
+          if (!q) { await answerCallback(callback.id, '\u26A0\uFE0F Question not found \u2014 it may have been deleted'); return res.status(200).json({ ok: true }); }
+          if (q.dismissed) { await answerCallback(callback.id, '\u26A0\uFE0F Cannot unpin \u2014 question is dismissed. Retrieve it first.'); return res.status(200).json({ ok: true }); }
           if (!q.pinned) { await answerCallback(callback.id, '\uD83D\uDCCD Not pinned'); return res.status(200).json({ ok: true }); }
           await unpinQuestion(questionId);
           await answerCallback(callback.id, '\uD83D\uDCCD Unpinned');
@@ -1265,7 +1268,7 @@ module.exports = async function handler(req, res) {
           if (!session || !session.fields || isSessionExpired(session)) { await clearPreviewSession(cbChatId); await answerCallback(callback.id, '\u26A0\uFE0F Session expired - try answering again'); return res.status(200).json({ ok: true }); }
           var qid = session.fields.questionId && session.fields.questionId.stringValue;
           var ansText = session.fields.answerText && session.fields.answerText.stringValue;
-          if (!qid || !ansText) { await clearPreviewSession(cbChatId); await answerCallback(callback.id, '\u26A0\uFE0F Session data missing'); return res.status(200).json({ ok: true }); }
+          if (!qid || !ansText) { await clearPreviewSession(cbChatId); await answerCallback(callback.id, '\u26A0\uFE0F Session data missing \u2014 try answering again'); return res.status(200).json({ ok: true }); }
           await answerQuestion(qid, ansText);
           await clearPreviewSession(cbChatId);
           await answerCallback(callback.id, '\u2705 Published!');
@@ -1283,7 +1286,7 @@ module.exports = async function handler(req, res) {
           await sendTelegram(cbChatId,
             cardTop('\u270F\uFE0F <b>REVISE ANSWER</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Send the corrected answer for:\n' + BOX_V + ' \uD83C\uDD94 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + BOX_V + ' <i>Type your revised answer as\n' + BOX_V + ' your next message.</i>\n' + BOX_V + '\n' + cardBottom
           );
-        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not enter edit mode'); }
+        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not enter edit mode \u2014 use /edit <id>'); }
       }
       else if (action === 'previewcancel') {
         await clearPreviewSession(cbChatId);
@@ -1296,7 +1299,7 @@ module.exports = async function handler(req, res) {
         try {
           var result = await retrieveQuestion(questionId);
           if (result.restoredAs === 'not_dismissed') {
-            await answerCallback(callback.id, '\u26A0\uFE0F Already active');
+            await answerCallback(callback.id, '\u26A0\uFE0F Already active (not dismissed)');
             var q = result.question;
             var card = buildCardForQuestion(q);
             await editMessage(cbChatId, cbMessageId, card.text, card.replyMarkup);
@@ -1375,6 +1378,34 @@ module.exports = async function handler(req, res) {
         await answerCallback(callback.id, 'Retrieve all cancelled');
         await editMessage(cbChatId, cbMessageId,
           cardTop('\u2705 <b>CANCELLED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Questions remain dismissed.\n' + BOX_V + ' Nothing was changed.\n' + BOX_V + '\n' + cardBottom
+        );
+      }
+      // DISMISS ALL confirmation flow
+      else if (action === 'confirmdismissall') {
+        try {
+          var all = await listAllQuestions();
+          var active = all.filter(function(q) { return questionState(q) !== 'DISMISSED'; });
+          var answeredCount = 0, unansweredCount = 0;
+          for (var di = 0; di < active.length; di++) {
+            var st = questionState(active[di]);
+            if (st === 'ANSWERED') answeredCount++; else unansweredCount++;
+            try { await dismissQuestion(active[di].id); } catch (e) {}
+          }
+          await answerCallback(callback.id, '\uD83D\uDE48 All dismissed!');
+          var detailLines = BOX_V + ' All active questions hidden from your site.\n';
+          if (answeredCount > 0) detailLines += BOX_V + ' \u2705 <b>' + answeredCount + '</b> answered \u2192 hidden (retrieve \u2192 back on site)\n';
+          if (unansweredCount > 0) detailLines += BOX_V + ' \u23F3 <b>' + unansweredCount + '</b> unanswered \u2192 hidden (retrieve \u2192 back to pending)\n';
+          detailLines += BOX_V + '\n' + BOX_V + ' Use /retrieveall or /retrieve <id>\n';
+          detailLines += BOX_V + ' to restore any question.\n';
+          await editMessage(cbChatId, cbMessageId,
+            cardTop('\uD83D\uDE48 <b>ALL DISMISSED</b>') + '\n' + BOX_V + '\n' + detailLines + BOX_V + '\n' + BOX_V + ' \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n' + BOX_V + '\n' + cardBottom
+          );
+        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Dismiss all failed - try again'); }
+      }
+      else if (action === 'canceldismissall') {
+        await answerCallback(callback.id, 'Dismiss all cancelled');
+        await editMessage(cbChatId, cbMessageId,
+          cardTop('\u2705 <b>CANCELLED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No questions were dismissed.\n' + BOX_V + ' Everything stays as it was.\n' + BOX_V + '\n' + cardBottom
         );
       }
       // /dismissed pagination
@@ -1864,6 +1895,33 @@ module.exports = async function handler(req, res) {
       var result = buildDismissedPageText(dismissed, 1);
       var buttons = buildDismissedPageButtons(result.page, result.pages);
       await sendTelegram(chatId, result.text, message.message_id, buttons);
+      return res.status(200).json({ ok: true });
+    }
+
+    /* /dismissall - dismiss all active (non-dismissed) questions with confirmation */
+    if (command === '/dismissall') {
+      var all = await listAllQuestions();
+      var active = all.filter(function(q) { return questionState(q) !== 'DISMISSED'; });
+      if (!active.length) {
+        await sendTelegram(chatId,
+          cardTop('\u2705 <b>NOTHING TO DISMISS</b>') + '\n' + BOX_V + '\n' + BOX_V + ' All questions are already dismissed.\n' + BOX_V + '\n' + BOX_V + ' Use /retrieveall to restore them.\n' + BOX_V + '\n' + cardBottom,
+          message.message_id, REPLY_KEYBOARD);
+        return res.status(200).json({ ok: true });
+      }
+      var answeredCount = active.filter(function(q) { return questionState(q) === 'ANSWERED'; }).length;
+      var unansweredCount = active.length - answeredCount;
+      var detailLine = BOX_V + ' <b>' + active.length + '</b> active question' + (active.length === 1 ? '' : 's') + ' will be hidden from your site.';
+      if (answeredCount > 0) detailLine += '\n' + BOX_V + ' \u2705 ' + answeredCount + ' answered \u2192 retrieve restores to site';
+      if (unansweredCount > 0) detailLine += '\n' + BOX_V + ' \u23F3 ' + unansweredCount + ' unanswered \u2192 retrieve restores to pending';
+
+      await sendTelegram(chatId,
+        cardTop('\uD83D\uDE48 <b>CONFIRM DISMISS ALL</b>') + '\n' + BOX_V + '\n' + detailLine + '\n' + BOX_V + '\n' + BOX_V + ' Data is preserved safely.\n' + BOX_V + ' Retrieve any question later with\n' + BOX_V + ' /retrieveall or /retrieve <id>.\n' + BOX_V + '\n' + cardBottom,
+        message.message_id,
+        { inline_keyboard: [[
+          { text: '\uD83D\uDE48 Yes, Dismiss All', callback_data: 'confirmdismissall' },
+          { text: '\u274C Cancel', callback_data: 'canceldismissall' }
+        ]] }
+      );
       return res.status(200).json({ ok: true });
     }
 
