@@ -2116,3 +2116,43 @@ html.light .ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned {
       var(--ama-pinned-blue-line) 50%,
       var(--ama-pinned-blue-line) 100%) border-box !important;
 }
+
+/* ============ AMA featured+pinned border-only final fix ============ */
+.ama-q.ama-q-spotlight.ama-q-pinned,
+.ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned {
+  position: relative;
+  border-color: transparent !important;
+  background: rgba(255,255,255,0.035) !important;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+.ama-q.ama-q-spotlight.ama-q-pinned::before,
+.ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned::before {
+  content: "" !important;
+  display: block !important;
+  position: absolute !important;
+  inset: 0 !important;
+  padding: 1px !important;
+  border-radius: inherit !important;
+  background: linear-gradient(to bottom,
+    var(--ama-featured-purple-line) 0%,
+    var(--ama-featured-purple-line) 50%,
+    var(--ama-pinned-blue-line) 50%,
+    var(--ama-pinned-blue-line) 100%) !important;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
+  -webkit-mask-composite: xor !important;
+  mask-composite: exclude !important;
+  pointer-events: none !important;
+  z-index: 1 !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+.ama-q.ama-q-spotlight.ama-q-pinned > *,
+.ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned > * {
+  position: relative;
+  z-index: 2;
+}
+html.light .ama-q.ama-q-spotlight.ama-q-pinned,
+html.light .ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned {
+  background: rgba(255,255,255,0.6) !important;
+}
