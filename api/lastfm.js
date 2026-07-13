@@ -20,6 +20,22 @@ var LFM_API = 'https://ws.audioscrobbler.com/2.0/';
 var _lfmCache = {};
 var LFM_CACHE_TTL = 60 * 1000;
 
+
+async function fetchLastfmJson(params, timeoutMs) {
+  timeoutMs = timeoutMs || 3500;
+  var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var timer = controller ? setTimeout(function() { controller.abort(); }, timeoutMs) : null;
+  try {
+    var response = await fetch(LFM_API + '?' + params.toString(), controller ? { signal: controller.signal } : undefined);
+    if (timer) clearTimeout(timer);
+    if (!response.ok) return { ok: false, status: response.status };
+    return response.json().catch(function() { return {}; });
+  } catch (e) {
+    if (timer) clearTimeout(timer);
+    return { ok: false, error: e.message || 'timeout' };
+  }
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -31,6 +47,58 @@ module.exports = async function handler(req, res) {
   var apiKey = process.env.LASTFM_API_KEY;
   if (!apiKey) {
     return res.status(500).json({ ok: false, error: 'Last.fm API key not configured. Set LASTFM_API_KEY env var.' });
+  }
+
+  if (req.query.bundle === '1') {
+    var user = req.query.user || 'YATINSHARMA';
+    var bundleKey = 'bundle:' + user;
+    var cachedBundle = _lfmCache[bundleKey];
+    if (cachedBundle && Date.now() - cachedBundle.ts < LFM_CACHE_TTL) {
+      res.setHeader('X-LastFM-Cache', 'HIT');
+      res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+      return res.status(200).json(cachedBundle.body);
+    }
+    function baseParams(methodName, extra) {
+      var p = new URLSearchParams();
+      p.set('method', methodName);
+      p.set('api_key', apiKey);
+      p.set('format', 'json');
+      p.set('user', user);
+      Object.keys(extra || {}).forEach(function(k) { p.set(k, extra[k]); });
+      return p;
+    }
+    try {
+      var settled = await Promise.allSettled([
+        fetchLastfmJson(baseParams('user.getinfo'), 3200),
+        fetchLastfmJson(baseParams('user.gettoptracks', { period: '1month', limit: '5' }), 3200),
+        fetchLastfmJson(baseParams('user.gettopartists', { period: '1month', limit: '5' }), 3200),
+        fetchLastfmJson(baseParams('user.getrecenttracks', { limit: '10' }), 3200)
+      ]);
+      var results = settled.map(function(x) { return x.status === 'fulfilled' ? (x.value || {}) : {}; });
+      var body = {
+        user: results[0].user || (cachedBundle && cachedBundle.body && cachedBundle.body.user) || null,
+        toptracks: results[1].toptracks || (cachedBundle && cachedBundle.body && cachedBundle.body.toptracks) || null,
+        topartists: results[2].topartists || (cachedBundle && cachedBundle.body && cachedBundle.body.topartists) || null,
+        recenttracks: results[3].recenttracks || (cachedBundle && cachedBundle.body && cachedBundle.body.recenttracks) || null,
+        bundledAt: Date.now(),
+        partial: settled.some(function(x) { return x.status !== 'fulfilled' || (x.value && x.value.ok === false); })
+      };
+      if (body.user || body.toptracks || body.topartists || body.recenttracks) {
+        _lfmCache[bundleKey] = { body: body, ts: Date.now() };
+        res.setHeader('X-LastFM-Cache', 'MISS');
+        res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+        return res.status(200).json(body);
+      }
+      if (cachedBundle && cachedBundle.body) {
+        res.setHeader('X-LastFM-Cache', 'STALE');
+        return res.status(200).json(cachedBundle.body);
+      }
+      return res.status(200).json({ ok: false, partial: true, error: 'Last.fm temporarily unavailable' });
+    } catch (error) {
+      console.error('Last.fm bundle error:', error);
+      if (cachedBundle && cachedBundle.body) return res.status(200).json(cachedBundle.body);
+      return res.status(200).json({ ok: false, error: 'Failed to build Last.fm bundle' });
+    }
   }
 
   var method = req.query.method;

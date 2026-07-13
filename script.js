@@ -504,148 +504,137 @@
      ============================================================ */
 
   function fetchLastfm() {
+    if (window.__lastfmLoading) return Promise.resolve();
+    window.__lastfmLoading = true;
     const u = CONFIG.lastfmUser;
+    let nowPlayingTimer = window.__lastfmTimer || null;
 
-    // Helper: load image safely — returns promise that resolves to URL or empty string
-    function safeImg(url) {
-      return new Promise(function(resolve) {
-        if (!url) { resolve(''); return; }
-        var img = new Image();
-        img.onload = function() {
-          // Reject tiny placeholder images (Last.fm returns tiny white 1x1 or 34x34 images)
-          if (img.naturalWidth < 60 || img.naturalHeight < 60) {
-            resolve('');
-          } else {
-            resolve(url);
-          }
-        };
-        img.onerror = function() { resolve(''); };
-        img.src = url;
-      });
-    }
-
-    // Helper: build a dark fallback div (NO img tags, NO onerror)
     function artDiv(className, url, fallbackText) {
-      // ALWAYS hardcode dark bg in inline style so it can NEVER be overridden
-      if (url) {
-        return '<div class="' + className + '" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>';
-      }
+      if (url) return '<div class="' + className + '" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>';
       return '<div class="' + className + ' lfm-noart" style="background:#141414 !important">' + (fallbackText || '♪') + '</div>';
     }
 
-    // 1. User info + avatar
-    fetch(`${lfmAPI}?method=user.getinfo&user=${u}`).then(r => r.json()).then(function (d) {
-      const i = d && d.user; if (!i) return;
-      const av = $('lfm-avatar');
-      if (av) { const url = lfmImg(i.image); if (url) av.src = url; }
-      const strip = $('lfm-statstrip');
-      if (strip) strip.textContent = `${(i.playcount||0).toLocaleString()} scrobbles · ${(i.artist_count||0).toLocaleString()} artists · ${(i.album_count||0).toLocaleString()} albums`;
-    }).catch(function () {});
-
-    // 2. Top tracks — fetch art via track.getInfo, preload before rendering
-    fetch(`${lfmAPI}?method=user.gettoptracks&user=${u}&period=1month&limit=5`).then(r => r.json()).then(function (d) {
-      const wrap = $('lfm-tracks'); if (!wrap || !d.toptracks) return;
-      const tracks = d.toptracks.track || [];
-      var artPromises = tracks.map(function(tr) {
-        var artistName = encodeURIComponent(tr.artist ? tr.artist.name : '');
-        var trackName = encodeURIComponent(tr.name);
-        return fetch(`${lfmAPI}?method=track.getInfo&artist=${artistName}&track=${trackName}`)
-          .then(r => r.json())
-          .then(info => { var url = lfmImg(info.track && info.track.album ? info.track.album.image : []); return safeImg(url); })
-          .catch(() => '');
-      });
-      Promise.all(artPromises).then(function(arts) {
-        wrap.innerHTML = tracks.map(function(tr, idx) {
-          return '<div class="lfm-track"><span class="lfm-track-rank">' + (idx+1) + '</span>' + artDiv('lfm-track-img', arts[idx], '♪') + '<div class="lfm-track-info"><div class="lfm-track-name">' + esc(tr.name) + '</div><div class="lfm-track-artist">' + (tr.artist ? esc(tr.artist.name) : '') + '</div></div><span class="lfm-track-plays">' + (tr.playcount||0) + 'x</span></div>';
-        }).join('');
-      });
-    }).catch(function () {});
-
-    // 3. Top artists — preload images, render dark fallback with letter
-    fetch(`${lfmAPI}?method=user.gettopartists&user=${u}&period=1month&limit=5`).then(r => r.json()).then(function (d) {
-      const wrap = $('lfm-artists'); if (!wrap || !d.topartists) return;
-      const artists = d.topartists.artist || [];
-      var artPromises = artists.map(function(ar) {
-        var artistName = encodeURIComponent(ar.name);
-        return fetch(`${lfmAPI}?method=artist.getInfo&artist=${artistName}`)
-          .then(r => r.json())
-          .then(info => { var url = lfmImg(info.artist ? info.artist.image : []); return safeImg(url); })
-          .catch(() => '');
-      });
-      Promise.all(artPromises).then(function(arts) {
-        // Premium gradient circles (Material Design 3 style) for artist fallbacks
-        var GRADIENTS = [
-          'linear-gradient(135deg, rgba(0, 200, 255, 0.5), rgba(120, 80, 255, 0.5))',
-          'linear-gradient(135deg, rgba(0, 240, 180, 0.5), rgba(0, 200, 255, 0.5))',
-          'linear-gradient(135deg, rgba(120, 80, 255, 0.5), rgba(0, 240, 180, 0.5))',
-          'linear-gradient(135deg, rgba(0, 200, 255, 0.5), rgba(0, 240, 180, 0.5))',
-          'linear-gradient(135deg, rgba(0, 240, 180, 0.5), rgba(120, 80, 255, 0.5))'
-        ];
-        wrap.innerHTML = artists.map(function(ar, idx) {
-          var letter = (ar.name || '?').charAt(0).toUpperCase();
-          if (arts[idx]) {
-            var artHTML = '<div class="lfm-artist-img" style="background:#141414 url(\'' + arts[idx] + '\') center/cover no-repeat"></div>';
-          } else {
-            var gradient = GRADIENTS[idx % GRADIENTS.length];
-            var artHTML = '<div class="lfm-artist-img lfm-noart lfm-artist-gradient" style="background:' + gradient + '; color:#ffffff !important;">' + esc(letter) + '</div>';
-          }
-          return '<div class="lfm-artist">' + artHTML + '<span class="lfm-artist-name">' + esc(ar.name) + '</span><span class="lfm-artist-plays">' + (ar.playcount||0) + 'x</span></div>';
-        }).join('');
-      });
-    }).catch(function () {});
-
-    // 4. Recent tracks (now playing + ticker)
-    function updateNowPlaying() {
-      fetch(`${lfmAPI}?method=user.getrecenttracks&user=${u}&limit=10`).then(r => r.json()).then(function (d) {
-        const tracks = (d.recenttracks && d.recenttracks.track) || [];
-        if (!tracks.length) return;
-        const first = tracks[0];
-        const isLive = first['@attr'] && first['@attr'].nowplaying === 'true';
-
-        // Now Playing card — preload art before setting
-        var npArtUrl = lfmImg(first.image);
-        safeImg(npArtUrl).then(function(validUrl) {
-          const npArtEl = $('lfm-np-art');
-          if (npArtEl) {
-            if (validUrl) {
-              npArtEl.style.cssText = 'background:#141414 url(\'' + validUrl + '\') center/cover no-repeat';
-              npArtEl.style.visibility = 'visible';
-              npArtEl.classList.remove('lfm-noart');
-              npArtEl.textContent = '';
-            } else {
-              npArtEl.style.cssText = 'background:#141414';
-              npArtEl.style.visibility = 'visible';
-              npArtEl.classList.add('lfm-noart');
-              npArtEl.textContent = '♪';
-            }
-          }
-        });
-
-        const npTrack = $('lfm-np-track'); if (npTrack) npTrack.textContent = first.name || '\u2014';
-        const npArtist = $('lfm-np-artist'); if (npArtist) npArtist.textContent = (first.artist && (first.artist['#text'] || first.artist.name)) || '\u2014';
-        const npCard = $('lfm-nowplaying'); if (npCard) npCard.classList.toggle('live', !!isLive);
-        const npLabel = $('lfm-np-label'); if (npLabel) npLabel.textContent = isLive ? 'NOW PLAYING' : 'LAST PLAYED';
-
-        // Recent ticker — preload all arts first
-        const recentWrap = $('lfm-recent'); if (!recentWrap) return;
-        const tickerTracks = isLive ? tracks.slice(1, 9) : tracks.slice(0, 9);
-        var tickerArtPromises = tickerTracks.map(function(tr) {
-          return safeImg(lfmImg(tr.image));
-        });
-        Promise.all(tickerArtPromises).then(function(arts) {
-          recentWrap.innerHTML = tickerTracks.map(function(tr, idx) {
-            var name = esc(tr.name || '\u2014');
-            var artist = esc((tr.artist && (tr.artist['#text'] || tr.artist.name)) || '');
-            return '<div class="lfm-recent-item">' + artDiv('lfm-recent-img', arts[idx], '♪') + '<div class="lfm-recent-info"><div class="lfm-recent-name">' + name + '</div><div class="lfm-recent-artist">' + artist + '</div></div></div>';
-          }).join('');
-        });
-      }).catch(function () {});
+    function artistFallback(name, idx) {
+      const gradients = [
+        'linear-gradient(135deg, rgba(0, 200, 255, 0.5), rgba(120, 80, 255, 0.5))',
+        'linear-gradient(135deg, rgba(0, 240, 180, 0.5), rgba(0, 200, 255, 0.5))',
+        'linear-gradient(135deg, rgba(120, 80, 255, 0.5), rgba(0, 240, 180, 0.5))',
+        'linear-gradient(135deg, rgba(0, 200, 255, 0.5), rgba(0, 240, 180, 0.5))',
+        'linear-gradient(135deg, rgba(0, 240, 180, 0.5), rgba(120, 80, 255, 0.5))'
+      ];
+      return '<div class="lfm-artist-img lfm-noart lfm-artist-gradient" style="background:' + gradients[idx % gradients.length] + '; color:#ffffff !important;">' + esc((name || '?').charAt(0).toUpperCase()) + '</div>';
     }
 
-    updateNowPlaying();
-    setInterval(updateNowPlaying, 12000);
-    return Promise.resolve();
+    function renderBundle(d) {
+      if (!d) return;
+      const user = d.user;
+      if (user) {
+        const av = $('lfm-avatar');
+        if (av) { const url = lfmImg(user.image); if (url) av.src = url; }
+        const strip = $('lfm-statstrip');
+        if (strip) strip.textContent = `${(user.playcount||0).toLocaleString()} scrobbles · ${(user.artist_count||0).toLocaleString()} artists · ${(user.album_count||0).toLocaleString()} albums`;
+      }
+
+      const tracksWrap = $('lfm-tracks');
+      const tracks = (d.toptracks && d.toptracks.track) || [];
+      if (tracksWrap && tracks.length) {
+        tracksWrap.innerHTML = tracks.map((tr, idx) => {
+          const url = lfmImg(tr.image);
+          return '<div class="lfm-track"><span class="lfm-track-rank">' + (idx+1) + '</span>' + artDiv('lfm-track-img', url, '♪') + '<div class="lfm-track-info"><div class="lfm-track-name">' + esc(tr.name) + '</div><div class="lfm-track-artist">' + (tr.artist ? esc(tr.artist.name || tr.artist['#text'] || '') : '') + '</div></div><span class="lfm-track-plays">' + (tr.playcount||0) + 'x</span></div>';
+        }).join('');
+      }
+
+      const artistsWrap = $('lfm-artists');
+      const artists = (d.topartists && d.topartists.artist) || [];
+      if (artistsWrap && artists.length) {
+        artistsWrap.innerHTML = artists.map((ar, idx) => {
+          const url = lfmImg(ar.image);
+          const art = url ? '<div class="lfm-artist-img" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>' : artistFallback(ar.name, idx);
+          return '<div class="lfm-artist">' + art + '<span class="lfm-artist-name">' + esc(ar.name) + '</span><span class="lfm-artist-plays">' + (ar.playcount||0) + 'x</span></div>';
+        }).join('');
+      }
+
+      renderRecent(d.recenttracks);
+    }
+
+    function renderRecent(recenttracks) {
+      const tracks = (recenttracks && recenttracks.track) || [];
+      if (!tracks.length) return;
+      const first = tracks[0];
+      const isLive = first['@attr'] && first['@attr'].nowplaying === 'true';
+      const npArtEl = $('lfm-np-art');
+      if (npArtEl) {
+        const url = lfmImg(first.image);
+        if (url) { npArtEl.style.cssText = 'background:#141414 url(\'' + url + '\') center/cover no-repeat'; npArtEl.classList.remove('lfm-noart'); npArtEl.textContent = ''; }
+        else { npArtEl.style.cssText = 'background:#141414'; npArtEl.classList.add('lfm-noart'); npArtEl.textContent = '♪'; }
+        npArtEl.style.visibility = 'visible';
+      }
+      const npTrack = $('lfm-np-track'); if (npTrack) npTrack.textContent = first.name || '—';
+      const npArtist = $('lfm-np-artist'); if (npArtist) npArtist.textContent = (first.artist && (first.artist['#text'] || first.artist.name)) || '—';
+      const npCard = $('lfm-nowplaying'); if (npCard) npCard.classList.toggle('live', !!isLive);
+      const npLabel = $('lfm-np-label'); if (npLabel) npLabel.textContent = isLive ? 'NOW PLAYING' : 'LAST PLAYED';
+      const recentWrap = $('lfm-recent');
+      if (recentWrap) {
+        const tickerTracks = isLive ? tracks.slice(1, 9) : tracks.slice(0, 9);
+        recentWrap.innerHTML = tickerTracks.map(tr => {
+          const name = esc(tr.name || '—');
+          const artist = esc((tr.artist && (tr.artist['#text'] || tr.artist.name)) || '');
+          return '<div class="lfm-recent-item">' + artDiv('lfm-recent-img', lfmImg(tr.image), '♪') + '<div class="lfm-recent-info"><div class="lfm-recent-name">' + name + '</div><div class="lfm-recent-artist">' + artist + '</div></div></div>';
+        }).join('');
+      }
+    }
+
+    function cachedBundle() {
+      try {
+        const cached = JSON.parse(localStorage.getItem('lastfm_bundle_cache') || 'null');
+        if (cached && cached.data && Date.now() - cached.ts < 10 * 60 * 1000) return cached.data;
+      } catch (e) {}
+      return null;
+    }
+
+    function saveBundleCache(data) {
+      try { if (data && (data.user || data.toptracks || data.topartists || data.recenttracks)) localStorage.setItem('lastfm_bundle_cache', JSON.stringify({ ts: Date.now(), data })); } catch (e) {}
+    }
+
+    function fetchWithTimeout(url, timeoutMs) {
+      timeoutMs = timeoutMs || 4500;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
+    }
+
+    function loadBundle() {
+      const cached = cachedBundle();
+      if (cached) renderBundle(cached);
+      return fetchWithTimeout(`${lfmAPI}?bundle=1&user=${encodeURIComponent(u)}`, 5000)
+        .then(r => r.json())
+        .then(d => { saveBundleCache(d); renderBundle(d); })
+        .catch(err => {
+          console.warn('Last.fm bundle failed:', err);
+          if (!cached) {
+            const tracksWrap = $('lfm-tracks'); if (tracksWrap) tracksWrap.innerHTML = '<div class="lfm-track">Last.fm is waking up. Music stats will appear shortly.</div>';
+          }
+        });
+    }
+
+    function updateNowPlaying() {
+      fetchWithTimeout(`${lfmAPI}?method=user.getrecenttracks&user=${encodeURIComponent(u)}&limit=10`, 4500)
+        .then(r => r.json())
+        .then(d => renderRecent(d.recenttracks))
+        .catch(() => {});
+    }
+
+    if (nowPlayingTimer) clearInterval(nowPlayingTimer);
+    return loadBundle().then(() => {
+      window.__lastfmTimer = setInterval(updateNowPlaying, 30000);
+    }).finally(() => { window.__lastfmLoading = false; });
   }
+
+
+  // Start Last.fm after initial page load too, not only after intro dismiss.
+  window.addEventListener('load', () => {
+    setTimeout(() => { try { fetchLastfm(); } catch (e) {} }, 1200);
+  }, { once: true });
 
   /* ============================================================
      9. ANILIST (summary + pagination)
