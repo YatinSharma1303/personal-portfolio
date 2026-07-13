@@ -1187,7 +1187,7 @@
       const activeSpotlight = !!opts.activeSpotlight;
       const spotlightBadge = activeSpotlight ? '<span class="ama-spotlight-badge"><span class="material-symbols-outlined ama-spotlight-icon">hotel_class</span>Featured</span>' : '';
       const pinBadge = q.pinned ? '<span class="ama-pin-badge"><span class="material-symbols-outlined ama-pin-icon">push_pin</span>Pinned</span>' : '';
-      const topicBadge = q.topic ? '<span class="ama-topic-badge" title="' + (q.topicManual ? 'Manual topic' : 'Auto topic') + '">' + esc(q.topic) + '</span>' : '';
+      const topicBadge = q.topic ? '<span class="ama-topic-badge" title="' + (q.topicManual ? 'Manual topic' : 'Auto topic') + '"><span class="material-symbols-outlined ama-topic-icon">sell</span>' + esc(q.topic) + '</span>' : '';
       const badgeRow = (activeSpotlight || q.pinned || q.topic) ? '<div class="ama-badge-row">' + (activeSpotlight ? spotlightBadge : (q.pinned ? pinBadge : '')) + (activeSpotlight && q.pinned ? pinBadge : '') + topicBadge + '</div>' : '';
       const reactionEntries = Object.entries(q.reactions || {}).filter(([, v]) => v > 0);
       const reactionSummary = reactionEntries.length ? '<div class="ama-reaction-summary">' + reactionEntries.map(([e, c]) => '<span>' + e + ' ' + c + '</span>').join(' ') + '</div>' : '';

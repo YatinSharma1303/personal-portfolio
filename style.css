@@ -2013,3 +2013,12 @@ html.light .ama-topic-badge { background: rgba(0,0,0,0.035); border-color: var(-
   content: none !important;
   display: none !important;
 }
+
+/* AMA topic pill icon */
+.ama-topic-icon {
+  font-size: 13px !important;
+  line-height: 1;
+  color: var(--gray-dim);
+  font-variation-settings: 'FILL' 1, 'wght' 600, 'opsz' 20;
+}
+html.light .ama-topic-icon { color: var(--gray-dim); }
