@@ -267,6 +267,28 @@ async function unpinQuestion(id) {
   });
 }
 
+async function setSpotlightQuestion(id) {
+  var all = await listAllQuestions();
+  for (var i = 0; i < all.length; i++) {
+    if (all[i].spotlight && all[i].id !== id) {
+      try {
+        await firestore('PATCH', docPath(COLLECTION, all[i].id) + '?' + mask(['spotlight']), {
+          fields: { spotlight: { booleanValue: false } }
+        });
+      } catch (e) {}
+    }
+  }
+  return firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['spotlight', 'spotlightAt']), {
+    fields: { spotlight: { booleanValue: true }, spotlightAt: { stringValue: new Date().toISOString() } }
+  });
+}
+
+async function clearSpotlightQuestion(id) {
+  return firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['spotlight']), {
+    fields: { spotlight: { booleanValue: false } }
+  });
+}
+
 /* -- Edit session -- */
 async function saveEditSession(chatId, questionId) {
   return firestore('PATCH', docPath(EDIT_SESSION_COLLECTION, String(chatId)), {
@@ -348,6 +370,8 @@ function fromFirestoreDoc(doc) {
     answered: !!(f.answered && f.answered.booleanValue),
     dismissed: !!(f.dismissed && f.dismissed.booleanValue),
     pinned: !!(f.pinned && f.pinned.booleanValue),
+    spotlight: !!(f.spotlight && f.spotlight.booleanValue),
+    spotlightAt: (f.spotlightAt && f.spotlightAt.stringValue) || '',
     createdAt: (f.createdAt && f.createdAt.stringValue) || '',
     answeredAt: (f.answeredAt && f.answeredAt.stringValue) || '',
     editedAt: (f.editedAt && f.editedAt.stringValue) || '',
@@ -538,6 +562,50 @@ function previewButtons() {
   ] };
 }
 
+function topicForQuestion(q) {
+  var text = ((q.question || '') + ' ' + (q.answer || '')).toLowerCase();
+  var topics = [
+    { name: 'AI/ML', keys: ['ai', 'ml', 'machine learning', 'model', 'rag', 'llm', 'neural', 'data'] },
+    { name: 'React', keys: ['react', 'frontend', 'component', 'vite', 'tailwind', 'css', 'javascript', 'typescript'] },
+    { name: 'Career', keys: ['career', 'job', 'intern', 'internship', 'resume', 'roadmap', 'learn', 'start'] },
+    { name: 'Projects', keys: ['project', 'portfolio', 'smarthealthcare', 'yatini', 'github', 'build'] },
+    { name: 'Anime', keys: ['anime', 'manga', 'naruto', 'gaara', 'one piece', 'favorite'] },
+    { name: 'Personal', keys: ['you', 'your', 'life', 'hobby', 'music', 'food', 'college'] }
+  ];
+  for (var i = 0; i < topics.length; i++) {
+    for (var k = 0; k < topics[i].keys.length; k++) {
+      if (text.indexOf(topics[i].keys[k]) !== -1) return topics[i].name;
+    }
+  }
+  return 'General';
+}
+
+function topTopics(all) {
+  var counts = {};
+  all.forEach(function(q) { var t = topicForQuestion(q); counts[t] = (counts[t] || 0) + 1; });
+  return Object.keys(counts).map(function(name) { return { name: name, count: counts[name] }; })
+    .sort(function(a, b) { return b.count - a.count || a.name.localeCompare(b.name); });
+}
+
+function questionValueScore(q) {
+  var st = questionState(q);
+  var ageDays = q.createdAt ? Math.max(0, (Date.now() - new Date(q.createdAt).getTime()) / 86400000) : 0;
+  var score = 0;
+  if (q.pinned) score += 30;
+  if (st === 'UNANSWERED') score += 25;
+  if (st === 'DISMISSED' && !q.answer) score += 10;
+  score += Math.min(20, ageDays * 2);
+  score += Math.min(15, String(q.question || '').length / 20);
+  score += Math.min(15, q.votes || 0);
+  return score;
+}
+
+function topicLines(all, limit) {
+  var topics = topTopics(all).slice(0, limit || 7);
+  if (!topics.length) return [BOX_V + ' No topic data yet.'];
+  return topics.map(function(t, i) { return BOX_V + ' ' + (i + 1) + '. <b>' + esc(t.name) + '</b> — ' + t.count; });
+}
+
 /* -- /start -- Dynamic welcome with live stats -- */
 async function buildWelcomeText() {
   var s = { total: 0, unanswered: 0, answered: 0, dismissed: 0, pinned: 0, totalVotes: 0, avgResponseMs: 0 };
@@ -608,6 +676,18 @@ var HELP_TEXT = [
   BOX_V + ' /export',
   BOX_V + '   Export all Q&amp;A text.',
   BOX_V,
+  BOX_V + ' <b>Insights</b>',
+  BOX_V + ' /digest',
+  BOX_V + '   7-day activity summary.',
+  BOX_V + ' /inbox',
+  BOX_V + '   Smart priority queue.',
+  BOX_V + ' /topics',
+  BOX_V + '   Topic breakdown.',
+  BOX_V + ' /quality',
+  BOX_V + '   Answers to improve.',
+  BOX_V + ' /health',
+  BOX_V + '   Bot and database status.',
+  BOX_V,
   BOX_V + ' <b>Answer</b>',
   BOX_V + ' /answer &lt;id&gt; &lt;text&gt;',
   BOX_V + '   Draft and preview reply.',
@@ -619,6 +699,12 @@ var HELP_TEXT = [
   BOX_V + '   Keep question on top.',
   BOX_V + ' /unpin &lt;id&gt;',
   BOX_V + '   Remove top placement.',
+  BOX_V + ' /spotlight &lt;id&gt;',
+  BOX_V + '   Feature answered AMA.',
+  BOX_V + ' /featured',
+  BOX_V + '   Show featured AMA.',
+  BOX_V + ' /unspotlight',
+  BOX_V + '   Clear featured AMA.',
   BOX_V,
   BOX_V + ' <b>Hide / restore</b>',
   BOX_V + ' /dismiss &lt;id&gt;',
@@ -694,6 +780,141 @@ async function sendStats(chatId, replyToId, editMessageId) {
       cardTop('\u26A0\uFE0F <b>STATS ERROR</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Dashboard could not load.\n' + BOX_V + ' Please try again in a moment.\n' + BOX_V + '\n' + cardBottom,
       replyToId, REPLY_KEYBOARD, editMessageId);
   }
+}
+
+async function sendDigest(chatId, replyToId, editMessageId) {
+  var all = await listAllQuestions();
+  var since = Date.now() - 7 * 86400000;
+  var week = all.filter(function(q) { return q.createdAt && new Date(q.createdAt).getTime() >= since; });
+  var answeredWeek = week.filter(function(q) { return questionState(q) === 'ANSWERED'; });
+  var pending = all.filter(function(q) { return questionState(q) === 'UNANSWERED'; });
+  var top = all.filter(function(q) { return questionState(q) === 'ANSWERED'; })
+    .sort(function(a, b) { return (b.votes || 0) - (a.votes || 0); })[0];
+  var topics = topTopics(week.length ? week : all);
+  var suggestion = pending.length ? 'Answer oldest pending question.' : 'Inbox is clear. Review /quality.';
+  var lines = [
+    cardTop('\uD83D\uDDDE <b>AMA DIGEST</b>'),
+    BOX_V,
+    BOX_V + ' Window \u2500 <b>last 7 days</b>',
+    BOX_V + ' New questions \u2500 <b>' + week.length + '</b>',
+    BOX_V + ' Answered \u2500 <b>' + answeredWeek.length + '</b>',
+    BOX_V + ' Still pending \u2500 <b>' + pending.length + '</b>',
+    BOX_V,
+    BOX_V + ' Top topic \u2500 <b>' + esc((topics[0] && topics[0].name) || '—') + '</b>',
+    top ? BOX_V + ' Top Q \u2500 “' + esc(clipText(top.question, 80)) + '”' : BOX_V + ' Top Q \u2500 —',
+    BOX_V,
+    BOX_V + ' Suggested action:',
+    BOX_V + ' ' + suggestion,
+    BOX_V,
+    cardBottom
+  ];
+  await respondTelegram(chatId, lines.join('\n'), replyToId, REPLY_KEYBOARD, editMessageId);
+}
+
+async function sendSmartInbox(chatId, replyToId, editMessageId) {
+  var all = await listAllQuestions();
+  var items = all.filter(function(q) { return questionState(q) === 'UNANSWERED' || (questionState(q) === 'DISMISSED' && !q.answer); })
+    .sort(function(a, b) { return questionValueScore(b) - questionValueScore(a); })
+    .slice(0, 6);
+  if (!items.length) {
+    await respondTelegram(chatId,
+      cardTop('\uD83D\uDCE5 <b>SMART INBOX</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No priority items right now.\n' + BOX_V + ' Your AMA inbox is clean.\n' + BOX_V + '\n' + cardBottom,
+      replyToId, REPLY_KEYBOARD, editMessageId);
+    return;
+  }
+  var lines = [cardTop('\uD83D\uDCE5 <b>SMART INBOX</b>'), BOX_V, BOX_V + ' Priority questions to handle first.', BOX_V];
+  items.forEach(function(q, i) {
+    var st = questionState(q);
+    lines.push(BOX_V + ' ' + (i + 1) + '. <b>' + st + '</b>' + (q.pinned ? ' · \uD83D\uDCCD' : '') + ' · ' + esc(visitorName(q.name)));
+    lines.push(BOX_V + ' “' + esc(clipText(q.question, 110)) + '”');
+    lines.push(BOX_V + ' ID: <code>' + esc(q.id) + '</code>');
+    lines.push(BOX_V);
+  });
+  lines.push(BOX_V + ' Use /get &lt;id&gt; or tap Answer.');
+  lines.push(cardBottom);
+  await respondTelegram(chatId, lines.join('\n'), replyToId, REPLY_KEYBOARD, editMessageId);
+}
+
+async function sendTopics(chatId, replyToId, editMessageId) {
+  var all = await listAllQuestions();
+  var lines = [cardTop('\uD83C\uDFF7 <b>AMA TOPICS</b>'), BOX_V, BOX_V + ' Keyword-based topic map.', BOX_V];
+  lines = lines.concat(topicLines(all, 8));
+  lines.push(BOX_V);
+  lines.push(BOX_V + ' Use /search &lt;text&gt; to inspect.');
+  lines.push(cardBottom);
+  await respondTelegram(chatId, lines.join('\n'), replyToId, REPLY_KEYBOARD, editMessageId);
+}
+
+async function sendQuality(chatId, replyToId, editMessageId) {
+  var all = await listAllQuestions();
+  var answered = all.filter(function(q) { return questionState(q) === 'ANSWERED'; });
+  var weak = answered.map(function(q) {
+    var reasons = [];
+    var len = String(q.answer || '').trim().length;
+    if (len < 80) reasons.push('short answer');
+    if (q.question.length > 120 && len < 180) reasons.push('detailed Q, brief A');
+    if ((q.votes || 0) >= 3 && len < 220) reasons.push('popular but brief');
+    return { q: q, reasons: reasons };
+  }).filter(function(x) { return x.reasons.length; })
+    .sort(function(a, b) { return (b.q.votes || 0) - (a.q.votes || 0); })
+    .slice(0, 6);
+  if (!weak.length) {
+    await respondTelegram(chatId,
+      cardTop('\uD83E\uDDEA <b>ANSWER QUALITY</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No weak answers detected.\n' + BOX_V + ' Published answers look healthy.\n' + BOX_V + '\n' + cardBottom,
+      replyToId, REPLY_KEYBOARD, editMessageId);
+    return;
+  }
+  var lines = [cardTop('\uD83E\uDDEA <b>ANSWER QUALITY</b>'), BOX_V, BOX_V + ' Answers worth improving:', BOX_V];
+  weak.forEach(function(x, i) {
+    lines.push(BOX_V + ' ' + (i + 1) + '. ' + x.reasons.join(', '));
+    lines.push(BOX_V + ' “' + esc(clipText(x.q.question, 95)) + '”');
+    lines.push(BOX_V + ' ID: <code>' + esc(x.q.id) + '</code>');
+    lines.push(BOX_V);
+  });
+  lines.push(BOX_V + ' Use /edit &lt;id&gt; to improve.');
+  lines.push(cardBottom);
+  await respondTelegram(chatId, lines.join('\n'), replyToId, REPLY_KEYBOARD, editMessageId);
+}
+
+async function sendHealth(chatId, replyToId, editMessageId) {
+  var okFirestore = false, count = 0, tokenOk = !!process.env.TELEGRAM_BOT_TOKEN;
+  try { var all = await listAllQuestions(); okFirestore = true; count = all.length; } catch (e) {}
+  var envOk = !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY && !!(process.env.FIREBASE_PROJECT_ID || true) && !!process.env.TELEGRAM_WEBHOOK_SECRET;
+  var lines = [
+    cardTop('\uD83E\uDE7A <b>BOT HEALTH</b>'),
+    BOX_V,
+    BOX_V + ' Telegram token \u2500 <b>' + (tokenOk ? 'OK' : 'MISSING') + '</b>',
+    BOX_V + ' Firestore \u2500 <b>' + (okFirestore ? 'OK' : 'ERROR') + '</b>',
+    BOX_V + ' Webhook secret \u2500 <b>' + (process.env.TELEGRAM_WEBHOOK_SECRET ? 'OK' : 'MISSING') + '</b>',
+    BOX_V + ' Questions read \u2500 <b>' + count + '</b>',
+    BOX_V + ' Checked \u2500 ' + esc(formatTime(new Date().toISOString())) + ' IST',
+    BOX_V,
+    cardBottom
+  ];
+  await respondTelegram(chatId, lines.join('\n'), replyToId, REPLY_KEYBOARD, editMessageId);
+}
+
+async function sendFeatured(chatId, replyToId, editMessageId) {
+  var all = await listAllQuestions();
+  var q = all.find(function(x) { return x.spotlight; });
+  if (!q) {
+    await respondTelegram(chatId,
+      cardTop('\uD83C\uDF1F <b>FEATURED AMA</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No spotlight question set.\n' + BOX_V + ' Use /spotlight &lt;id&gt; to feature one.\n' + BOX_V + '\n' + cardBottom,
+      replyToId, REPLY_KEYBOARD, editMessageId);
+    return;
+  }
+  var lines = [
+    cardTop('\uD83C\uDF1F <b>FEATURED AMA</b>'),
+    BOX_V,
+    BOX_V + ' Visitor \u2500 <b>' + esc(visitorName(q.name)) + '</b>',
+    BOX_V + ' ID \u2500 <code>' + esc(q.id) + '</code>',
+    BOX_V,
+    BOX_V + ' Q: “' + esc(clipText(q.question, 140)) + '”',
+    q.answer ? BOX_V + ' A: “' + esc(clipText(q.answer, 180)) + '”' : BOX_V + ' No answer yet.',
+    BOX_V,
+    cardBottom
+  ];
+  await respondTelegram(chatId, lines.join('\n'), replyToId, buildCardForQuestion(q).replyMarkup, editMessageId);
 }
 
 /* -- Answered card with reactions -- */
@@ -1527,6 +1748,12 @@ module.exports = async function handler(req, res) {
           await editMessage(cbChatId, cbMessageId, result.text, buildDismissedPageButtons(page, result.pages));
         } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Error loading page'); }
       }
+      else if (action === 'featured') {
+        try {
+          await answerCallback(callback.id, 'Featured AMA');
+          await sendFeatured(cbChatId, undefined, cbMessageId);
+        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not load featured'); }
+      }
       else if (action === 'pending') {
         if (questionId === 'noop') { await answerCallback(callback.id, ''); return res.status(200).json({ ok: true, callback: action }); }
         var page = parseInt(questionId, 10) || 1;
@@ -1684,6 +1911,111 @@ module.exports = async function handler(req, res) {
     if (command === '/export') {
       var loadingId = await sendLoadingCard(chatId, '\uD83D\uDCE6 <b>EXPORTING\u2026</b>', 'Preparing your AMA export...', message.message_id);
       await exportQuestions(chatId, message.message_id, loadingId);
+      return res.status(200).json({ ok: true });
+    }
+
+    /* /digest */
+    if (command === '/digest') {
+      var loadingId = await sendLoadingCard(chatId, '\uD83D\uDDDE <b>BUILDING DIGEST\u2026</b>', 'Summarizing recent AMA activity...', message.message_id);
+      await sendDigest(chatId, message.message_id, loadingId);
+      return res.status(200).json({ ok: true });
+    }
+
+    /* /inbox */
+    if (command === '/inbox') {
+      var loadingId = await sendLoadingCard(chatId, '\uD83D\uDCE5 <b>BUILDING INBOX\u2026</b>', 'Ranking questions by priority...', message.message_id);
+      await sendSmartInbox(chatId, message.message_id, loadingId);
+      return res.status(200).json({ ok: true });
+    }
+
+    /* /topics */
+    if (command === '/topics') {
+      var loadingId = await sendLoadingCard(chatId, '\uD83C\uDFF7 <b>SCANNING TOPICS\u2026</b>', 'Grouping questions by theme...', message.message_id);
+      await sendTopics(chatId, message.message_id, loadingId);
+      return res.status(200).json({ ok: true });
+    }
+
+    /* /quality */
+    if (command === '/quality') {
+      var loadingId = await sendLoadingCard(chatId, '\uD83E\uDDEA <b>CHECKING QUALITY\u2026</b>', 'Finding answers worth improving...', message.message_id);
+      await sendQuality(chatId, message.message_id, loadingId);
+      return res.status(200).json({ ok: true });
+    }
+
+    /* /health */
+    if (command === '/health') {
+      var loadingId = await sendLoadingCard(chatId, '\uD83E\uDE7A <b>CHECKING HEALTH\u2026</b>', 'Testing bot and Firestore status...', message.message_id);
+      await sendHealth(chatId, message.message_id, loadingId);
+      return res.status(200).json({ ok: true });
+    }
+
+    /* /featured */
+    if (command === '/featured') {
+      var loadingId = await sendLoadingCard(chatId, '\uD83C\uDF1F <b>LOADING FEATURED\u2026</b>', 'Checking current spotlight AMA...', message.message_id);
+      await sendFeatured(chatId, message.message_id, loadingId);
+      return res.status(200).json({ ok: true });
+    }
+
+    /* /spotlight <id> */
+    if (command === '/spotlight') {
+      var qid = text.split(/\s+/)[1];
+      if (!qid) {
+        await sendTelegram(chatId,
+          cardTop('\uD83C\uDF1F <b>SPOTLIGHT</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Feature one answered AMA.\n' + BOX_V + '\n' + BOX_V + ' Usage: /spotlight &lt;id&gt;\n' + BOX_V + ' Check current: /featured\n' + BOX_V + '\n' + cardBottom,
+          message.message_id, REPLY_KEYBOARD);
+        return res.status(200).json({ ok: true });
+      }
+      var loadingId = await sendLoadingCard(chatId, '\uD83C\uDF1F <b>SETTING SPOTLIGHT\u2026</b>', 'Preparing featured AMA card...', message.message_id);
+      try {
+        var q = await getQuestion(qid);
+        if (!q) {
+          await respondTelegram(chatId,
+            cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question exists for this ID.\n' + BOX_V + ' ID \u2500 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
+            message.message_id, REPLY_KEYBOARD, loadingId);
+          return res.status(200).json({ ok: true });
+        }
+        if (questionState(q) !== 'ANSWERED') {
+          await respondTelegram(chatId,
+            cardTop('\u26A0\uFE0F <b>CANNOT SPOTLIGHT</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Spotlight works best with answered\n' + BOX_V + ' public questions only.\n' + BOX_V + '\n' + BOX_V + ' Status \u2500 <b>' + questionState(q) + '</b>\n' + BOX_V + ' ID \u2500 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
+            message.message_id, REPLY_KEYBOARD, loadingId);
+          return res.status(200).json({ ok: true });
+        }
+        await setSpotlightQuestion(qid);
+        q.spotlight = true;
+        await respondTelegram(chatId,
+          cardTop('\uD83C\uDF1F <b>SPOTLIGHT SET</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This AMA is now featured.\n' + BOX_V + '\n' + BOX_V + ' Visitor \u2500 <b>' + esc(visitorName(q.name)) + '</b>\n' + BOX_V + ' ID \u2500 <code>' + esc(q.id) + '</code>\n' + BOX_V + '\n' + BOX_V + ' “' + esc(clipText(q.question, 130)) + '”\n' + BOX_V + '\n' + cardBottom,
+          message.message_id,
+          { inline_keyboard: [[{ text: '\uD83C\uDF1F View Featured', callback_data: 'featured:show' }]] },
+          loadingId);
+      } catch (e) {
+        await respondTelegram(chatId,
+          cardTop('\u26A0\uFE0F <b>SPOTLIGHT FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not set spotlight.\n' + BOX_V + ' Try again in a moment.\n' + BOX_V + '\n' + cardBottom,
+          message.message_id, REPLY_KEYBOARD, loadingId);
+      }
+      return res.status(200).json({ ok: true });
+    }
+
+    /* /unspotlight */
+    if (command === '/unspotlight') {
+      var loadingId = await sendLoadingCard(chatId, '\uD83C\uDF1F <b>CLEARING SPOTLIGHT\u2026</b>', 'Removing featured AMA selection...', message.message_id);
+      try {
+        var all = await listAllQuestions();
+        var q = all.find(function(x) { return x.spotlight; });
+        if (!q) {
+          await respondTelegram(chatId,
+            cardTop('\uD83C\uDF1F <b>NO SPOTLIGHT SET</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No AMA is currently featured.\n' + BOX_V + ' Use /spotlight &lt;id&gt; to set one.\n' + BOX_V + '\n' + cardBottom,
+            message.message_id, REPLY_KEYBOARD, loadingId);
+          return res.status(200).json({ ok: true });
+        }
+        await clearSpotlightQuestion(q.id);
+        await respondTelegram(chatId,
+          cardTop('\uD83C\uDF1F <b>SPOTLIGHT CLEARED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Featured AMA has been removed.\n' + BOX_V + '\n' + BOX_V + ' Previous featured ID \u2500 <code>' + esc(q.id) + '</code>\n' + BOX_V + '\n' + cardBottom,
+          message.message_id, REPLY_KEYBOARD, loadingId);
+      } catch (e) {
+        await respondTelegram(chatId,
+          cardTop('\u26A0\uFE0F <b>CLEAR FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not clear spotlight.\n' + BOX_V + ' Try again in a moment.\n' + BOX_V + '\n' + cardBottom,
+          message.message_id, REPLY_KEYBOARD, loadingId);
+      }
       return res.status(200).json({ ok: true });
     }
 

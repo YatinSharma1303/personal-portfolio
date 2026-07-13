@@ -21,4 +21,12 @@ retrieveall - Restore ALL dismissed questions at once. Confirms first.
 export - Download all Q&A as formatted text with votes, reactions & timestamps.
 stats - Full dashboard: totals, pinned count, avg response time & top question.
 refresh - Combined view: unanswered + dismissed. Everything needing attention.
+digest - 7-day AMA activity summary with suggested next action.
+inbox - Smart priority inbox ranked by urgency and value.
+topics - Keyword-based topic breakdown of all AMA questions.
+quality - Finds published answers that may need improvement.
+spotlight - Feature one answered AMA. Usage: /spotlight <id>
+featured - Show the currently featured AMA.
+health - Check Telegram, Firestore, webhook and database status.
 cancel - Abort active session (answer, edit, lookup). Returns to normal mode.
+unspotlight - Clear the currently featured AMA.
