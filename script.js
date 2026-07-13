@@ -706,75 +706,32 @@
       banner.innerHTML = (img ? '<img class="al-banner-img" alt="' + esc(t) + '" src="' + img + '">' : '') + '<div class="al-banner-info"><div class="al-banner-label" data-status="' + statusRaw.toLowerCase() + '">' + label + '</div><div class="al-banner-title">' + esc(t) + '</div><div class="al-banner-progress">' + esc(progress + score) + '</div></div>';
       banner.style.display = 'flex';
     }
-    function amaQuestionCard(q, opts = {}) {
-      const up = votedSet.has(q.id);
-      const REACTION_EMOJIS = ['👍', '🔥', '👏', '🤩'];
-      const reactionHTML = REACTION_EMOJIS.map(emoji => {
-        const count = (q.reactions && q.reactions[emoji]) || 0;
-        const reacted = reactedSet.has(q.id + ':' + emoji);
-        return '<button class="ama-react-btn ' + (reacted ? 'react-active' : '') + '" data-id="' + q.id + '" data-emoji="' + emoji + '">' + emoji + '<span>' + count + '</span></button>';
-      }).join('');
-      const pinBadge = q.pinned ? '<span class="ama-pin-badge"><span class="material-symbols-outlined ama-pin-icon">push_pin</span>Pinned</span>' : '';
-      const spotlightBadge = q.spotlight ? '<span class="ama-spotlight-badge"><span class="material-symbols-outlined ama-spotlight-icon">hotel_class</span>Featured</span>' : '';
-      const reactionEntries = Object.entries(q.reactions || {}).filter(([, v]) => v > 0);
-      const reactionSummary = reactionEntries.length ? '<div class="ama-reaction-summary">' + reactionEntries.map(([e, c]) => '<span>' + e + ' ' + c + '</span>').join(' ') + '</div>' : '';
-      return '<div class="ama-q' + (q.pinned ? ' ama-q-pinned' : '') + (q.spotlight ? ' ama-q-spotlight' : '') + (opts.featured ? ' ama-q-featured-card' : '') + '">' +
-        (opts.featured ? '<div class="ama-featured-label"><span class="material-symbols-outlined">hotel_class</span><span>Featured AMA</span></div>' : '') +
-        spotlightBadge + pinBadge +
-        '<div class="ama-q-text">' + esc(q.question) + '</div>' +
-        '<div class="ama-q-ans">' + esc(q.answer) + '</div>' +
-        '<div class="ama-q-meta">' +
-          '<span class="ama-q-meta-name"><span class="material-symbols-outlined ama-q-meta-icon">person</span>' + esc(q.name || 'Anonymous') + '</span>' +
-          '<span class="ama-q-meta-time"><span class="material-symbols-outlined ama-q-meta-icon">schedule</span>Asked ' + esc(formatAmaTime(q.createdAt)) + '</span>' +
-          '<span class="ama-q-meta-time ama-q-meta-answered"><span class="material-symbols-outlined ama-q-meta-icon">check_circle</span>Answered ' + esc(formatAmaTime(q.answeredAt)) + '</span>' +
-          (q.spotlightAt ? '<span class="ama-q-meta-time ama-q-meta-spotlight"><span class="material-symbols-outlined ama-q-meta-icon">hotel_class</span>Featured ' + esc(formatAmaTime(q.spotlightAt)) + '</span>' : '') +
-          (q.editedAt ? '<span class="ama-q-meta-time ama-q-meta-edited"><span class="material-symbols-outlined ama-q-meta-icon">edit</span>Edited ' + esc(formatAmaTime(q.editedAt)) + '</span>' : '') +
-        '</div>' +
-        '<div class="ama-q-vote">' +
-        '<button class="ama-vote-btn ' + (up ? 'voted' : '') + '" data-id="' + q.id + '" data-dir="1" title="Helpful">\u25B2</button>' +
-        '<span class="ama-vote-count" data-count="' + q.id + '">' + q.votes + '</span>' +
-        '<button class="ama-vote-btn ' + (up ? 'voted' : '') + '" data-id="' + q.id + '" data-dir="-1" title="Undo">\u25BC</button>' +
-        '</div>' +
-        '<div class="ama-q-reactions">' + reactionHTML + '</div>' +
-        reactionSummary +
-        '</div>';
-    }
-
-    function wireAmaActions(root) {
-      if (!root) return;
-      root.querySelectorAll('.ama-vote-btn').forEach(b => b.addEventListener('click', () => vote(b.dataset.id, +b.dataset.dir)));
-      root.querySelectorAll('.ama-react-btn').forEach(b => b.addEventListener('click', () => toggleReaction(b.dataset.id, b.dataset.emoji)));
-    }
-
     function render() {
-      if (!answeredDocs.length) {
-        if (listWrap) listWrap.hidden = true;
-        if (featured) { featured.hidden = true; featured.innerHTML = ''; }
+      ensureChrome();
+      const filtered = activeStatus === 'ALL' ? allEntries : allEntries.filter(e => String(e._status || '').toUpperCase() === activeStatus);
+      const pages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+      if (page > pages) page = pages;
+      const slice = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+      if (!slice.length) {
+        list.innerHTML = '<div class="al-empty">No anime found for this status.</div>';
+        renderPager(pages);
         return;
       }
-      if (listWrap) listWrap.hidden = false;
-
-      const spotlightDoc = answeredDocs.find(q => q.spotlight && !q.dismissed);
-      if (featured) {
-        if (spotlightDoc) {
-          featured.hidden = false;
-          featured.innerHTML = amaQuestionCard(spotlightDoc, { featured: true });
-          wireAmaActions(featured);
-        } else {
-          featured.hidden = true;
-          featured.innerHTML = '';
-        }
-      }
-
-      const arr = sorted().filter(q => !q.spotlight);
-      const pages = Math.max(1, Math.ceil(arr.length / PER_PAGE));
-      if (page > pages) page = pages;
-      const slice = arr.slice((page - 1) * PER_PAGE, page * PER_PAGE);
-      list.innerHTML = slice.length ? slice.map(q => amaQuestionCard(q)).join('') : (spotlightDoc ? '<div class="ama-empty-note">No more answered questions yet.</div>' : '');
-      renderPager(arr.length ? pages : 1);
-      wireAmaActions(list);
+      list.innerHTML = slice.map(e => {
+        const t = (e.media && e.media.title && (e.media.title.romaji || e.media.title.english)) || '—';
+        const img = (e.media && e.media.coverImage && e.media.coverImage.large) || '';
+        const progress = e.progress ? e.progress + (e.media && e.media.episodes ? '/' + e.media.episodes : '') + ' eps' : '';
+        const score = e.score ? '★ ' + e.score : '';
+        return '<div class="al-item">' +
+          (img ? '<img src="' + img + '" alt="' + esc(t) + '" loading="lazy">' : '') +
+          '<div class="al-item-info"><div class="al-item-name">' + esc(t) + '</div>' +
+          '<div class="al-item-score">' + esc([progress, score].filter(Boolean).join(' · ')) + '</div></div>' +
+          '</div>';
+      }).join('');
+      renderPager(pages);
     }
     function renderPager(pages) {
+      if (!pagerEl) return;
       if (pages <= 1) { pagerEl.innerHTML = ''; return; }
       let html = `<button class="al-page-btn" ${page===1?'disabled':''} data-page="${page-1}">‹</button>`;
       for (let p = 1; p <= pages; p++) {
@@ -1249,7 +1206,7 @@
           featured.innerHTML = '';
         }
       }
-      const arr = sorted().filter(q => !q.spotlight);
+      const arr = sorted().filter(q => !(featured && q.spotlight));
       const pages = Math.max(1, Math.ceil(arr.length / PER_PAGE));
       if (page > pages) page = pages;
       const slice = arr.slice((page - 1) * PER_PAGE, page * PER_PAGE);
