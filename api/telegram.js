@@ -17,6 +17,31 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function clip(value, max) {
+  value = String(value || '').replace(/\s+/g, ' ').trim();
+  max = max || 120;
+  return value.length > max ? value.slice(0, max - 1) + '…' : value;
+}
+
+async function sendLog(botToken, title, fields, emoji) {
+  var logChatId = process.env.TELEGRAM_LOG_CHAT_ID;
+  if (!botToken || !logChatId) return;
+  fields = fields || {};
+  var lines = [(emoji || '\uD83E\uDDFE') + ' <b>LOG · ' + escapeHtml(title) + '</b>'];
+  Object.keys(fields).forEach(function(k) {
+    var v = fields[k];
+    if (v === undefined || v === null || v === '') return;
+    lines.push(escapeHtml(k) + ': ' + escapeHtml(String(v)));
+  });
+  try {
+    await fetch(TELEGRAM_API + botToken + '/sendMessage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: logChatId, text: lines.join('\n'), parse_mode: 'HTML', disable_web_page_preview: true })
+    });
+  } catch (e) {}
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -105,8 +130,17 @@ module.exports = async function handler(req, res) {
 
     var data = await tgRes.json().catch(function() { return null; });
     if (!tgRes.ok || !data || !data.ok) {
+      await sendLog(botToken, 'SITE TELEGRAM NOTIFY FAILED', { ID: questionId, Error: (data && data.description) || 'Telegram API error ' + tgRes.status }, '\u26A0\uFE0F');
       return res.status(502).json({ ok: false, error: (data && data.description) || 'Telegram API error ' + tgRes.status });
     }
+
+    await sendLog(botToken, 'SITE QUESTION RECEIVED', {
+      Visitor: visitor,
+      ID: questionId,
+      Topic: topic || '—',
+      Question: clip(question, 120),
+      Time: timeStr + ' IST'
+    }, '\uD83C\uDF10');
 
     return res.status(200).json({ ok: true });
   } catch (error) {

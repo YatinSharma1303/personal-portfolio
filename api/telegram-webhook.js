@@ -31,6 +31,7 @@ var SESSION_TTL_MS = 10 * 60 * 1000;
    - _questionsCache avoids redundant listAllQuestions() calls within one request.
    - _cachedToken / _cachedTokenExpiry reuse the Google OAuth token across Firestore calls. */
 var _questionsCache = null;
+var _currentActor = null;
 
 function isSessionExpired(sessionDoc) {
   if (!sessionDoc || !sessionDoc.fields) return true;
@@ -155,6 +156,43 @@ async function sendTelegram(chatId, text, replyToMessageId, replyMarkup) {
   return data.result || null;
 }
 
+function actorFromUser(user) {
+  user = user || {};
+  var name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || (user.username ? '@' + user.username : 'Unknown');
+  return {
+    name: name,
+    id: user.id ? String(user.id) : 'unknown',
+    username: user.username ? '@' + user.username : '—'
+  };
+}
+
+async function sendLog(title, fields, emoji, actorOverride) {
+  var logChatId = process.env.TELEGRAM_LOG_CHAT_ID;
+  var botToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (!logChatId || !botToken) return;
+  fields = fields || {};
+  emoji = emoji || '\uD83E\uDDFE';
+  var actor = actorOverride || _currentActor;
+  var lines = [emoji + ' <b>LOG · ' + esc(title) + '</b>'];
+  if (actor) {
+    lines.push('Actor: ' + esc(actor.name) + ' (' + esc(actor.id) + ')');
+    if (actor.username && actor.username !== '—') lines.push('Username: ' + esc(actor.username));
+  }
+  Object.keys(fields).forEach(function(k) {
+    var v = fields[k];
+    if (v === undefined || v === null || v === '') return;
+    lines.push(esc(k) + ': ' + esc(String(v)));
+  });
+  try { lines.push('Time: ' + esc(formatTime(new Date().toISOString())) + ' IST'); } catch (e) {}
+  try {
+    await fetch(TELEGRAM_API + botToken + '/sendMessage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: logChatId, text: lines.join('\n'), parse_mode: 'HTML', disable_web_page_preview: true })
+    });
+  } catch (e) {}
+}
+
 /* -- Answer callback query -- */
 async function answerCallback(callbackId, text) {
   var botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -201,7 +239,7 @@ async function editMessage(chatId, messageId, text, replyMarkup) {
 
 /* -- Question CRUD -- */
 async function answerQuestion(id, answer) {
-  return firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['answer', 'answered', 'answeredAt', 'dismissed']), {
+  var result = await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['answer', 'answered', 'answeredAt', 'dismissed']), {
     fields: {
       answer: { stringValue: answer.slice(0, 1000) },
       answered: { booleanValue: true },
@@ -209,15 +247,19 @@ async function answerQuestion(id, answer) {
       dismissed: { booleanValue: false }
     }
   });
+  await sendLog('ANSWER PUBLISHED', { ID: id, Answer: clipText(answer, 120) }, '\u2705');
+  return result;
 }
 
 async function editAnswer(id, answer) {
-  return firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['answer', 'editedAt']), {
+  var result = await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['answer', 'editedAt']), {
     fields: {
       answer: { stringValue: answer.slice(0, 1000) },
       editedAt: { stringValue: new Date().toISOString() }
     }
   });
+  await sendLog('ANSWER UPDATED', { ID: id, Answer: clipText(answer, 120) }, '\u270F\uFE0F');
+  return result;
 }
 
 async function dismissQuestion(id) {
@@ -225,9 +267,11 @@ async function dismissQuestion(id) {
      (answered == true) naturally excludes dismissed questions.
      The bot's questionState() checks dismissed first, so the card
      still shows as DISMISSED regardless of answered value. */
-  return firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['dismissed', 'answered']), {
+  var result = await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['dismissed', 'answered']), {
     fields: { dismissed: { booleanValue: true }, answered: { booleanValue: false } }
   });
+  await sendLog('QUESTION DISMISSED', { ID: id }, '\uD83D\uDE48');
+  return result;
 }
 
 async function retrieveQuestion(id) {
@@ -241,30 +285,38 @@ async function retrieveQuestion(id) {
     await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['dismissed', 'answered']), {
       fields: { dismissed: { booleanValue: false }, answered: { booleanValue: true } }
     });
+    await sendLog('QUESTION RETRIEVED', { ID: id, Restored: 'site with answer' }, '\u21A9\uFE0F');
     return { restoredAs: 'answered', question: q };
   } else {
     await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['dismissed', 'answered']), {
       fields: { dismissed: { booleanValue: false }, answered: { booleanValue: false } }
     });
+    await sendLog('QUESTION RETRIEVED', { ID: id, Restored: 'pending queue' }, '\u21A9\uFE0F');
     return { restoredAs: 'unanswered', question: q };
   }
 }
 
 async function deleteQuestion(id) {
-  return firestore('DELETE', docPath(COLLECTION, id));
+  var result = await firestore('DELETE', docPath(COLLECTION, id));
+  await sendLog('QUESTION DELETED', { ID: id }, '\uD83D\uDDD1');
+  return result;
 }
 
 /* -- Pin/Unpin -- */
 async function pinQuestion(id) {
-  return firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['pinned']), {
+  var result = await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['pinned']), {
     fields: { pinned: { booleanValue: true } }
   });
+  await sendLog('QUESTION PINNED', { ID: id }, '\uD83D\uDCCD');
+  return result;
 }
 
 async function unpinQuestion(id) {
-  return firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['pinned']), {
+  var result = await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['pinned']), {
     fields: { pinned: { booleanValue: false } }
   });
+  await sendLog('QUESTION UNPINNED', { ID: id }, '\uD83D\uDCCD');
+  return result;
 }
 
 async function setSpotlightQuestion(id) {
@@ -278,25 +330,32 @@ async function setSpotlightQuestion(id) {
       } catch (e) {}
     }
   }
-  return firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['spotlight', 'spotlightAt']), {
+  var result = await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['spotlight', 'spotlightAt']), {
     fields: { spotlight: { booleanValue: true }, spotlightAt: { stringValue: new Date().toISOString() } }
   });
+  await sendLog('SPOTLIGHT SET', { ID: id }, '\uD83C\uDF1F');
+  return result;
 }
 
 async function clearSpotlightQuestion(id) {
-  return firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['spotlight']), {
+  var result = await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['spotlight']), {
     fields: { spotlight: { booleanValue: false } }
   });
+  await sendLog('SPOTLIGHT CLEARED', { ID: id }, '\uD83C\uDF1F');
+  return result;
 }
 
 async function setQuestionTopic(id, topic) {
-  return firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['topic', 'topicManual', 'topicAt']), {
+  var normalized = normalizeTopic(topic);
+  var result = await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['topic', 'topicManual', 'topicAt']), {
     fields: {
-      topic: { stringValue: normalizeTopic(topic) },
+      topic: { stringValue: normalized },
       topicManual: { booleanValue: true },
       topicAt: { stringValue: new Date().toISOString() }
     }
   });
+  await sendLog('TOPIC SET', { ID: id, Topic: normalized, Source: 'manual' }, '\uD83C\uDFF7');
+  return result;
 }
 
 async function setAutoQuestionTopic(id, topic) {
@@ -353,9 +412,11 @@ async function clearLookupSession(chatId) {
 
 /* -- Preview session (answer preview -> confirm flow) -- */
 async function savePreviewSession(chatId, questionId, answerText) {
-  return firestore('PATCH', docPath(PREVIEW_SESSION_COLLECTION, String(chatId)), {
+  var result = await firestore('PATCH', docPath(PREVIEW_SESSION_COLLECTION, String(chatId)), {
     fields: { chatId: { stringValue: String(chatId) }, questionId: { stringValue: questionId }, answerText: { stringValue: answerText.slice(0, 1000) }, createdAt: { stringValue: new Date().toISOString() } }
   });
+  await sendLog('ANSWER PREVIEW CREATED', { ID: questionId, Draft: clipText(answerText, 120) }, '\uD83D\uDC41');
+  return result;
 }
 
 async function getPreviewSession(chatId) {
@@ -1178,6 +1239,7 @@ async function sendHealth(chatId, replyToId, editMessageId) {
     BOX_V,
     cardBottom
   ];
+  await sendLog('HEALTH CHECK', { Firestore: okFirestore ? 'OK' : 'ERROR', Questions: count }, '\uD83E\uDE7A');
   await respondTelegram(chatId, lines.join('\n'), replyToId, healthButtons(), editMessageId);
 }
 
@@ -1780,6 +1842,7 @@ module.exports = async function handler(req, res) {
     var update = jsonBody(req);
     var message = update.message || update.edited_message;
     var callback = update.callback_query;
+    _currentActor = actorFromUser((callback && callback.from) || (message && message.from) || {});
 
     /* -- INLINE BUTTON PRESS -- */
     if (callback) {
@@ -1788,12 +1851,14 @@ module.exports = async function handler(req, res) {
       var allowedChatId = String(process.env.TELEGRAM_CHAT_ID || '');
       if (allowedChatId && String(cbChatId) !== allowedChatId) {
         await answerCallback(callback.id, 'Private bot. Access denied.');
+        await sendLog('UNAUTHORIZED CALLBACK', { Chat: cbChatId, Action: callback.data || 'unknown' }, '\uD83D\uDEAB', actorFromUser(callback.from));
         return res.status(200).json({ ok: true, denied: 'wrong chat' });
       }
       var data = callback.data || '';
       var parts = data.split(':');
       var action = parts[0];
       var questionId = parts.slice(1).join(':');
+      await sendLog('BOT CALLBACK', { Action: action, Value: clipText(questionId, 80) }, '\uD83D\uDD18');
 
       // DELETE CONFIRMATION FLOW
       if (action === 'delete') {
@@ -1916,6 +1981,7 @@ module.exports = async function handler(req, res) {
           if (!session || !session.fields || isSessionExpired(session)) { await clearPreviewSession(cbChatId); await answerCallback(callback.id, '\u26A0\uFE0F Session expired'); return res.status(200).json({ ok: true }); }
           var qid = session.fields.questionId && session.fields.questionId.stringValue;
           await clearPreviewSession(cbChatId);
+          await sendLog('ANSWER PREVIEW REVISED', { ID: qid }, '\u270F\uFE0F');
           await answerCallback(callback.id, '\u270F\uFE0F Send your revised answer');
           await saveEditSession(cbChatId, qid);
           await sendTelegram(cbChatId,
@@ -1924,7 +1990,10 @@ module.exports = async function handler(req, res) {
         } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not enter edit mode \u2014 use /edit id'); }
       }
       else if (action === 'previewcancel') {
+        var cancelSession = await getPreviewSession(cbChatId);
+        var cancelQid = cancelSession && cancelSession.fields && cancelSession.fields.questionId && cancelSession.fields.questionId.stringValue;
         await clearPreviewSession(cbChatId);
+        await sendLog('ANSWER PREVIEW CANCELLED', { ID: cancelQid || 'unknown' }, '\u274C');
         await answerCallback(callback.id, 'Answer cancelled');
         await editMessage(cbChatId, cbMessageId,
           cardTop('\u274C <b>ANSWER CANCELLED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Your answer was not published.\n' + BOX_V + ' The question is unchanged.\n' + BOX_V + '\n' + cardBottom
@@ -1979,6 +2048,7 @@ module.exports = async function handler(req, res) {
           for (var di = 0; di < all.length; di++) {
             try { await deleteQuestion(all[di].id); deleted++; } catch (e) {}
           }
+          await sendLog('BULK DELETE ALL', { Requested: count, Deleted: deleted }, '\uD83D\uDDD1');
           await editMessage(cbChatId, cbMessageId,
             cardTop('\u2705 <b>ALL DELETED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Successfully deleted <b>' + deleted + '</b> question' + (deleted === 1 ? '' : 's') + '.\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n' + BOX_V + '\n' + cardBottom
           );
@@ -2008,6 +2078,7 @@ module.exports = async function handler(req, res) {
           var detailLines = BOX_V + ' All dismissed questions restored.\n';
           if (toPending > 0) detailLines += BOX_V + ' \u23F3 <b>' + toPending + '</b> \u2192 pending queue\n';
           if (toSite > 0) detailLines += BOX_V + ' \u2705 <b>' + toSite + '</b> \u2192 back on site (with answers)\n';
+          await sendLog('BULK RETRIEVE ALL', { ToSite: toSite, ToPending: toPending }, '\u21A9\uFE0F');
           await editMessage(cbChatId, cbMessageId,
             cardTop('\u2705 <b>ALL RETRIEVED</b>') + '\n' + BOX_V + '\n' + detailLines + BOX_V + '\n' + BOX_V + ' \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n' + BOX_V + '\n' + cardBottom
           );
@@ -2045,6 +2116,7 @@ module.exports = async function handler(req, res) {
           if (unansweredCount > 0) detailLines += BOX_V + ' \u23F3 <b>' + unansweredCount + '</b> unanswered \u2192 hidden (retrieve \u2192 back to pending)\n';
           detailLines += BOX_V + '\n' + BOX_V + ' Use /retrieveall or /retrieve &lt;id&gt;\n';
           detailLines += BOX_V + ' to restore any question.\n';
+          await sendLog('BULK DISMISS ALL', { Dismissed: dismissedCount, Answered: answeredCount, Unanswered: unansweredCount }, '\uD83D\uDE48');
           await editMessage(cbChatId, cbMessageId,
             cardTop('\uD83D\uDE48 <b>ALL DISMISSED</b>') + '\n' + BOX_V + '\n' + detailLines + BOX_V + '\n' + BOX_V + ' \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n' + BOX_V + '\n' + cardBottom
           );
@@ -2125,6 +2197,7 @@ module.exports = async function handler(req, res) {
               var t = autoTopicForQuestion(all[ri]);
               try { await setAutoQuestionTopic(all[ri].id, t); changed++; } catch (e) {}
             }
+            await sendLog('TOPICS RECOMPUTED', { Updated: changed, PreservedManual: 'manual preserved' }, '\uD83D\uDD04');
             await editMessage(cbChatId, cbMessageId, cardTop('\uD83D\uDD04 <b>AUTO TOPICS UPDATED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Recomputed <b>' + changed + '</b> auto topic' + (changed === 1 ? '' : 's') + '.\n' + BOX_V + ' Manual topics were preserved.\n' + BOX_V + '\n' + cardBottom, topicsButtons(topTopics(await listAllQuestions())));
           }
           else if (questionId === 'unspotlight') {
@@ -2157,6 +2230,7 @@ module.exports = async function handler(req, res) {
           else {
             var t = autoTopicForQuestion(q);
             await setAutoQuestionTopic(questionId, t);
+            await sendLog('TOPIC RECOMPUTED', { ID: questionId, Topic: t, Source: 'auto' }, '\uD83D\uDD04');
             q.topic = t; q.topicManual = false;
             await sendTopicInfo(cbChatId, questionId, undefined, cbMessageId);
           }
@@ -2168,9 +2242,11 @@ module.exports = async function handler(req, res) {
           var q = await getQuestion(questionId);
           if (!q) { await editMessage(cbChatId, cbMessageId, cardTop('\u26A0\uFE0F <b>QUESTION NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question exists for this ID.\n' + BOX_V + '\n' + cardBottom); }
           else {
+            var oldTopic = q.topic || '—';
             await clearQuestionTopic(questionId);
             q.topic = autoTopicForQuestion(q); q.topicManual = false;
             await setAutoQuestionTopic(questionId, q.topic);
+            await sendLog('TOPIC CLEARED', { ID: questionId, Previous: oldTopic, AutoTopic: q.topic }, '\uD83E\uDDF9');
             await editMessage(cbChatId, cbMessageId,
               cardTop('\uD83E\uDDF9 <b>TOPIC CLEARED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Manual topic removed.\n' + BOX_V + ' Auto topic is now active.\n' + BOX_V + '\n' + BOX_V + ' Topic \u2500 <b>' + esc(q.topic) + '</b>\n' + BOX_V + ' ID \u2500 <code>' + esc(questionId) + '</code>\n' + BOX_V + '\n' + cardBottom,
               navMarkup([[getBtn('\uD83D\uDCCB Open Question', questionId)], [cmdBtn('\uD83C\uDFF7 Topics', 'topics')]]));
@@ -2225,6 +2301,7 @@ module.exports = async function handler(req, res) {
     if (allowedChatId && String(chatId) !== allowedChatId) {
       var denialKind = command === '/start' ? 'start' : (text.startsWith('/') ? 'command' : 'message');
       await sendUnauthorizedNotice(chatId, message.from, message.message_id, denialKind, command);
+      await sendLog('UNAUTHORIZED ' + denialKind.toUpperCase(), { Chat: chatId, Attempt: clipText(text, 120) }, '\uD83D\uDEAB', actorFromUser(message.from));
       return res.status(200).json({ ok: true, denied: 'wrong chat' });
     }
 
@@ -2238,11 +2315,23 @@ module.exports = async function handler(req, res) {
     else if (text === '\uD83E\uDE7A Health') { command = '/health'; }
     else if (text === '\uD83D\uDCD6 Help') { /* fall through to /help */ }
     else if (text === '\uD83D\uDD0D Search') {
+      await sendLog('BOT COMMAND', { Command: '/search', Text: 'Search keyboard button' }, '\uD83E\uDD16');
       await sendTelegram(chatId,
         cardTop('\uD83D\uDD0D <b>SEARCH</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Type your search like:\n' + BOX_V + ' /search react\n' + BOX_V + ' /search healthcare\n' + BOX_V + ' /search anonymous\n' + BOX_V + '\n' + cardBottom,
         message.message_id, REPLY_KEYBOARD);
       return res.status(200).json({ ok: true });
     }
+
+    var logCommand = command;
+    if (text === '\uD83D\uDCE5 Inbox') logCommand = '/inbox';
+    else if (text === '\uD83D\uDDDE Digest') logCommand = '/digest';
+    else if (text === '\uD83D\uDCCB Pending') logCommand = '/pending';
+    else if (text === '\uD83D\uDCCA Stats') logCommand = '/stats';
+    else if (text === '\uD83D\uDD50 Recent') logCommand = '/recent';
+    else if (text === '\uD83C\uDF1F Featured') logCommand = '/featured';
+    else if (text === '\uD83E\uDE7A Health') logCommand = '/health';
+    else if (text === '\uD83D\uDCD6 Help') logCommand = '/help';
+    await sendLog('BOT COMMAND', { Command: logCommand, Text: clipText(text, 80) }, '\uD83E\uDD16');
 
     /* /start */
     if (command === '/start') {
@@ -2520,8 +2609,10 @@ module.exports = async function handler(req, res) {
           await respondTelegram(chatId, cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question exists for this ID.\n' + BOX_V + '\n' + cardBottom, message.message_id, REPLY_KEYBOARD, loadingId);
           return res.status(200).json({ ok: true });
         }
+        var oldTopic = q.topic || '—';
         var autoT = autoTopicForQuestion(q);
         await setAutoQuestionTopic(qid, autoT);
+        await sendLog('TOPIC CLEARED', { ID: qid, Previous: oldTopic, AutoTopic: autoT }, '\uD83E\uDDF9');
         await respondTelegram(chatId,
           cardTop('\uD83E\uDDF9 <b>TOPIC CLEARED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Manual topic removed.\n' + BOX_V + ' Auto topic is active.\n' + BOX_V + '\n' + BOX_V + ' Topic \u2500 <b>' + esc(autoT) + '</b>\n' + BOX_V + ' ID \u2500 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
           message.message_id,
@@ -2551,6 +2642,7 @@ module.exports = async function handler(req, res) {
         }
         var topic = autoTopicForQuestion(q);
         await setAutoQuestionTopic(qid, topic);
+        await sendLog('TOPIC RECOMPUTED', { ID: qid, Topic: topic, Source: 'auto' }, '\uD83D\uDD04');
         q.topic = topic; q.topicManual = false;
         await sendTopicInfo(chatId, qid, message.message_id, loadingId);
       } catch (e) {
@@ -2570,6 +2662,7 @@ module.exports = async function handler(req, res) {
           var topic = autoTopicForQuestion(all[ri]);
           try { await setAutoQuestionTopic(all[ri].id, topic); changed++; } catch (e) {}
         }
+        await sendLog('TOPICS RECOMPUTED', { Updated: changed, PreservedManual: skipped }, '\uD83D\uDD04');
         await respondTelegram(chatId,
           cardTop('\uD83D\uDD04 <b>AUTO TOPICS UPDATED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Recomputed <b>' + changed + '</b> question' + (changed === 1 ? '' : 's') + '.\n' + BOX_V + ' Preserved <b>' + skipped + '</b> manual topic' + (skipped === 1 ? '' : 's') + '.\n' + BOX_V + '\n' + cardBottom,
           message.message_id, topicsButtons(topTopics(await listAllQuestions())), loadingId);
