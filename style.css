@@ -1870,52 +1870,71 @@ html.light .footer-link:hover { border-color: var(--accent); color: var(--accent
 html.light .footer-nav a:hover { color: var(--accent); background: rgba(100,80,220,0.06); }
 
 /* ============ AMA Featured / Spotlight ============ */
-.ama-featured {
-  margin: 22px 0 26px;
+:root {
+  --ama-featured-purple: #D0BCFF;
+  --ama-featured-purple-line: rgba(208,188,255,0.62);
+  --ama-pinned-blue: #00C8FF;
+  --ama-pinned-blue-line: rgba(0,200,255,0.34);
+  --ama-card-bg: rgba(255,255,255,0.035);
 }
-.ama-featured-label {
-  display: inline-flex;
+html.light {
+  --ama-featured-purple: #6750A4;
+  --ama-featured-purple-line: rgba(103,80,164,0.48);
+  --ama-pinned-blue: #006CBA;
+  --ama-pinned-blue-line: rgba(0,108,186,0.34);
+  --ama-card-bg: rgba(255,255,255,0.6);
+}
+
+.ama-featured { margin: 22px 0 26px; }
+.ama-featured-label { display: none !important; }
+
+/* Badge row: featured left; pinned right only when both exist. */
+.ama-badge-row {
+  display: flex;
   align-items: center;
-  gap: 7px;
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #fbbf24;
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(251,191,36,0.35);
-  background: rgba(251,191,36,0.09);
-  margin-bottom: 12px;
+  justify-content: flex-start;
+  gap: 8px;
+  margin-bottom: 10px;
 }
-.ama-featured-label .material-symbols-outlined { font-size: 16px; font-variation-settings: 'FILL' 1, 'wght' 700, 'opsz' 20; }
-.ama-q-featured-card {
-  position: relative;
-  border-color: rgba(251,191,36,0.4) !important;
-  background:
-    radial-gradient(circle at 18% 0%, rgba(251,191,36,0.16), transparent 35%),
-    radial-gradient(circle at 95% 20%, rgba(0,200,255,0.12), transparent 38%),
-    rgba(255,255,255,0.035);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.26), 0 0 0 1px rgba(251,191,36,0.08) inset;
-}
-.ama-spotlight-badge {
+.ama-badge-row .ama-pin-badge,
+.ama-badge-row .ama-spotlight-badge { margin: 0; }
+.ama-badge-row .ama-pin-badge:nth-child(2) { margin-left: auto; }
+
+.ama-spotlight-badge,
+.ama-pin-badge {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   font-family: var(--mono);
   font-size: 10px;
   font-weight: 800;
-  color: #fbbf24;
-  background: rgba(251,191,36,0.1);
-  border: 1px solid rgba(251,191,36,0.28);
+  letter-spacing: 0.06em;
   border-radius: 999px;
-  padding: 4px 8px;
-  margin: 0 6px 10px 0;
+  padding: 4px 9px;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
 }
-.ama-spotlight-icon { font-size: 13px !important; font-variation-settings: 'FILL' 1, 'wght' 700, 'opsz' 20; }
-.ama-q-meta-spotlight { color: #fbbf24; opacity: 0.95; }
-.ama-q-meta-spotlight .ama-q-meta-icon { color: #fbbf24; }
+.ama-spotlight-badge {
+  color: var(--ama-featured-purple) !important;
+  background: rgba(208,188,255,0.12) !important;
+  border: 1px solid var(--ama-featured-purple-line) !important;
+}
+.ama-pin-badge {
+  color: var(--ama-pinned-blue) !important;
+  background: rgba(0,200,255,0.10) !important;
+  border: 1px solid var(--ama-pinned-blue-line) !important;
+}
+html.light .ama-spotlight-badge { background: rgba(103,80,164,0.10) !important; }
+html.light .ama-pin-badge { background: rgba(0,108,186,0.08) !important; }
+
+.ama-spotlight-icon,
+.ama-q-meta-spotlight,
+.ama-q-meta-spotlight .ama-q-meta-icon { color: var(--ama-featured-purple) !important; }
+.ama-pin-icon { color: var(--ama-pinned-blue) !important; }
+.ama-spotlight-icon,
+.ama-pin-icon { font-size: 13px !important; font-variation-settings: 'FILL' 1, 'wght' 700, 'opsz' 20; }
+
 .ama-empty-note {
   font-family: var(--mono);
   font-size: 12px;
@@ -1925,234 +1944,49 @@ html.light .footer-nav a:hover { color: var(--accent); background: rgba(100,80,2
   border: 1px dashed var(--border);
   border-radius: 14px;
 }
-html.light .ama-q-featured-card { background: rgba(255,255,255,0.78); border-color: rgba(180,130,20,0.35) !important; }
-html.light .ama-featured-label, html.light .ama-spotlight-badge { color: #9a6700; background: rgba(251,191,36,0.13); border-color: rgba(180,130,20,0.28); }
 
-/* ============ AMA badge layout refinement ============ */
-.ama-badge-row {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.ama-badge-row .ama-pin-badge,
-.ama-badge-row .ama-spotlight-badge {
-  margin: 0;
-}
-.ama-badge-row .ama-pin-badge:nth-child(2) {
-  margin-left: auto;
-}
-.ama-q-featured-card {
-  border-color: var(--border) !important;
-  background: rgba(255,255,255,0.035) !important;
-  box-shadow: none !important;
-}
-.ama-featured-label { display: none !important; }
-.ama-spotlight-badge {
-  color: #fbbf24;
-  background: rgba(251,191,36,0.12);
-  border-color: rgba(251,191,36,0.32);
-}
-html.light .ama-q-featured-card {
-  background: rgba(255,255,255,0.6) !important;
-  border-color: var(--border) !important;
-  box-shadow: none !important;
-}
-
-/* ============ AMA featured purple MD3 refinement ============ */
-.ama-spotlight-badge {
-  color: #D0BCFF !important;
-  background: rgba(208,188,255,0.14) !important;
-  border-color: rgba(208,188,255,0.38) !important;
-}
-.ama-spotlight-icon,
-.ama-q-meta-spotlight,
-.ama-q-meta-spotlight .ama-q-meta-icon {
-  color: #D0BCFF !important;
-}
-html.light .ama-spotlight-badge {
-  color: #6750A4 !important;
-  background: rgba(103,80,164,0.12) !important;
-  border-color: rgba(103,80,164,0.30) !important;
-}
-html.light .ama-spotlight-icon,
-html.light .ama-q-meta-spotlight,
-html.light .ama-q-meta-spotlight .ama-q-meta-icon {
-  color: #6750A4 !important;
-}
-
-/* ============ Remove all featured glow/halo effects ============ */
-.ama-spotlight-badge,
-.ama-spotlight-badge *,
-.ama-q-spotlight,
-.ama-q-featured-card {
-  box-shadow: none !important;
-  text-shadow: none !important;
-  filter: none !important;
-}
-.ama-q-spotlight:not(.ama-q-pinned),
-.ama-q-featured-card:not(.ama-q-pinned) {
-  border-color: var(--border) !important;
-  background: rgba(255,255,255,0.035) !important;
-}
-.ama-q-featured-card::before,
-.ama-q-featured-card::after,
-.ama-q-spotlight::before,
-.ama-q-spotlight::after,
-.ama-spotlight-badge::before,
-.ama-spotlight-badge::after {
-  display: none !important;
-  content: none !important;
-  box-shadow: none !important;
-  background: none !important;
-}
-html.light .ama-q-spotlight:not(.ama-q-pinned),
-html.light .ama-q-featured-card:not(.ama-q-pinned) {
-  border-color: var(--border) !important;
-  background: rgba(255,255,255,0.6) !important;
-}
-
-/* ============ AMA featured/pinned state borders + tints ============ */
-:root {
-  --ama-featured-purple: #D0BCFF;
-  --ama-featured-purple-soft: rgba(208,188,255,0.105);
-  --ama-featured-purple-line: rgba(208,188,255,0.52);
-  --ama-pinned-blue: #00C8FF;
-  --ama-pinned-blue-soft: rgba(0,200,255,0.055);
-  --ama-pinned-blue-line: rgba(0,200,255,0.28);
-}
-html.light {
-  --ama-featured-purple: #6750A4;
-  --ama-featured-purple-soft: rgba(103,80,164,0.095);
-  --ama-featured-purple-line: rgba(103,80,164,0.42);
-  --ama-pinned-blue: #006CBA;
-  --ama-pinned-blue-soft: rgba(0,108,186,0.065);
-  --ama-pinned-blue-line: rgba(0,108,186,0.30);
-}
-
-/* Featured only: purple line + subtle purple card tint */
-.ama-q.ama-q-spotlight:not(.ama-q-pinned) {
-  border-color: var(--ama-featured-purple-line) !important;
-  background: var(--ama-featured-purple-soft) !important;
-  box-shadow: none !important;
-}
-
-/* Pinned only: keep/enforce the blue line + subtle blue tint */
-.ama-q.ama-q-pinned:not(.ama-q-spotlight) {
-  border-color: var(--ama-pinned-blue-line) !important;
-  background: var(--ama-pinned-blue-soft) !important;
-}
-
-/* Featured + pinned: upper half purple, lower half blue — border + body tint */
-.ama-q.ama-q-spotlight.ama-q-pinned,
-.ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned {
-  border: 1px solid transparent !important;
-  background:
-    linear-gradient(to bottom,
-      var(--ama-featured-purple-soft) 0%,
-      var(--ama-featured-purple-soft) 50%,
-      var(--ama-pinned-blue-soft) 50%,
-      var(--ama-pinned-blue-soft) 100%) padding-box,
-    linear-gradient(to bottom,
-      var(--ama-featured-purple-line) 0%,
-      var(--ama-featured-purple-line) 50%,
-      var(--ama-pinned-blue-line) 50%,
-      var(--ama-pinned-blue-line) 100%) border-box !important;
-  box-shadow: none !important;
-}
-
-/* Keep featured card clean: no halo/glow, only the state tint/border above */
+/* No glow, no body tint: only clean state borders. */
+.ama-q.ama-q-spotlight,
 .ama-q.ama-q-featured-card {
   box-shadow: none !important;
   filter: none !important;
   text-shadow: none !important;
 }
+.ama-q.ama-q-featured-card { background: var(--ama-card-bg) !important; }
 
-/* Badge colors stay aligned with their card-state colors */
-.ama-spotlight-badge {
-  color: var(--ama-featured-purple) !important;
-  background: var(--ama-featured-purple-soft) !important;
+/* Featured only: purple border. */
+.ama-q.ama-q-spotlight:not(.ama-q-pinned) {
   border-color: var(--ama-featured-purple-line) !important;
+  background: var(--ama-card-bg) !important;
 }
-.ama-pin-badge {
-  color: var(--ama-pinned-blue) !important;
-  background: var(--ama-pinned-blue-soft) !important;
-  border-color: var(--ama-pinned-blue-line) !important;
-}
-.ama-q-meta-spotlight,
-.ama-q-meta-spotlight .ama-q-meta-icon,
-.ama-spotlight-icon { color: var(--ama-featured-purple) !important; }
-.ama-pin-icon { color: var(--ama-pinned-blue) !important; }
 
-/* ============ AMA state border-only refinement ============ */
-.ama-q.ama-q-spotlight:not(.ama-q-pinned),
+/* Pinned only: blue border, normal card body. */
 .ama-q.ama-q-pinned:not(.ama-q-spotlight) {
-  background: rgba(255,255,255,0.035) !important;
-  box-shadow: none !important;
-}
-.ama-q.ama-q-spotlight.ama-q-pinned,
-.ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned {
-  background:
-    linear-gradient(rgba(255,255,255,0.035), rgba(255,255,255,0.035)) padding-box,
-    linear-gradient(to bottom,
-      var(--ama-featured-purple-line) 0%,
-      var(--ama-featured-purple-line) 50%,
-      var(--ama-pinned-blue-line) 50%,
-      var(--ama-pinned-blue-line) 100%) border-box !important;
-  box-shadow: none !important;
-}
-html.light .ama-q.ama-q-spotlight:not(.ama-q-pinned),
-html.light .ama-q.ama-q-pinned:not(.ama-q-spotlight) {
-  background: rgba(255,255,255,0.6) !important;
-}
-html.light .ama-q.ama-q-spotlight.ama-q-pinned,
-html.light .ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned {
-  background:
-    linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)) padding-box,
-    linear-gradient(to bottom,
-      var(--ama-featured-purple-line) 0%,
-      var(--ama-featured-purple-line) 50%,
-      var(--ama-pinned-blue-line) 50%,
-      var(--ama-pinned-blue-line) 100%) border-box !important;
+  border-color: var(--ama-pinned-blue-line) !important;
+  background: var(--ama-card-bg) !important;
 }
 
-/* ============ AMA featured+pinned border-only final fix ============ */
+/* Featured + pinned: border split only, upper purple/lower blue. */
 .ama-q.ama-q-spotlight.ama-q-pinned,
 .ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned {
-  position: relative;
-  border-color: transparent !important;
-  background: rgba(255,255,255,0.035) !important;
+  border: 1px solid transparent !important;
+  background:
+    linear-gradient(var(--ama-card-bg), var(--ama-card-bg)) padding-box,
+    linear-gradient(to bottom,
+      var(--ama-featured-purple-line) 0%,
+      var(--ama-featured-purple-line) 50%,
+      var(--ama-pinned-blue-line) 50%,
+      var(--ama-pinned-blue-line) 100%) border-box !important;
   box-shadow: none !important;
   overflow: hidden;
 }
-.ama-q.ama-q-spotlight.ama-q-pinned::before,
-.ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned::before {
-  content: "" !important;
-  display: block !important;
-  position: absolute !important;
-  inset: 0 !important;
-  padding: 1px !important;
-  border-radius: inherit !important;
-  background: linear-gradient(to bottom,
-    var(--ama-featured-purple-line) 0%,
-    var(--ama-featured-purple-line) 50%,
-    var(--ama-pinned-blue-line) 50%,
-    var(--ama-pinned-blue-line) 100%) !important;
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
-  -webkit-mask-composite: xor !important;
-  mask-composite: exclude !important;
-  pointer-events: none !important;
-  z-index: 1 !important;
-  box-shadow: none !important;
-  filter: none !important;
-}
-.ama-q.ama-q-spotlight.ama-q-pinned > *,
-.ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned > * {
-  position: relative;
-  z-index: 2;
-}
-html.light .ama-q.ama-q-spotlight.ama-q-pinned,
-html.light .ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned {
-  background: rgba(255,255,255,0.6) !important;
+
+.ama-q.ama-q-spotlight::before,
+.ama-q.ama-q-spotlight::after,
+.ama-q.ama-q-featured-card::before,
+.ama-q.ama-q-featured-card::after,
+.ama-spotlight-badge::before,
+.ama-spotlight-badge::after {
+  content: none !important;
+  display: none !important;
 }
