@@ -567,6 +567,45 @@ function clipText(value, max) {
   return s.length > max ? s.slice(0, max - 1) + '…' : s;
 }
 
+function telegramUserName(user) {
+  user = user || {};
+  var full = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
+  return full || (user.username ? '@' + user.username : 'Telegram user');
+}
+
+function privateBotNotice(user) {
+  user = user || {};
+  var name = telegramUserName(user);
+  var userId = user.id ? String(user.id) : 'Unavailable';
+  var username = user.username ? '@' + user.username : 'Unavailable';
+  return [
+    cardTop('\uD83D\uDD12 <b>PRIVATE ADMIN BOT</b>'),
+    BOX_V,
+    BOX_V + ' Hello, <b>' + esc(name) + '</b>.',
+    BOX_V,
+    BOX_V + ' This bot is the private admin',
+    BOX_V + ' assistant for Yatin Sharma\'s',
+    BOX_V + ' portfolio AMA system.',
+    BOX_V,
+    BOX_V + ' Access is restricted to the owner.',
+    BOX_V + ' No commands are available here.',
+    BOX_V,
+    BOX_V + ' <b>Your Telegram details</b>',
+    BOX_V + ' Name \u2500 ' + esc(name),
+    BOX_V + ' ID \u2500 <code>' + esc(userId) + '</code>',
+    BOX_V + ' Username \u2500 ' + esc(username),
+    BOX_V,
+    BOX_V + ' If this is unexpected, please',
+    BOX_V + ' contact the owner directly.',
+    BOX_V,
+    cardBottom
+  ].join('\n');
+}
+
+async function sendUnauthorizedNotice(chatId, user, replyToId) {
+  try { await sendTelegram(chatId, privateBotNotice(user), replyToId); } catch (e) {}
+}
+
 function answerPreviewCard(q, answerText, questionId) {
   var name = visitorName(q && q.name);
   var question = q ? q.question : 'Question unavailable';
@@ -1699,7 +1738,9 @@ module.exports = async function handler(req, res) {
       var cbMessageId = callback.message && callback.message.message_id;
       var allowedChatId = String(process.env.TELEGRAM_CHAT_ID || '');
       if (allowedChatId && String(cbChatId) !== allowedChatId) {
-        return res.status(200).json({ ok: true, ignored: 'wrong chat' });
+        await answerCallback(callback.id, 'Private bot. Access denied.');
+        await sendUnauthorizedNotice(cbChatId, callback.from);
+        return res.status(200).json({ ok: true, denied: 'wrong chat' });
       }
       var data = callback.data || '';
       var parts = data.split(':');
@@ -2130,7 +2171,8 @@ module.exports = async function handler(req, res) {
     var chatId = message.chat && message.chat.id;
     var allowedChatId = String(process.env.TELEGRAM_CHAT_ID || '');
     if (allowedChatId && String(chatId) !== allowedChatId) {
-      return res.status(200).json({ ok: true, ignored: 'wrong chat' });
+      await sendUnauthorizedNotice(chatId, message.from, message.message_id);
+      return res.status(200).json({ ok: true, denied: 'wrong chat' });
     }
 
     var text = String((message.text || message.caption) || '').trim();
