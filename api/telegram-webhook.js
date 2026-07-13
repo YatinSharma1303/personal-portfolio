@@ -166,14 +166,44 @@ function actorFromUser(user) {
   };
 }
 
-async function sendLog(title, fields, emoji, actorOverride) {
+function inferLogCategory(title) {
+  title = String(title || '').toUpperCase();
+  if (title.indexOf('SITE ') === 0 || title.indexOf('SITE_') === 0) return title.indexOf('FAILED') !== -1 ? 'error' : 'site';
+  if (title.indexOf('UNAUTHORIZED') !== -1) return 'security';
+  if (title.indexOf('BOT COMMAND') !== -1 || title.indexOf('BOT CALLBACK') !== -1) return 'bot';
+  if (title.indexOf('ANSWER') !== -1) return 'answer';
+  if (title.indexOf('DISMISS') !== -1 || title.indexOf('RETRIEVE') !== -1) return 'moderation';
+  if (title.indexOf('DELETE') !== -1 || title.indexOf('DELETED') !== -1) return 'delete';
+  if (title.indexOf('PINNED') !== -1 || title.indexOf('UNPINNED') !== -1) return 'pin';
+  if (title.indexOf('SPOTLIGHT') !== -1) return 'spotlight';
+  if (title.indexOf('TOPIC') !== -1) return 'topic';
+  if (title.indexOf('HEALTH') !== -1) return 'health';
+  if (title.indexOf('ERROR') !== -1 || title.indexOf('FAILED') !== -1) return 'error';
+  return 'bot';
+}
+
+function logThreadIdFor(category) {
+  var raw = process.env.TELEGRAM_LOG_THREAD_MAP;
+  if (!raw) return null;
+  try {
+    var map = JSON.parse(raw);
+    var v = map && map[category];
+    if (v && typeof v === 'object') v = v.threadId || v.id || v.message_thread_id;
+    var n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  } catch (e) { return null; }
+}
+
+async function sendLog(title, fields, emoji, actorOverride, category) {
   var logChatId = process.env.TELEGRAM_LOG_CHAT_ID;
   var botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!logChatId || !botToken) return;
   fields = fields || {};
   emoji = emoji || '\uD83E\uDDFE';
+  category = category || inferLogCategory(title);
   var actor = actorOverride || _currentActor;
   var lines = [emoji + ' <b>LOG · ' + esc(title) + '</b>'];
+  lines.push('Category: ' + esc(category));
   if (actor) {
     lines.push('Actor: ' + esc(actor.name) + ' (' + esc(actor.id) + ')');
     if (actor.username && actor.username !== '—') lines.push('Username: ' + esc(actor.username));
@@ -185,10 +215,13 @@ async function sendLog(title, fields, emoji, actorOverride) {
   });
   try { lines.push('Time: ' + esc(formatTime(new Date().toISOString())) + ' IST'); } catch (e) {}
   try {
+    var payload = { chat_id: logChatId, text: lines.join('\n'), parse_mode: 'HTML', disable_web_page_preview: true };
+    var threadId = logThreadIdFor(category);
+    if (threadId) payload.message_thread_id = threadId;
     await fetch(TELEGRAM_API + botToken + '/sendMessage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: logChatId, text: lines.join('\n'), parse_mode: 'HTML', disable_web_page_preview: true })
+      body: JSON.stringify(payload)
     });
   } catch (e) {}
 }

@@ -23,21 +23,45 @@ function clip(value, max) {
   return value.length > max ? value.slice(0, max - 1) + '…' : value;
 }
 
-async function sendLog(botToken, title, fields, emoji) {
+function inferLogCategory(title) {
+  title = String(title || '').toUpperCase();
+  if (title.indexOf('SITE ') === 0 || title.indexOf('SITE_') === 0) return title.indexOf('FAILED') !== -1 ? 'error' : 'site';
+  if (title.indexOf('ERROR') !== -1 || title.indexOf('FAILED') !== -1) return 'error';
+  return 'site';
+}
+
+function logThreadIdFor(category) {
+  var raw = process.env.TELEGRAM_LOG_THREAD_MAP;
+  if (!raw) return null;
+  try {
+    var map = JSON.parse(raw);
+    var v = map && map[category];
+    if (v && typeof v === 'object') v = v.threadId || v.id || v.message_thread_id;
+    var n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  } catch (e) { return null; }
+}
+
+async function sendLog(botToken, title, fields, emoji, category) {
   var logChatId = process.env.TELEGRAM_LOG_CHAT_ID;
   if (!botToken || !logChatId) return;
   fields = fields || {};
+  category = category || inferLogCategory(title);
   var lines = [(emoji || '\uD83E\uDDFE') + ' <b>LOG · ' + escapeHtml(title) + '</b>'];
+  lines.push('Category: ' + escapeHtml(category));
   Object.keys(fields).forEach(function(k) {
     var v = fields[k];
     if (v === undefined || v === null || v === '') return;
     lines.push(escapeHtml(k) + ': ' + escapeHtml(String(v)));
   });
   try {
+    var payload = { chat_id: logChatId, text: lines.join('\n'), parse_mode: 'HTML', disable_web_page_preview: true };
+    var threadId = logThreadIdFor(category);
+    if (threadId) payload.message_thread_id = threadId;
     await fetch(TELEGRAM_API + botToken + '/sendMessage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: logChatId, text: lines.join('\n'), parse_mode: 'HTML', disable_web_page_preview: true })
+      body: JSON.stringify(payload)
     });
   } catch (e) {}
 }
