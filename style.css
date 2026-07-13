@@ -2012,3 +2012,75 @@ html.light .ama-q-featured-card:not(.ama-q-pinned) {
   border-color: var(--border) !important;
   background: rgba(255,255,255,0.6) !important;
 }
+
+/* ============ AMA featured/pinned state borders + tints ============ */
+:root {
+  --ama-featured-purple: #D0BCFF;
+  --ama-featured-purple-soft: rgba(208,188,255,0.105);
+  --ama-featured-purple-line: rgba(208,188,255,0.52);
+  --ama-pinned-blue: #00C8FF;
+  --ama-pinned-blue-soft: rgba(0,200,255,0.055);
+  --ama-pinned-blue-line: rgba(0,200,255,0.28);
+}
+html.light {
+  --ama-featured-purple: #6750A4;
+  --ama-featured-purple-soft: rgba(103,80,164,0.095);
+  --ama-featured-purple-line: rgba(103,80,164,0.42);
+  --ama-pinned-blue: #006CBA;
+  --ama-pinned-blue-soft: rgba(0,108,186,0.065);
+  --ama-pinned-blue-line: rgba(0,108,186,0.30);
+}
+
+/* Featured only: purple line + subtle purple card tint */
+.ama-q.ama-q-spotlight:not(.ama-q-pinned) {
+  border-color: var(--ama-featured-purple-line) !important;
+  background: var(--ama-featured-purple-soft) !important;
+  box-shadow: none !important;
+}
+
+/* Pinned only: keep/enforce the blue line + subtle blue tint */
+.ama-q.ama-q-pinned:not(.ama-q-spotlight) {
+  border-color: var(--ama-pinned-blue-line) !important;
+  background: var(--ama-pinned-blue-soft) !important;
+}
+
+/* Featured + pinned: upper half purple, lower half blue — border + body tint */
+.ama-q.ama-q-spotlight.ama-q-pinned,
+.ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned {
+  border: 1px solid transparent !important;
+  background:
+    linear-gradient(to bottom,
+      var(--ama-featured-purple-soft) 0%,
+      var(--ama-featured-purple-soft) 50%,
+      var(--ama-pinned-blue-soft) 50%,
+      var(--ama-pinned-blue-soft) 100%) padding-box,
+    linear-gradient(to bottom,
+      var(--ama-featured-purple-line) 0%,
+      var(--ama-featured-purple-line) 50%,
+      var(--ama-pinned-blue-line) 50%,
+      var(--ama-pinned-blue-line) 100%) border-box !important;
+  box-shadow: none !important;
+}
+
+/* Keep featured card clean: no halo/glow, only the state tint/border above */
+.ama-q.ama-q-featured-card {
+  box-shadow: none !important;
+  filter: none !important;
+  text-shadow: none !important;
+}
+
+/* Badge colors stay aligned with their card-state colors */
+.ama-spotlight-badge {
+  color: var(--ama-featured-purple) !important;
+  background: var(--ama-featured-purple-soft) !important;
+  border-color: var(--ama-featured-purple-line) !important;
+}
+.ama-pin-badge {
+  color: var(--ama-pinned-blue) !important;
+  background: var(--ama-pinned-blue-soft) !important;
+  border-color: var(--ama-pinned-blue-line) !important;
+}
+.ama-q-meta-spotlight,
+.ama-q-meta-spotlight .ama-q-meta-icon,
+.ama-spotlight-icon { color: var(--ama-featured-purple) !important; }
+.ama-pin-icon { color: var(--ama-pinned-blue) !important; }
