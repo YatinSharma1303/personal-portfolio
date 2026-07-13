@@ -573,7 +573,7 @@ function telegramUserName(user) {
   return full || (user.username ? '@' + user.username : 'Telegram user');
 }
 
-function privateBotNotice(user) {
+function privateBotStartNotice(user) {
   user = user || {};
   var name = telegramUserName(user);
   var userId = user.id ? String(user.id) : 'Unavailable';
@@ -602,8 +602,57 @@ function privateBotNotice(user) {
   ].join('\n');
 }
 
-async function sendUnauthorizedNotice(chatId, user, replyToId) {
-  try { await sendTelegram(chatId, privateBotNotice(user), replyToId); } catch (e) {}
+function privateBotCommandDeniedNotice(user, command) {
+  user = user || {};
+  var userId = user.id ? String(user.id) : 'Unavailable';
+  var username = user.username ? '@' + user.username : 'Unavailable';
+  return [
+    cardTop('\u26D4 <b>ACCESS RESTRICTED</b>'),
+    BOX_V,
+    BOX_V + ' This is a private admin bot.',
+    BOX_V + ' Your command was not processed.',
+    BOX_V,
+    BOX_V + ' Command \u2500 <code>' + esc(command || 'unknown') + '</code>',
+    BOX_V + ' ID \u2500 <code>' + esc(userId) + '</code>',
+    BOX_V + ' Username \u2500 ' + esc(username),
+    BOX_V,
+    BOX_V + ' Use /start to view ownership',
+    BOX_V + ' and access information.',
+    BOX_V,
+    cardBottom
+  ].join('\n');
+}
+
+function privateBotMessageDeniedNotice(user) {
+  user = user || {};
+  var userId = user.id ? String(user.id) : 'Unavailable';
+  return [
+    cardTop('\uD83D\uDD12 <b>PRIVATE BOT</b>'),
+    BOX_V,
+    BOX_V + ' This bot is restricted to',
+    BOX_V + ' its owner only.',
+    BOX_V,
+    BOX_V + ' Messages from this chat are',
+    BOX_V + ' not processed.',
+    BOX_V,
+    BOX_V + ' Your Telegram ID:',
+    BOX_V + ' <code>' + esc(userId) + '</code>',
+    BOX_V,
+    BOX_V + ' Use /start for more details.',
+    BOX_V,
+    cardBottom
+  ].join('\n');
+}
+
+async function sendUnauthorizedNotice(chatId, user, replyToId, kind, command) {
+  try {
+    var text = kind === 'start'
+      ? privateBotStartNotice(user)
+      : kind === 'command'
+        ? privateBotCommandDeniedNotice(user, command)
+        : privateBotMessageDeniedNotice(user);
+    await sendTelegram(chatId, text, replyToId);
+  } catch (e) {}
 }
 
 function answerPreviewCard(q, answerText, questionId) {
@@ -1739,7 +1788,6 @@ module.exports = async function handler(req, res) {
       var allowedChatId = String(process.env.TELEGRAM_CHAT_ID || '');
       if (allowedChatId && String(cbChatId) !== allowedChatId) {
         await answerCallback(callback.id, 'Private bot. Access denied.');
-        await sendUnauthorizedNotice(cbChatId, callback.from);
         return res.status(200).json({ ok: true, denied: 'wrong chat' });
       }
       var data = callback.data || '';
@@ -2169,15 +2217,16 @@ module.exports = async function handler(req, res) {
     if (!message) return res.status(200).json({ ok: true, ignored: 'no message' });
 
     var chatId = message.chat && message.chat.id;
-    var allowedChatId = String(process.env.TELEGRAM_CHAT_ID || '');
-    if (allowedChatId && String(chatId) !== allowedChatId) {
-      await sendUnauthorizedNotice(chatId, message.from, message.message_id);
-      return res.status(200).json({ ok: true, denied: 'wrong chat' });
-    }
-
     var text = String((message.text || message.caption) || '').trim();
     if (!text) return res.status(200).json({ ok: true, ignored: 'empty' });
     var command = text.split(/\s+/)[0].toLowerCase().replace(/@\w+$/, '');
+
+    var allowedChatId = String(process.env.TELEGRAM_CHAT_ID || '');
+    if (allowedChatId && String(chatId) !== allowedChatId) {
+      var denialKind = command === '/start' ? 'start' : (text.startsWith('/') ? 'command' : 'message');
+      await sendUnauthorizedNotice(chatId, message.from, message.message_id, denialKind, command);
+      return res.status(200).json({ ok: true, denied: 'wrong chat' });
+    }
 
     /* Keyboard shortcut handling */
     if (text === '\uD83D\uDCE5 Inbox') { command = '/inbox'; }
