@@ -1191,48 +1191,71 @@
       });
       return arr;
     }
+    function amaQuestionCard(q, opts = {}) {
+      const up = votedSet.has(q.id);
+      const REACTION_EMOJIS = ['👍', '🔥', '👏', '🤩'];
+      const reactionHTML = REACTION_EMOJIS.map(emoji => {
+        const count = (q.reactions && q.reactions[emoji]) || 0;
+        const reacted = reactedSet.has(q.id + ':' + emoji);
+        return '<button class="ama-react-btn ' + (reacted ? 'react-active' : '') + '" data-id="' + q.id + '" data-emoji="' + emoji + '">' + emoji + '<span>' + count + '</span></button>';
+      }).join('');
+      const pinBadge = q.pinned ? '<span class="ama-pin-badge"><span class="material-symbols-outlined ama-pin-icon">push_pin</span>Pinned</span>' : '';
+      const spotlightBadge = q.spotlight ? '<span class="ama-spotlight-badge"><span class="material-symbols-outlined ama-spotlight-icon">hotel_class</span>Featured</span>' : '';
+      const reactionEntries = Object.entries(q.reactions || {}).filter(([, v]) => v > 0);
+      const reactionSummary = reactionEntries.length ? '<div class="ama-reaction-summary">' + reactionEntries.map(([e, c]) => '<span>' + e + ' ' + c + '</span>').join(' ') + '</div>' : '';
+      return '<div class="ama-q' + (q.pinned ? ' ama-q-pinned' : '') + (q.spotlight ? ' ama-q-spotlight' : '') + (opts.featured ? ' ama-q-featured-card' : '') + '">' +
+        (opts.featured ? '<div class="ama-featured-label"><span class="material-symbols-outlined">hotel_class</span><span>Featured AMA</span></div>' : '') +
+        spotlightBadge + pinBadge +
+        '<div class="ama-q-text">' + esc(q.question) + '</div>' +
+        '<div class="ama-q-ans">' + esc(q.answer) + '</div>' +
+        '<div class="ama-q-meta">' +
+          '<span class="ama-q-meta-name"><span class="material-symbols-outlined ama-q-meta-icon">person</span>' + esc(q.name || 'Anonymous') + '</span>' +
+          '<span class="ama-q-meta-time"><span class="material-symbols-outlined ama-q-meta-icon">schedule</span>Asked ' + esc(formatAmaTime(q.createdAt)) + '</span>' +
+          '<span class="ama-q-meta-time ama-q-meta-answered"><span class="material-symbols-outlined ama-q-meta-icon">check_circle</span>Answered ' + esc(formatAmaTime(q.answeredAt)) + '</span>' +
+          (q.spotlightAt ? '<span class="ama-q-meta-time ama-q-meta-spotlight"><span class="material-symbols-outlined ama-q-meta-icon">hotel_class</span>Featured ' + esc(formatAmaTime(q.spotlightAt)) + '</span>' : '') +
+          (q.editedAt ? '<span class="ama-q-meta-time ama-q-meta-edited"><span class="material-symbols-outlined ama-q-meta-icon">edit</span>Edited ' + esc(formatAmaTime(q.editedAt)) + '</span>' : '') +
+        '</div>' +
+        '<div class="ama-q-vote">' +
+        '<button class="ama-vote-btn ' + (up ? 'voted' : '') + '" data-id="' + q.id + '" data-dir="1" title="Helpful">\u25B2</button>' +
+        '<span class="ama-vote-count" data-count="' + q.id + '">' + q.votes + '</span>' +
+        '<button class="ama-vote-btn ' + (up ? 'voted' : '') + '" data-id="' + q.id + '" data-dir="-1" title="Undo">\u25BC</button>' +
+        '</div>' +
+        '<div class="ama-q-reactions">' + reactionHTML + '</div>' +
+        reactionSummary +
+        '</div>';
+    }
+
+    function wireAmaActions(root) {
+      if (!root) return;
+      root.querySelectorAll('.ama-vote-btn').forEach(b => b.addEventListener('click', () => vote(b.dataset.id, +b.dataset.dir)));
+      root.querySelectorAll('.ama-react-btn').forEach(b => b.addEventListener('click', () => toggleReaction(b.dataset.id, b.dataset.emoji)));
+    }
+
     function render() {
-      if (!answeredDocs.length) { if (listWrap) listWrap.hidden = true; return; }
+      if (!answeredDocs.length) {
+        if (listWrap) listWrap.hidden = true;
+        if (featured) { featured.hidden = true; featured.innerHTML = ''; }
+        return;
+      }
       if (listWrap) listWrap.hidden = false;
-      const arr = sorted();
+      const spotlightDoc = answeredDocs.find(q => q.spotlight && !q.dismissed);
+      if (featured) {
+        if (spotlightDoc) {
+          featured.hidden = false;
+          featured.innerHTML = amaQuestionCard(spotlightDoc, { featured: true });
+          wireAmaActions(featured);
+        } else {
+          featured.hidden = true;
+          featured.innerHTML = '';
+        }
+      }
+      const arr = sorted().filter(q => !q.spotlight);
       const pages = Math.max(1, Math.ceil(arr.length / PER_PAGE));
       if (page > pages) page = pages;
       const slice = arr.slice((page - 1) * PER_PAGE, page * PER_PAGE);
-      list.innerHTML = slice.map(q => {
-        const up = votedSet.has(q.id);
-        const REACTION_EMOJIS = ['👍', '🔥', '👏', '🤩'];
-        const reactionHTML = REACTION_EMOJIS.map(emoji => {
-          const count = (q.reactions && q.reactions[emoji]) || 0;
-          const reacted = reactedSet.has(q.id + ':' + emoji);
-          return '<button class="ama-react-btn ' + (reacted ? 'react-active' : '') + '" data-id="' + q.id + '" data-emoji="' + emoji + '">' + emoji + '<span>' + count + '</span></button>';
-        }).join('');
-        // Pin badge
-        const pinBadge = q.pinned ? '<span class="ama-pin-badge"><span class="material-symbols-outlined ama-pin-icon">push_pin</span>Pinned</span>' : '';
-        // Reaction summary line for cards with reactions
-        const reactionEntries = Object.entries(q.reactions || {}).filter(([, v]) => v > 0);
-        const reactionSummary = reactionEntries.length ? '<div class="ama-reaction-summary">' + reactionEntries.map(([e, c]) => '<span>' + e + ' ' + c + '</span>').join(' ') + '</div>' : '';
-        return '<div class="ama-q' + (q.pinned ? ' ama-q-pinned' : '') + '">' +
-          pinBadge +
-          '<div class="ama-q-text">' + esc(q.question) + '</div>' +
-          '<div class="ama-q-ans">' + esc(q.answer) + '</div>' +
-          '<div class="ama-q-meta">' +
-            '<span class="ama-q-meta-name"><span class="material-symbols-outlined ama-q-meta-icon">person</span>' + esc(q.name || 'Anonymous') + '</span>' +
-            '<span class="ama-q-meta-time"><span class="material-symbols-outlined ama-q-meta-icon">schedule</span>Asked ' + esc(formatAmaTime(q.createdAt)) + '</span>' +
-            '<span class="ama-q-meta-time ama-q-meta-answered"><span class="material-symbols-outlined ama-q-meta-icon">check_circle</span>Answered ' + esc(formatAmaTime(q.answeredAt)) + '</span>' +
-            (q.editedAt ? '<span class="ama-q-meta-time ama-q-meta-edited"><span class="material-symbols-outlined ama-q-meta-icon">edit</span>Edited ' + esc(formatAmaTime(q.editedAt)) + '</span>' : '') +
-          '</div>' +
-          '<div class="ama-q-vote">' +
-          '<button class="ama-vote-btn ' + (up ? 'voted' : '') + '" data-id="' + q.id + '" data-dir="1" title="Helpful">\u25B2</button>' +
-          '<span class="ama-vote-count" data-count="' + q.id + '">' + q.votes + '</span>' +
-          '<button class="ama-vote-btn ' + (up ? 'voted' : '') + '" data-id="' + q.id + '" data-dir="-1" title="Undo">\u25BC</button>' +
-          '</div>' +
-          '<div class="ama-q-reactions">' + reactionHTML + '</div>' +
-          reactionSummary +
-          '</div>';
-      }).join('');
-      renderPager(pages);
-      list.querySelectorAll('.ama-vote-btn').forEach(b => b.addEventListener('click', () => vote(b.dataset.id, +b.dataset.dir)));
-      list.querySelectorAll('.ama-react-btn').forEach(b => b.addEventListener('click', () => toggleReaction(b.dataset.id, b.dataset.emoji)));
+      list.innerHTML = slice.length ? slice.map(q => amaQuestionCard(q)).join('') : (spotlightDoc ? '<div class="ama-empty-note">No more answered questions yet.</div>' : '');
+      renderPager(arr.length ? pages : 1);
+      wireAmaActions(list);
     }
     function renderPager(pages) {
       if (pages <= 1) { pager.innerHTML = ''; return; }
