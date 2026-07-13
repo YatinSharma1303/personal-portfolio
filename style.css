@@ -1872,23 +1872,23 @@ html.light .footer-nav a:hover { color: var(--accent); background: rgba(100,80,2
 /* ============ AMA Featured / Spotlight ============ */
 :root {
   --ama-featured-purple: #D0BCFF;
-  --ama-featured-purple-line: rgba(208,188,255,0.62);
+  --ama-featured-purple-line: rgba(208,188,255,0.28);
   --ama-pinned-blue: #00C8FF;
-  --ama-pinned-blue-line: rgba(0,200,255,0.34);
+  --ama-pinned-blue-line: rgba(0,200,255,0.20);
   --ama-card-bg: rgba(255,255,255,0.035);
 }
 html.light {
   --ama-featured-purple: #6750A4;
-  --ama-featured-purple-line: rgba(103,80,164,0.48);
+  --ama-featured-purple-line: rgba(103,80,164,0.26);
   --ama-pinned-blue: #006CBA;
-  --ama-pinned-blue-line: rgba(0,108,186,0.34);
+  --ama-pinned-blue-line: rgba(0,108,186,0.20);
   --ama-card-bg: rgba(255,255,255,0.6);
 }
 
 .ama-featured { margin: 22px 0 26px; }
 .ama-featured-label { display: none !important; }
 
-/* Badge row: featured left; pinned right only when both exist. */
+/* Badge layout */
 .ama-badge-row {
   display: flex;
   align-items: center;
@@ -1901,14 +1901,15 @@ html.light {
 .ama-badge-row .ama-pin-badge:nth-child(2) { margin-left: auto; }
 
 .ama-spotlight-badge,
-.ama-pin-badge {
+.ama-pin-badge,
+.ama-topic-badge {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   font-family: var(--mono);
   font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   border-radius: 999px;
   padding: 4px 9px;
   box-shadow: none !important;
@@ -1925,8 +1926,17 @@ html.light {
   background: rgba(0,200,255,0.10) !important;
   border: 1px solid var(--ama-pinned-blue-line) !important;
 }
+.ama-topic-badge {
+  color: var(--gray);
+  background: rgba(255,255,255,0.055);
+  border: 1px solid var(--border);
+  margin-left: auto;
+}
+.ama-badge-row .ama-topic-badge:first-child { margin-left: 0; }
+.ama-badge-row .ama-pin-badge:nth-child(2) + .ama-topic-badge { margin-left: 8px; }
 html.light .ama-spotlight-badge { background: rgba(103,80,164,0.10) !important; }
 html.light .ama-pin-badge { background: rgba(0,108,186,0.08) !important; }
+html.light .ama-topic-badge { background: rgba(0,0,0,0.035); border-color: var(--border); }
 
 .ama-spotlight-icon,
 .ama-q-meta-spotlight,
@@ -1945,104 +1955,61 @@ html.light .ama-pin-badge { background: rgba(0,108,186,0.08) !important; }
   border-radius: 14px;
 }
 
-/* No glow, no body tint: only clean state borders. */
+/* State cards: no glow, no body tint. */
 .ama-q.ama-q-spotlight,
 .ama-q.ama-q-featured-card {
   box-shadow: none !important;
   filter: none !important;
   text-shadow: none !important;
-}
-.ama-q.ama-q-featured-card { background: var(--ama-card-bg) !important; }
-
-/* Featured only: purple border. */
-.ama-q.ama-q-spotlight:not(.ama-q-pinned) {
-  border-color: var(--ama-featured-purple-line) !important;
   background: var(--ama-card-bg) !important;
 }
-
-/* Pinned only: blue border, normal card body. */
+.ama-q.ama-q-spotlight:not(.ama-q-pinned) {
+  border-color: var(--ama-featured-purple-line) !important;
+}
 .ama-q.ama-q-pinned:not(.ama-q-spotlight) {
   border-color: var(--ama-pinned-blue-line) !important;
   background: var(--ama-card-bg) !important;
 }
 
-/* Featured + pinned: border split only, upper purple/lower blue. */
+/* Featured + pinned: TRUE border-only split, no body tint. */
 .ama-q.ama-q-spotlight.ama-q-pinned,
 .ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned {
-  border: 1px solid transparent !important;
-  background:
-    linear-gradient(var(--ama-card-bg), var(--ama-card-bg)) padding-box,
-    linear-gradient(to bottom,
-      var(--ama-featured-purple-line) 0%,
-      var(--ama-featured-purple-line) 50%,
-      var(--ama-pinned-blue-line) 50%,
-      var(--ama-pinned-blue-line) 100%) border-box !important;
-  box-shadow: none !important;
-  overflow: hidden;
+  position: relative !important;
+  border-color: transparent !important;
+  background: var(--ama-card-bg) !important;
+  overflow: hidden !important;
 }
-
-.ama-q.ama-q-spotlight::before,
+.ama-q.ama-q-spotlight.ama-q-pinned::before,
+.ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned::before {
+  content: "" !important;
+  display: block !important;
+  position: absolute !important;
+  inset: 0 !important;
+  padding: 1px !important;
+  border-radius: inherit !important;
+  background: linear-gradient(to bottom,
+    var(--ama-featured-purple-line) 0%,
+    var(--ama-featured-purple-line) 50%,
+    var(--ama-pinned-blue-line) 50%,
+    var(--ama-pinned-blue-line) 100%) !important;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
+  -webkit-mask-composite: xor !important;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
+  mask-composite: exclude !important;
+  pointer-events: none !important;
+  z-index: 1 !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+.ama-q.ama-q-spotlight.ama-q-pinned > *,
+.ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned > * {
+  position: relative;
+  z-index: 2;
+}
 .ama-q.ama-q-spotlight::after,
-.ama-q.ama-q-featured-card::before,
 .ama-q.ama-q-featured-card::after,
 .ama-spotlight-badge::before,
 .ama-spotlight-badge::after {
   content: none !important;
   display: none !important;
-}
-
-/* ============ AMA topic pill ============ */
-.ama-topic-badge {
-  display: inline-flex;
-  align-items: center;
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  border-radius: 999px;
-  padding: 4px 9px;
-  color: var(--gray);
-  background: rgba(255,255,255,0.055);
-  border: 1px solid var(--border);
-  margin-left: auto;
-}
-.ama-badge-row .ama-topic-badge:first-child { margin-left: 0; }
-.ama-badge-row .ama-pin-badge:nth-child(2) + .ama-topic-badge { margin-left: 8px; }
-html.light .ama-topic-badge {
-  color: var(--gray);
-  background: rgba(0,0,0,0.035);
-  border-color: var(--border);
-}
-
-/* ============ AMA featured+pinned subtle final override ============ */
-:root {
-  --ama-featured-purple-line: rgba(208,188,255,0.28);
-  --ama-pinned-blue-line: rgba(0,200,255,0.20);
-}
-html.light {
-  --ama-featured-purple-line: rgba(103,80,164,0.26);
-  --ama-pinned-blue-line: rgba(0,108,186,0.20);
-}
-.ama-q.ama-q-spotlight.ama-q-pinned,
-.ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned {
-  border: 1px solid transparent !important;
-  background:
-    linear-gradient(var(--ama-card-bg), var(--ama-card-bg)) padding-box,
-    linear-gradient(to bottom,
-      var(--ama-featured-purple-line) 0%,
-      var(--ama-featured-purple-line) 50%,
-      var(--ama-pinned-blue-line) 50%,
-      var(--ama-pinned-blue-line) 100%) border-box !important;
-  box-shadow: none !important;
-  filter: none !important;
-}
-html.light .ama-q.ama-q-spotlight.ama-q-pinned,
-html.light .ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned {
-  background:
-    linear-gradient(var(--ama-card-bg), var(--ama-card-bg)) padding-box,
-    linear-gradient(to bottom,
-      var(--ama-featured-purple-line) 0%,
-      var(--ama-featured-purple-line) 50%,
-      var(--ama-pinned-blue-line) 50%,
-      var(--ama-pinned-blue-line) 100%) border-box !important;
 }
