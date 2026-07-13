@@ -656,7 +656,7 @@
     }
 
     function updateNowPlaying() {
-      fetchWithTimeout(`${lfmAPI}?method=user.getrecenttracks&user=${encodeURIComponent(u)}&limit=10`, 4500)
+      fetchWithTimeout(`${lfmAPI}?method=user.getrecenttracks&user=${encodeURIComponent(u)}&limit=10&_=${Date.now()}`, 4500)
         .then(r => r.json())
         .then(d => renderRecent(d.recenttracks))
         .catch(() => {});
@@ -664,7 +664,8 @@
 
     if (nowPlayingTimer) clearInterval(nowPlayingTimer);
     return loadBundle().then(() => {
-      window.__lastfmTimer = setInterval(updateNowPlaying, 30000);
+      updateNowPlaying();
+      window.__lastfmTimer = setInterval(updateNowPlaying, 12000);
     }).finally(() => { window.__lastfmLoading = false; });
   }
 

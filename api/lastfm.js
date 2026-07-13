@@ -132,13 +132,16 @@ module.exports = async function handler(req, res) {
   }
 
   var cacheKey = params.toString();
+  var isRealtimeMethod = method === 'user.getrecenttracks';
 
-  /* Check cache */
-  var cached = _lfmCache[cacheKey];
-  if (cached && Date.now() - cached.ts < LFM_CACHE_TTL) {
-    res.setHeader('X-LastFM-Cache', 'HIT');
-    res.setHeader('Content-Type', 'application/json');
-    return res.status(200).send(cached.body);
+  /* Check cache. Real-time recent tracks must bypass cache so now-playing updates quickly. */
+  if (!isRealtimeMethod) {
+    var cached = _lfmCache[cacheKey];
+    if (cached && Date.now() - cached.ts < LFM_CACHE_TTL) {
+      res.setHeader('X-LastFM-Cache', 'HIT');
+      res.setHeader('Content-Type', 'application/json');
+      return res.status(200).send(cached.body);
+    }
   }
 
   var lfmUrl = LFM_API + '?' + params.toString();
@@ -152,18 +155,23 @@ module.exports = async function handler(req, res) {
       return res.status(response.status).json({ ok: false, error: 'Last.fm API error', status: response.status });
     }
 
-    /* Cache the successful response */
-    _lfmCache[cacheKey] = { body: body, ts: Date.now() };
+    if (!isRealtimeMethod) {
+      /* Cache the successful response */
+      _lfmCache[cacheKey] = { body: body, ts: Date.now() };
 
-    /* Purge stale entries (simple sweep — keeps cache from growing unbounded) */
-    var keys = Object.keys(_lfmCache);
-    for (var ki = 0; ki < keys.length; ki++) {
-      if (Date.now() - _lfmCache[keys[ki]].ts > LFM_CACHE_TTL * 2) {
-        delete _lfmCache[keys[ki]];
+      /* Purge stale entries (simple sweep — keeps cache from growing unbounded) */
+      var keys = Object.keys(_lfmCache);
+      for (var ki = 0; ki < keys.length; ki++) {
+        if (Date.now() - _lfmCache[keys[ki]].ts > LFM_CACHE_TTL * 2) {
+          delete _lfmCache[keys[ki]];
+        }
       }
+      res.setHeader('X-LastFM-Cache', 'MISS');
+      res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+    } else {
+      res.setHeader('X-LastFM-Cache', 'BYPASS');
+      res.setHeader('Cache-Control', 'no-store, max-age=0');
     }
-
-    res.setHeader('X-LastFM-Cache', 'MISS');
     res.setHeader('Content-Type', 'application/json');
     return res.status(200).send(body);
   } catch (error) {
