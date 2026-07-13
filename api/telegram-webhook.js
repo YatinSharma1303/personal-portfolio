@@ -661,8 +661,16 @@ function topicSearchKey(topicName) {
 function topicsButtons(topics) {
   var rows = [];
   topics.slice(0, 4).forEach(function(t) { rows.push([searchBtn('\uD83D\uDD0D Search ' + t.name, topicSearchKey(t.name))]); });
+  rows.push([cmdBtn('\uD83D\uDD04 Recompute Auto', 'retopics')]);
   rows.push([cmdBtn('\uD83D\uDCE5 Inbox', 'inbox'), cmdBtn('\uD83D\uDDDE Digest', 'digest')]);
   return navMarkup(rows);
+}
+function topicInfoButtons(id) {
+  return navMarkup([
+    [getBtn('\uD83D\uDCCB Open Question', id)],
+    [{ text: '\uD83D\uDD04 Recompute Auto', callback_data: 'retopic:' + id }, { text: '\uD83E\uDDF9 Clear Topic', callback_data: 'cleartopic:' + id }],
+    [cmdBtn('\uD83C\uDFF7 Topics', 'topics')]
+  ]);
 }
 
 function normalizeTopic(input) {
@@ -678,22 +686,58 @@ function normalizeTopic(input) {
   return raw.split(' ').map(function(w) { return w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : ''; }).join(' ').slice(0, 40);
 }
 
+function titleTopic(value) {
+  return String(value || '').trim().split(/\s+/).filter(Boolean).map(function(w) {
+    var lower = w.toLowerCase();
+    var upperKeep = ['ai', 'ml', 'rag', 'llm', 'api', 'css', 'html', 'js', 'ui', 'ux'];
+    if (upperKeep.indexOf(lower) !== -1) return lower.toUpperCase();
+    if (lower === 'react') return 'React';
+    if (lower === 'firebase') return 'Firebase';
+    if (lower === 'firestore') return 'Firestore';
+    if (lower === 'github') return 'GitHub';
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+  }).join(' ').slice(0, 40) || 'General';
+}
+
 function autoTopicForQuestion(q) {
   var text = ((q.question || '') + ' ' + (q.answer || '')).toLowerCase();
-  var topics = [
-    { name: 'AI/ML', keys: ['ai', 'ml', 'machine learning', 'model', 'rag', 'llm', 'neural', 'data'] },
-    { name: 'React', keys: ['react', 'frontend', 'component', 'vite', 'tailwind', 'css', 'javascript', 'typescript'] },
-    { name: 'Career', keys: ['career', 'job', 'intern', 'internship', 'resume', 'roadmap', 'learn', 'start'] },
-    { name: 'Projects', keys: ['project', 'portfolio', 'smarthealthcare', 'yatini', 'github', 'build'] },
-    { name: 'Anime', keys: ['anime', 'manga', 'naruto', 'gaara', 'one piece', 'bleach'] },
-    { name: 'Personal', keys: ['you', 'your', 'life', 'hobby', 'music', 'food', 'college'] }
+  var phraseMap = [
+    ['smarthealthcare', 'SmartHealthCare'],
+    ['smart healthcare', 'SmartHealthCare'],
+    ['disease prediction', 'Disease Prediction'],
+    ['drug recommendation', 'Drug Recommendation'],
+    ['heart risk', 'Heart Risk'],
+    ['machine learning', 'Machine Learning'],
+    ['deep learning', 'Deep Learning'],
+    ['data science', 'Data Science'],
+    ['random forest', 'Random Forest'],
+    ['rag chatbot', 'RAG Chatbot'],
+    ['telegram bot', 'Telegram Bot'],
+    ['firebase firestore', 'Firestore'],
+    ['firestore rules', 'Firestore Rules'],
+    ['react hooks', 'React Hooks'],
+    ['portfolio website', 'Portfolio'],
+    ['full stack', 'Full Stack'],
+    ['resume tips', 'Resume'],
+    ['career roadmap', 'Career Roadmap'],
+    ['anime list', 'Anime List'],
+    ['last fm', 'Last.fm'],
+    ['last.fm', 'Last.fm']
   ];
-  for (var i = 0; i < topics.length; i++) {
-    for (var k = 0; k < topics[i].keys.length; k++) {
-      if (text.indexOf(topics[i].keys[k]) !== -1) return topics[i].name;
-    }
+  for (var i = 0; i < phraseMap.length; i++) if (text.indexOf(phraseMap[i][0]) !== -1) return phraseMap[i][1];
+
+  var important = ['smarthealthcare','yatini','react','firebase','firestore','telegram','wakatime','lastfm','anilist','github','portfolio','resume','internship','roadmap','career','anime','naruto','gaara','bleach','pokemon','healthcare','prediction','medicine','disease','model','rag','llm','api','database','frontend','backend','python','javascript','typescript','tailwind','vercel','streamlit','faiss','groq'];
+  for (var j = 0; j < important.length; j++) {
+    var wordRe = new RegExp('(^|[^a-z0-9])' + important[j].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^a-z0-9]|$)', 'i');
+    if (wordRe.test(text)) return titleTopic(important[j]);
   }
-  return 'General';
+
+  var stop = { what:1, why:1, how:1, can:1, you:1, your:1, the:1, and:1, for:1, with:1, about:1, please:1, tell:1, me:1, is:1, are:1, do:1, does:1, did:1, this:1, that:1, from:1, have:1, has:1, want:1, need:1, question:1, answer:1, ask:1, anything:1, best:1, good:1, like:1, use:1, using:1, make:1, made:1, build:1, built:1, start:1, learn:1, explain:1 };
+  var words = text.replace(/[^a-z0-9+#.\s-]/g, ' ').split(/\s+/).filter(function(w) { return w.length >= 4 && !stop[w]; });
+  var counts = {};
+  words.forEach(function(w) { counts[w] = (counts[w] || 0) + 1; });
+  var best = Object.keys(counts).sort(function(a, b) { return (counts[b] * 10 + b.length) - (counts[a] * 10 + a.length); })[0];
+  return best ? titleTopic(best) : 'General';
 }
 
 function resolvedTopic(q) {
@@ -830,6 +874,10 @@ var HELP_TEXT = [
   BOX_V + '   Show topic source.',
   BOX_V + ' /cleartopic &lt;id&gt;',
   BOX_V + '   Return to auto topic.',
+  BOX_V + ' /retopic &lt;id&gt;',
+  BOX_V + '   Recompute one auto topic.',
+  BOX_V + ' /retopics',
+  BOX_V + '   Recompute all auto topics.',
   BOX_V + ' /quality',
   BOX_V + '   Answers to improve.',
   BOX_V + ' /health',
@@ -1068,11 +1116,7 @@ async function sendTopicInfo(chatId, questionId, replyToId, editMessageId) {
     BOX_V,
     cardBottom
   ];
-  await respondTelegram(chatId, lines.join('\n'), replyToId, navMarkup([
-    [getBtn('\uD83D\uDCCB Open Question', q.id)],
-    [{ text: '\uD83E\uDDF9 Clear Topic', callback_data: 'cleartopic:' + q.id }],
-    [cmdBtn('\uD83C\uDFF7 Topics', 'topics')]
-  ]), editMessageId);
+  await respondTelegram(chatId, lines.join('\n'), replyToId, topicInfoButtons(q.id), editMessageId);
 }
 
 async function sendFeatured(chatId, replyToId, editMessageId) {
@@ -1984,6 +2028,16 @@ module.exports = async function handler(req, res) {
           else if (questionId === 'help') {
             await editMessage(cbChatId, cbMessageId, HELP_TEXT);
           }
+          else if (questionId === 'retopics') {
+            var all = await listAllQuestions();
+            var changed = 0;
+            for (var ri = 0; ri < all.length; ri++) {
+              if (all[ri].topicManual) continue;
+              var t = autoTopicForQuestion(all[ri]);
+              try { await setAutoQuestionTopic(all[ri].id, t); changed++; } catch (e) {}
+            }
+            await editMessage(cbChatId, cbMessageId, cardTop('\uD83D\uDD04 <b>AUTO TOPICS UPDATED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Recomputed <b>' + changed + '</b> auto topic' + (changed === 1 ? '' : 's') + '.\n' + BOX_V + ' Manual topics were preserved.\n' + BOX_V + '\n' + cardBottom, topicsButtons(topTopics(await listAllQuestions())));
+          }
           else if (questionId === 'unspotlight') {
             var all = await listAllQuestions();
             var spotlighted = all.filter(function(x) { return x.spotlight; });
@@ -2005,6 +2059,19 @@ module.exports = async function handler(req, res) {
       else if (action === 'topicof') {
         try { await answerCallback(callback.id, 'Topic info'); await sendTopicInfo(cbChatId, questionId, undefined, cbMessageId); }
         catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not load topic'); }
+      }
+      else if (action === 'retopic') {
+        try {
+          await answerCallback(callback.id, 'Recomputing topic…');
+          var q = await getQuestion(questionId);
+          if (!q) await editMessage(cbChatId, cbMessageId, cardTop('\u26A0\uFE0F <b>QUESTION NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question exists for this ID.\n' + BOX_V + '\n' + cardBottom);
+          else {
+            var t = autoTopicForQuestion(q);
+            await setAutoQuestionTopic(questionId, t);
+            q.topic = t; q.topicManual = false;
+            await sendTopicInfo(cbChatId, questionId, undefined, cbMessageId);
+          }
+        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not recompute topic'); }
       }
       else if (action === 'cleartopic') {
         try {
@@ -2371,6 +2438,52 @@ module.exports = async function handler(req, res) {
           loadingId);
       } catch (e) {
         await respondTelegram(chatId, cardTop('\u26A0\uFE0F <b>CLEAR FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not clear topic.\n' + BOX_V + '\n' + cardBottom, message.message_id, REPLY_KEYBOARD, loadingId);
+      }
+      return res.status(200).json({ ok: true });
+    }
+
+    /* /retopic <id> */
+    if (command === '/retopic') {
+      var qid = text.split(/\s+/)[1];
+      if (!qid) {
+        await sendTelegram(chatId,
+          cardTop('\uD83D\uDD04 <b>RECOMPUTE TOPIC</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Recompute automatic topic.\n' + BOX_V + '\n' + BOX_V + ' Usage: /retopic &lt;id&gt;\n' + BOX_V + '\n' + cardBottom,
+          message.message_id, REPLY_KEYBOARD);
+        return res.status(200).json({ ok: true });
+      }
+      var loadingId = await sendLoadingCard(chatId, '\uD83D\uDD04 <b>RECOMPUTING TOPIC\u2026</b>', 'Analyzing important words...', message.message_id);
+      try {
+        var q = await getQuestion(qid);
+        if (!q) {
+          await respondTelegram(chatId, cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question exists for this ID.\n' + BOX_V + '\n' + cardBottom, message.message_id, REPLY_KEYBOARD, loadingId);
+          return res.status(200).json({ ok: true });
+        }
+        var topic = autoTopicForQuestion(q);
+        await setAutoQuestionTopic(qid, topic);
+        q.topic = topic; q.topicManual = false;
+        await sendTopicInfo(chatId, qid, message.message_id, loadingId);
+      } catch (e) {
+        await respondTelegram(chatId, cardTop('\u26A0\uFE0F <b>RETOPIC FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not recompute topic.\n' + BOX_V + '\n' + cardBottom, message.message_id, REPLY_KEYBOARD, loadingId);
+      }
+      return res.status(200).json({ ok: true });
+    }
+
+    /* /retopics */
+    if (command === '/retopics') {
+      var loadingId = await sendLoadingCard(chatId, '\uD83D\uDD04 <b>RECOMPUTING TOPICS\u2026</b>', 'Updating every automatic topic...', message.message_id);
+      try {
+        var all = await listAllQuestions();
+        var changed = 0, skipped = 0;
+        for (var ri = 0; ri < all.length; ri++) {
+          if (all[ri].topicManual) { skipped++; continue; }
+          var topic = autoTopicForQuestion(all[ri]);
+          try { await setAutoQuestionTopic(all[ri].id, topic); changed++; } catch (e) {}
+        }
+        await respondTelegram(chatId,
+          cardTop('\uD83D\uDD04 <b>AUTO TOPICS UPDATED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Recomputed <b>' + changed + '</b> question' + (changed === 1 ? '' : 's') + '.\n' + BOX_V + ' Preserved <b>' + skipped + '</b> manual topic' + (skipped === 1 ? '' : 's') + '.\n' + BOX_V + '\n' + cardBottom,
+          message.message_id, topicsButtons(topTopics(await listAllQuestions())), loadingId);
+      } catch (e) {
+        await respondTelegram(chatId, cardTop('\u26A0\uFE0F <b>RETOPICS FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not recompute topics.\n' + BOX_V + '\n' + cardBottom, message.message_id, REPLY_KEYBOARD, loadingId);
       }
       return res.status(200).json({ ok: true });
     }

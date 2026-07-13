@@ -41,6 +41,7 @@ module.exports = async function handler(req, res) {
     var question = String(body.question || '').trim().slice(0, 280);
     var questionId = String(body.id || '').trim().slice(0, 80);
     var createdAt = String(body.createdAt || new Date().toISOString()).trim().slice(0, 80);
+    var topic = String(body.topic || '').trim().slice(0, 40);
 
     if (!question) return res.status(400).json({ ok: false, error: 'Question is required' });
 
@@ -68,6 +69,7 @@ module.exports = async function handler(req, res) {
       BOX_V + ' \uD83D\uDC64 Visitor \u2500 <b>' + escapeHtml(visitor) + '</b>',
       BOX_V + ' \uD83D\uDD50 Time \u2500 ' + escapeHtml(timeStr) + ' IST',
       BOX_V + ' \uD83C\uDD94 ID \u2500 <code>' + escapeHtml(questionId) + '</code>',
+      topic ? BOX_V + ' \uD83C\uDFF7 Topic \u2500 <b>' + escapeHtml(topic) + '</b>' : BOX_V,
       BOX_V,
       BOX_V + ' \uD83D\uDCAC <b>Question</b>',
       BOX_V + ' “' + escapeHtml(question) + '”',

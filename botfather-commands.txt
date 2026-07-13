@@ -33,3 +33,5 @@ unspotlight - Clear the currently featured AMA.
 topic - Set manual topic for a question. Usage: /topic <id> <topic>
 topicof - Show active/manual/auto topic for a question. Usage: /topicof <id>
 cleartopic - Remove manual topic and return to auto topic. Usage: /cleartopic <id>
+retopic - Recompute automatic topic for one question. Usage: /retopic <id>
+retopics - Recompute automatic topics for all non-manual questions.

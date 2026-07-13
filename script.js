@@ -1115,18 +1115,36 @@
         });
       } catch (e) { return ''; }
     }
+    function titleTopicClient(value) {
+      const keep = { ai:'AI', ml:'ML', rag:'RAG', llm:'LLM', api:'API', css:'CSS', html:'HTML', js:'JS', ui:'UI', ux:'UX' };
+      return String(value || '').trim().split(/\s+/).filter(Boolean).map(w => {
+        const l = w.toLowerCase();
+        if (keep[l]) return keep[l];
+        if (l === 'react') return 'React';
+        if (l === 'firebase') return 'Firebase';
+        if (l === 'firestore') return 'Firestore';
+        if (l === 'github') return 'GitHub';
+        return l.charAt(0).toUpperCase() + l.slice(1);
+      }).join(' ').slice(0, 40) || 'General';
+    }
     function autoTopicForQuestionClient(question, answer) {
       const text = ((question || '') + ' ' + (answer || '')).toLowerCase();
-      const topics = [
-        ['AI/ML', ['ai','ml','machine learning','model','rag','llm','neural','data']],
-        ['React', ['react','frontend','component','vite','tailwind','css','javascript','typescript']],
-        ['Career', ['career','job','intern','internship','resume','roadmap','learn','start']],
-        ['Projects', ['project','portfolio','smarthealthcare','yatini','github','build']],
-        ['Anime', ['anime','manga','naruto','gaara','one piece','bleach']],
-        ['Personal', ['you','your','life','hobby','music','food','college']]
+      const phrases = [
+        ['smarthealthcare', 'SmartHealthCare'], ['smart healthcare', 'SmartHealthCare'],
+        ['disease prediction', 'Disease Prediction'], ['drug recommendation', 'Drug Recommendation'], ['heart risk', 'Heart Risk'],
+        ['machine learning', 'Machine Learning'], ['deep learning', 'Deep Learning'], ['data science', 'Data Science'], ['random forest', 'Random Forest'],
+        ['rag chatbot', 'RAG Chatbot'], ['telegram bot', 'Telegram Bot'], ['firebase firestore', 'Firestore'], ['firestore rules', 'Firestore Rules'],
+        ['react hooks', 'React Hooks'], ['portfolio website', 'Portfolio'], ['full stack', 'Full Stack'], ['resume tips', 'Resume'],
+        ['career roadmap', 'Career Roadmap'], ['anime list', 'Anime List'], ['last fm', 'Last.fm'], ['last.fm', 'Last.fm']
       ];
-      for (const [name, keys] of topics) if (keys.some(k => text.includes(k))) return name;
-      return 'General';
+      for (const [phrase, topic] of phrases) if (text.includes(phrase)) return topic;
+      const important = ['smarthealthcare','yatini','react','firebase','firestore','telegram','wakatime','lastfm','anilist','github','portfolio','resume','internship','roadmap','career','anime','naruto','gaara','bleach','pokemon','healthcare','prediction','medicine','disease','model','rag','llm','api','database','frontend','backend','python','javascript','typescript','tailwind','vercel','streamlit','faiss','groq'];
+      for (const w of important) if (new RegExp('(^|[^a-z0-9])' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^a-z0-9]|$)', 'i').test(text)) return titleTopicClient(w);
+      const stop = new Set(['what','why','how','can','you','your','the','and','for','with','about','please','tell','this','that','from','have','want','need','question','answer','anything','best','good','like','using','make','made','build','built','start','learn','explain']);
+      const counts = {};
+      text.replace(/[^a-z0-9+#.\s-]/g, ' ').split(/\s+/).filter(w => w.length >= 4 && !stop.has(w)).forEach(w => counts[w] = (counts[w] || 0) + 1);
+      const best = Object.keys(counts).sort((a,b) => (counts[b] * 10 + b.length) - (counts[a] * 10 + a.length))[0];
+      return best ? titleTopicClient(best) : 'General';
     }
 
     function fromDoc(doc) {
@@ -1335,7 +1353,7 @@
         topic: { stringValue: autoTopic }, topicManual: { booleanValue: false }, topicAt: { stringValue: createdAt }
       };
       status.textContent = 'Sending…'; status.className = 'ama-status';
-      const notify = () => fetch('/api/telegram', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, question: text, id, createdAt }) }).catch(() => {});
+      const notify = () => fetch('/api/telegram', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, question: text, id, createdAt, topic: autoTopic }) }).catch(() => {});
       const afterSubmit = (ok) => {
         todayCount++; localStorage.setItem(LIMIT_KEY, JSON.stringify({ date: today, count: todayCount })); countEl.textContent = todayCount; input.value = '';
         if (nameInput) nameInput.value = '';
