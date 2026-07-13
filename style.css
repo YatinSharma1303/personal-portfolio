@@ -1868,3 +1868,62 @@ html.light .footer-line { background: linear-gradient(90deg, transparent, rgba(8
 html.light .footer-link { border-color: rgba(80,80,140,0.15); color: var(--gray-dim); }
 html.light .footer-link:hover { border-color: var(--accent); color: var(--accent); background: rgba(100,80,220,0.06); box-shadow: 0 4px 16px rgba(100,80,220,0.1); }
 html.light .footer-nav a:hover { color: var(--accent); background: rgba(100,80,220,0.06); }
+
+/* ============ AMA Featured / Spotlight ============ */
+.ama-featured {
+  margin: 22px 0 26px;
+}
+.ama-featured-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #fbbf24;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(251,191,36,0.35);
+  background: rgba(251,191,36,0.09);
+  margin-bottom: 12px;
+}
+.ama-featured-label .material-symbols-outlined { font-size: 16px; font-variation-settings: 'FILL' 1, 'wght' 700, 'opsz' 20; }
+.ama-q-featured-card {
+  position: relative;
+  border-color: rgba(251,191,36,0.4) !important;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(251,191,36,0.16), transparent 35%),
+    radial-gradient(circle at 95% 20%, rgba(0,200,255,0.12), transparent 38%),
+    rgba(255,255,255,0.035);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.26), 0 0 0 1px rgba(251,191,36,0.08) inset;
+}
+.ama-spotlight-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  color: #fbbf24;
+  background: rgba(251,191,36,0.1);
+  border: 1px solid rgba(251,191,36,0.28);
+  border-radius: 999px;
+  padding: 4px 8px;
+  margin: 0 6px 10px 0;
+}
+.ama-spotlight-icon { font-size: 13px !important; font-variation-settings: 'FILL' 1, 'wght' 700, 'opsz' 20; }
+.ama-q-meta-spotlight { color: #fbbf24; opacity: 0.95; }
+.ama-q-meta-spotlight .ama-q-meta-icon { color: #fbbf24; }
+.ama-empty-note {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--gray-dim);
+  text-align: center;
+  padding: 16px;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+}
+html.light .ama-q-featured-card { background: rgba(255,255,255,0.78); border-color: rgba(180,130,20,0.35) !important; }
+html.light .ama-featured-label, html.light .ama-spotlight-badge { color: #9a6700; background: rgba(251,191,36,0.13); border-color: rgba(180,130,20,0.28); }
