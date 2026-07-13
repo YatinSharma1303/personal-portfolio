@@ -525,6 +525,40 @@
       return '<div class="lfm-artist-img lfm-noart lfm-artist-gradient" style="background:' + gradients[idx % gradients.length] + '; color:#ffffff !important;">' + esc((name || '?').charAt(0).toUpperCase()) + '</div>';
     }
 
+    function hydrateTopTrackArt(tracks) {
+      if (!tracks || !tracks.length) return;
+      tracks.forEach((tr, idx) => {
+        const el = document.querySelector('.lfm-track-img[data-track-art="' + idx + '"]');
+        if (!el || el.dataset.hasArt === '1') return;
+        const artistName = tr.artist ? (tr.artist.name || tr.artist['#text'] || '') : '';
+        const trackName = tr.name || '';
+        if (!artistName || !trackName) return;
+        const cacheKey = 'lfm_track_art_' + artistName + '::' + trackName;
+        try {
+          const cached = localStorage.getItem(cacheKey);
+          if (cached) {
+            el.style.cssText = 'background:#141414 url(\'' + cached + '\') center/cover no-repeat';
+            el.classList.remove('lfm-noart');
+            el.textContent = '';
+            el.dataset.hasArt = '1';
+            return;
+          }
+        } catch (e) {}
+        fetchWithTimeout(`${lfmAPI}?method=track.getInfo&artist=${encodeURIComponent(artistName)}&track=${encodeURIComponent(trackName)}`, 3500)
+          .then(r => r.json())
+          .then(info => {
+            const url = lfmImg(info.track && info.track.album ? info.track.album.image : []);
+            if (!url) return;
+            el.style.cssText = 'background:#141414 url(\'' + url + '\') center/cover no-repeat';
+            el.classList.remove('lfm-noart');
+            el.textContent = '';
+            el.dataset.hasArt = '1';
+            try { localStorage.setItem(cacheKey, url); } catch (e) {}
+          })
+          .catch(() => {});
+      });
+    }
+
     function renderBundle(d) {
       if (!d) return;
       const user = d.user;
@@ -540,8 +574,12 @@
       if (tracksWrap && tracks.length) {
         tracksWrap.innerHTML = tracks.map((tr, idx) => {
           const url = lfmImg(tr.image);
-          return '<div class="lfm-track"><span class="lfm-track-rank">' + (idx+1) + '</span>' + artDiv('lfm-track-img', url, '♪') + '<div class="lfm-track-info"><div class="lfm-track-name">' + esc(tr.name) + '</div><div class="lfm-track-artist">' + (tr.artist ? esc(tr.artist.name || tr.artist['#text'] || '') : '') + '</div></div><span class="lfm-track-plays">' + (tr.playcount||0) + 'x</span></div>';
+          const art = url
+            ? '<div class="lfm-track-img" data-track-art="' + idx + '" data-has-art="1" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>'
+            : '<div class="lfm-track-img lfm-noart" data-track-art="' + idx + '" data-has-art="0" style="background:#141414 !important">♪</div>';
+          return '<div class="lfm-track"><span class="lfm-track-rank">' + (idx+1) + '</span>' + art + '<div class="lfm-track-info"><div class="lfm-track-name">' + esc(tr.name) + '</div><div class="lfm-track-artist">' + (tr.artist ? esc(tr.artist.name || tr.artist['#text'] || '') : '') + '</div></div><span class="lfm-track-plays">' + (tr.playcount||0) + 'x</span></div>';
         }).join('');
+        hydrateTopTrackArt(tracks);
       }
 
       const artistsWrap = $('lfm-artists');
