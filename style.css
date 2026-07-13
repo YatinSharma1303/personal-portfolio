@@ -1959,3 +1959,25 @@ html.light .ama-q-featured-card {
   border-color: var(--border) !important;
   box-shadow: none !important;
 }
+
+/* ============ AMA featured purple MD3 refinement ============ */
+.ama-spotlight-badge {
+  color: #D0BCFF !important;
+  background: rgba(208,188,255,0.14) !important;
+  border-color: rgba(208,188,255,0.38) !important;
+}
+.ama-spotlight-icon,
+.ama-q-meta-spotlight,
+.ama-q-meta-spotlight .ama-q-meta-icon {
+  color: #D0BCFF !important;
+}
+html.light .ama-spotlight-badge {
+  color: #6750A4 !important;
+  background: rgba(103,80,164,0.12) !important;
+  border-color: rgba(103,80,164,0.30) !important;
+}
+html.light .ama-spotlight-icon,
+html.light .ama-q-meta-spotlight,
+html.light .ama-q-meta-spotlight .ama-q-meta-icon {
+  color: #6750A4 !important;
+}
