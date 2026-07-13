@@ -194,6 +194,67 @@ function logThreadIdFor(category) {
   } catch (e) { return null; }
 }
 
+function logCategoryLabel(category) {
+  var labels = {
+    site: '🌐 Site Activity',
+    bot: '🤖 Bot Interaction',
+    security: '🚫 Security',
+    answer: '✅ Answer Workflow',
+    moderation: '🛠 Moderation',
+    delete: '🗑 Delete Audit',
+    pin: '📌 Pin Actions',
+    spotlight: '🌟 Featured AMA',
+    topic: '🏷 Topic Management',
+    health: '🩺 Health',
+    error: '⚠️ Errors'
+  };
+  return labels[category] || '🧾 General';
+}
+
+function prettyFieldName(key) {
+  return String(key || '').replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
+function buildLogMessage(title, fields, emoji, actor, category) {
+  fields = fields || {};
+  emoji = emoji || '🧾';
+  var lines = [
+    '┌─' + emoji + ' <b>' + esc(title) + '</b>',
+    '│',
+    '│ <b>Category</b>',
+    '│ ' + esc(logCategoryLabel(category))
+  ];
+
+  if (actor) {
+    lines.push('│');
+    lines.push('│ <b>Actor</b>');
+    lines.push('│ ' + esc(actor.name));
+    lines.push('│ ID: <code>' + esc(actor.id) + '</code>' + ((actor.username && actor.username !== '—') ? ' · ' + esc(actor.username) : ''));
+  }
+
+  var keys = Object.keys(fields).filter(function(k) {
+    var v = fields[k];
+    return !(v === undefined || v === null || v === '');
+  });
+  if (keys.length) {
+    lines.push('│');
+    lines.push('│ <b>Details</b>');
+    keys.forEach(function(k) {
+      var value = String(fields[k]);
+      lines.push('│ ' + esc(prettyFieldName(k)) + ': ' + esc(clipText(value, 160)));
+    });
+  }
+
+  try {
+    lines.push('│');
+    lines.push('│ <b>Time</b>');
+    lines.push('│ ' + esc(formatTime(new Date().toISOString())) + ' IST');
+  } catch (e) {}
+
+  lines.push('└──────────────────────────────');
+  return lines.join('\n');
+}
+
 async function sendLog(title, fields, emoji, actorOverride, category) {
   var logChatId = process.env.TELEGRAM_LOG_CHAT_ID;
   var botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -202,20 +263,13 @@ async function sendLog(title, fields, emoji, actorOverride, category) {
   emoji = emoji || '\uD83E\uDDFE';
   category = category || inferLogCategory(title);
   var actor = actorOverride || _currentActor;
-  var lines = [emoji + ' <b>LOG · ' + esc(title) + '</b>'];
-  lines.push('Category: ' + esc(category));
-  if (actor) {
-    lines.push('Actor: ' + esc(actor.name) + ' (' + esc(actor.id) + ')');
-    if (actor.username && actor.username !== '—') lines.push('Username: ' + esc(actor.username));
-  }
-  Object.keys(fields).forEach(function(k) {
-    var v = fields[k];
-    if (v === undefined || v === null || v === '') return;
-    lines.push(esc(k) + ': ' + esc(String(v)));
-  });
-  try { lines.push('Time: ' + esc(formatTime(new Date().toISOString())) + ' IST'); } catch (e) {}
   try {
-    var payload = { chat_id: logChatId, text: lines.join('\n'), parse_mode: 'HTML', disable_web_page_preview: true };
+    var payload = {
+      chat_id: logChatId,
+      text: buildLogMessage(title, fields, emoji, actor, category),
+      parse_mode: 'HTML',
+      disable_web_page_preview: true
+    };
     var threadId = logThreadIdFor(category);
     if (threadId) payload.message_thread_id = threadId;
     await fetch(TELEGRAM_API + botToken + '/sendMessage', {

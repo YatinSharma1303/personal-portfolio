@@ -42,20 +42,56 @@ function logThreadIdFor(category) {
   } catch (e) { return null; }
 }
 
+function logCategoryLabel(category) {
+  var labels = {
+    site: '🌐 Site Activity',
+    error: '⚠️ Errors'
+  };
+  return labels[category] || '🧾 General';
+}
+
+function prettyFieldName(key) {
+  return String(key || '').replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
+function buildLogMessage(title, fields, emoji, category) {
+  fields = fields || {};
+  emoji = emoji || '🧾';
+  var lines = [
+    '┌─' + emoji + ' <b>' + escapeHtml(title) + '</b>',
+    '│',
+    '│ <b>Category</b>',
+    '│ ' + escapeHtml(logCategoryLabel(category))
+  ];
+
+  var keys = Object.keys(fields).filter(function(k) {
+    var v = fields[k];
+    return !(v === undefined || v === null || v === '');
+  });
+  if (keys.length) {
+    lines.push('│');
+    lines.push('│ <b>Details</b>');
+    keys.forEach(function(k) {
+      lines.push('│ ' + escapeHtml(prettyFieldName(k)) + ': ' + escapeHtml(clip(fields[k], 160)));
+    });
+  }
+
+  lines.push('└──────────────────────────────');
+  return lines.join('\n');
+}
+
 async function sendLog(botToken, title, fields, emoji, category) {
   var logChatId = process.env.TELEGRAM_LOG_CHAT_ID;
   if (!botToken || !logChatId) return;
   fields = fields || {};
   category = category || inferLogCategory(title);
-  var lines = [(emoji || '\uD83E\uDDFE') + ' <b>LOG · ' + escapeHtml(title) + '</b>'];
-  lines.push('Category: ' + escapeHtml(category));
-  Object.keys(fields).forEach(function(k) {
-    var v = fields[k];
-    if (v === undefined || v === null || v === '') return;
-    lines.push(escapeHtml(k) + ': ' + escapeHtml(String(v)));
-  });
   try {
-    var payload = { chat_id: logChatId, text: lines.join('\n'), parse_mode: 'HTML', disable_web_page_preview: true };
+    var payload = {
+      chat_id: logChatId,
+      text: buildLogMessage(title, fields, emoji, category),
+      parse_mode: 'HTML',
+      disable_web_page_preview: true
+    };
     var threadId = logThreadIdFor(category);
     if (threadId) payload.message_thread_id = threadId;
     await fetch(TELEGRAM_API + botToken + '/sendMessage', {
