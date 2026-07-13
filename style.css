@@ -1981,3 +1981,34 @@ html.light .ama-q-meta-spotlight,
 html.light .ama-q-meta-spotlight .ama-q-meta-icon {
   color: #6750A4 !important;
 }
+
+/* ============ Remove all featured glow/halo effects ============ */
+.ama-spotlight-badge,
+.ama-spotlight-badge *,
+.ama-q-spotlight,
+.ama-q-featured-card {
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+.ama-q-spotlight:not(.ama-q-pinned),
+.ama-q-featured-card:not(.ama-q-pinned) {
+  border-color: var(--border) !important;
+  background: rgba(255,255,255,0.035) !important;
+}
+.ama-q-featured-card::before,
+.ama-q-featured-card::after,
+.ama-q-spotlight::before,
+.ama-q-spotlight::after,
+.ama-spotlight-badge::before,
+.ama-spotlight-badge::after {
+  display: none !important;
+  content: none !important;
+  box-shadow: none !important;
+  background: none !important;
+}
+html.light .ama-q-spotlight:not(.ama-q-pinned),
+html.light .ama-q-featured-card:not(.ama-q-pinned) {
+  border-color: var(--border) !important;
+  background: rgba(255,255,255,0.6) !important;
+}
