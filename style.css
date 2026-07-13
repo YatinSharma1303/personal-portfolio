@@ -2084,3 +2084,35 @@ html.light {
 .ama-q-meta-spotlight .ama-q-meta-icon,
 .ama-spotlight-icon { color: var(--ama-featured-purple) !important; }
 .ama-pin-icon { color: var(--ama-pinned-blue) !important; }
+
+/* ============ AMA state border-only refinement ============ */
+.ama-q.ama-q-spotlight:not(.ama-q-pinned),
+.ama-q.ama-q-pinned:not(.ama-q-spotlight) {
+  background: rgba(255,255,255,0.035) !important;
+  box-shadow: none !important;
+}
+.ama-q.ama-q-spotlight.ama-q-pinned,
+.ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned {
+  background:
+    linear-gradient(rgba(255,255,255,0.035), rgba(255,255,255,0.035)) padding-box,
+    linear-gradient(to bottom,
+      var(--ama-featured-purple-line) 0%,
+      var(--ama-featured-purple-line) 50%,
+      var(--ama-pinned-blue-line) 50%,
+      var(--ama-pinned-blue-line) 100%) border-box !important;
+  box-shadow: none !important;
+}
+html.light .ama-q.ama-q-spotlight:not(.ama-q-pinned),
+html.light .ama-q.ama-q-pinned:not(.ama-q-spotlight) {
+  background: rgba(255,255,255,0.6) !important;
+}
+html.light .ama-q.ama-q-spotlight.ama-q-pinned,
+html.light .ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned {
+  background:
+    linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)) padding-box,
+    linear-gradient(to bottom,
+      var(--ama-featured-purple-line) 0%,
+      var(--ama-featured-purple-line) 50%,
+      var(--ama-pinned-blue-line) 50%,
+      var(--ama-pinned-blue-line) 100%) border-box !important;
+}
