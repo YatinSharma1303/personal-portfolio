@@ -2013,3 +2013,36 @@ html.light .ama-topic-badge {
   background: rgba(0,0,0,0.035);
   border-color: var(--border);
 }
+
+/* ============ AMA featured+pinned subtle final override ============ */
+:root {
+  --ama-featured-purple-line: rgba(208,188,255,0.28);
+  --ama-pinned-blue-line: rgba(0,200,255,0.20);
+}
+html.light {
+  --ama-featured-purple-line: rgba(103,80,164,0.26);
+  --ama-pinned-blue-line: rgba(0,108,186,0.20);
+}
+.ama-q.ama-q-spotlight.ama-q-pinned,
+.ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned {
+  border: 1px solid transparent !important;
+  background:
+    linear-gradient(var(--ama-card-bg), var(--ama-card-bg)) padding-box,
+    linear-gradient(to bottom,
+      var(--ama-featured-purple-line) 0%,
+      var(--ama-featured-purple-line) 50%,
+      var(--ama-pinned-blue-line) 50%,
+      var(--ama-pinned-blue-line) 100%) border-box !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+html.light .ama-q.ama-q-spotlight.ama-q-pinned,
+html.light .ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned {
+  background:
+    linear-gradient(var(--ama-card-bg), var(--ama-card-bg)) padding-box,
+    linear-gradient(to bottom,
+      var(--ama-featured-purple-line) 0%,
+      var(--ama-featured-purple-line) 50%,
+      var(--ama-pinned-blue-line) 50%,
+      var(--ama-pinned-blue-line) 100%) border-box !important;
+}
