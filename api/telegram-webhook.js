@@ -1077,7 +1077,9 @@ async function sendTopicInfo(chatId, questionId, replyToId, editMessageId) {
 
 async function sendFeatured(chatId, replyToId, editMessageId) {
   var all = await listAllQuestions();
-  var q = all.find(function(x) { return x.spotlight; });
+  var spotlighted = all.filter(function(x) { return x.spotlight; })
+    .sort(function(a, b) { return new Date(b.spotlightAt || b.answeredAt || 0) - new Date(a.spotlightAt || a.answeredAt || 0); });
+  var q = spotlighted[0];
   if (!q) {
     await respondTelegram(chatId,
       cardTop('\uD83C\uDF1F <b>FEATURED AMA</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No spotlight question set.\n' + BOX_V + ' Use /spotlight &lt;id&gt; to feature one.\n' + BOX_V + '\n' + cardBottom,
@@ -1984,9 +1986,10 @@ module.exports = async function handler(req, res) {
           }
           else if (questionId === 'unspotlight') {
             var all = await listAllQuestions();
-            var q = all.find(function(x) { return x.spotlight; });
+            var spotlighted = all.filter(function(x) { return x.spotlight; });
+            var q = spotlighted.sort(function(a, b) { return new Date(b.spotlightAt || b.answeredAt || 0) - new Date(a.spotlightAt || a.answeredAt || 0); })[0];
             if (!q) await editMessage(cbChatId, cbMessageId, cardTop('\uD83C\uDF1F <b>NO SPOTLIGHT SET</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No AMA is currently featured.\n' + BOX_V + '\n' + cardBottom, featuredButtons(false));
-            else { await clearSpotlightQuestion(q.id); await editMessage(cbChatId, cbMessageId, cardTop('\uD83C\uDF1F <b>SPOTLIGHT CLEARED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Featured AMA has been removed.\n' + BOX_V + '\n' + BOX_V + ' Previous ID \u2500 <code>' + esc(q.id) + '</code>\n' + BOX_V + '\n' + cardBottom, unspotlightButtons()); }
+            else { for (var si = 0; si < spotlighted.length; si++) { try { await clearSpotlightQuestion(spotlighted[si].id); } catch (e) {} } await editMessage(cbChatId, cbMessageId, cardTop('\uD83C\uDF1F <b>SPOTLIGHT CLEARED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Featured AMA has been removed.\n' + BOX_V + '\n' + BOX_V + ' Previous ID \u2500 <code>' + esc(q.id) + '</code>\n' + BOX_V + '\n' + cardBottom, unspotlightButtons()); }
           }
           else await answerCallback(callback.id, 'Unknown command button');
         } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not load command'); }
@@ -2274,14 +2277,15 @@ module.exports = async function handler(req, res) {
       var loadingId = await sendLoadingCard(chatId, '\uD83C\uDF1F <b>CLEARING SPOTLIGHT\u2026</b>', 'Removing featured AMA selection...', message.message_id);
       try {
         var all = await listAllQuestions();
-        var q = all.find(function(x) { return x.spotlight; });
+        var spotlighted = all.filter(function(x) { return x.spotlight; });
+        var q = spotlighted.sort(function(a, b) { return new Date(b.spotlightAt || b.answeredAt || 0) - new Date(a.spotlightAt || a.answeredAt || 0); })[0];
         if (!q) {
           await respondTelegram(chatId,
             cardTop('\uD83C\uDF1F <b>NO SPOTLIGHT SET</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No AMA is currently featured.\n' + BOX_V + ' Use /spotlight &lt;id&gt; to set one.\n' + BOX_V + '\n' + cardBottom,
             message.message_id, featuredButtons(false), loadingId);
           return res.status(200).json({ ok: true });
         }
-        await clearSpotlightQuestion(q.id);
+        for (var si = 0; si < spotlighted.length; si++) { try { await clearSpotlightQuestion(spotlighted[si].id); } catch (e) {} }
         await respondTelegram(chatId,
           cardTop('\uD83C\uDF1F <b>SPOTLIGHT CLEARED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Featured AMA has been removed.\n' + BOX_V + '\n' + BOX_V + ' Previous featured ID \u2500 <code>' + esc(q.id) + '</code>\n' + BOX_V + '\n' + cardBottom,
           message.message_id, unspotlightButtons(), loadingId);

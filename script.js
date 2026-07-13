@@ -1184,13 +1184,14 @@
         const reacted = reactedSet.has(q.id + ':' + emoji);
         return '<button class="ama-react-btn ' + (reacted ? 'react-active' : '') + '" data-id="' + q.id + '" data-emoji="' + emoji + '">' + emoji + '<span>' + count + '</span></button>';
       }).join('');
-      const spotlightBadge = q.spotlight ? '<span class="ama-spotlight-badge"><span class="material-symbols-outlined ama-spotlight-icon">hotel_class</span>Featured</span>' : '';
+      const activeSpotlight = !!opts.activeSpotlight;
+      const spotlightBadge = activeSpotlight ? '<span class="ama-spotlight-badge"><span class="material-symbols-outlined ama-spotlight-icon">hotel_class</span>Featured</span>' : '';
       const pinBadge = q.pinned ? '<span class="ama-pin-badge"><span class="material-symbols-outlined ama-pin-icon">push_pin</span>Pinned</span>' : '';
       const topicBadge = q.topic ? '<span class="ama-topic-badge" title="' + (q.topicManual ? 'Manual topic' : 'Auto topic') + '">' + esc(q.topic) + '</span>' : '';
-      const badgeRow = (q.spotlight || q.pinned || q.topic) ? '<div class="ama-badge-row">' + (q.spotlight ? spotlightBadge : (q.pinned ? pinBadge : '')) + (q.spotlight && q.pinned ? pinBadge : '') + topicBadge + '</div>' : '';
+      const badgeRow = (activeSpotlight || q.pinned || q.topic) ? '<div class="ama-badge-row">' + (activeSpotlight ? spotlightBadge : (q.pinned ? pinBadge : '')) + (activeSpotlight && q.pinned ? pinBadge : '') + topicBadge + '</div>' : '';
       const reactionEntries = Object.entries(q.reactions || {}).filter(([, v]) => v > 0);
       const reactionSummary = reactionEntries.length ? '<div class="ama-reaction-summary">' + reactionEntries.map(([e, c]) => '<span>' + e + ' ' + c + '</span>').join(' ') + '</div>' : '';
-      return '<div class="ama-q' + (q.pinned ? ' ama-q-pinned' : '') + (q.spotlight ? ' ama-q-spotlight' : '') + (opts.featured ? ' ama-q-featured-card' : '') + '">' +
+      return '<div class="ama-q' + (q.pinned ? ' ama-q-pinned' : '') + (activeSpotlight ? ' ama-q-spotlight' : '') + (opts.featured ? ' ama-q-featured-card' : '') + '">' +
         badgeRow +
         '<div class="ama-q-text">' + esc(q.question) + '</div>' +
         '<div class="ama-q-ans">' + esc(q.answer) + '</div>' +
@@ -1198,7 +1199,7 @@
           '<span class="ama-q-meta-name"><span class="material-symbols-outlined ama-q-meta-icon">person</span>' + esc(q.name || 'Anonymous') + '</span>' +
           '<span class="ama-q-meta-time"><span class="material-symbols-outlined ama-q-meta-icon">schedule</span>Asked ' + esc(formatAmaTime(q.createdAt)) + '</span>' +
           '<span class="ama-q-meta-time ama-q-meta-answered"><span class="material-symbols-outlined ama-q-meta-icon">check_circle</span>Answered ' + esc(formatAmaTime(q.answeredAt)) + '</span>' +
-          (q.spotlightAt ? '<span class="ama-q-meta-time ama-q-meta-spotlight"><span class="material-symbols-outlined ama-q-meta-icon">hotel_class</span>Featured ' + esc(formatAmaTime(q.spotlightAt)) + '</span>' : '') +
+          (activeSpotlight && q.spotlightAt ? '<span class="ama-q-meta-time ama-q-meta-spotlight"><span class="material-symbols-outlined ama-q-meta-icon">hotel_class</span>Featured ' + esc(formatAmaTime(q.spotlightAt)) + '</span>' : '') +
           (q.editedAt ? '<span class="ama-q-meta-time ama-q-meta-edited"><span class="material-symbols-outlined ama-q-meta-icon">edit</span>Edited ' + esc(formatAmaTime(q.editedAt)) + '</span>' : '') +
         '</div>' +
         '<div class="ama-q-vote">' +
@@ -1224,22 +1225,26 @@
         return;
       }
       if (listWrap) listWrap.hidden = false;
-      const spotlightDoc = answeredDocs.find(q => q.spotlight && !q.dismissed);
+      const spotlightCandidates = answeredDocs
+        .filter(q => q.spotlight && !q.dismissed)
+        .sort((a, b) => new Date(b.spotlightAt || b.answeredAt || 0) - new Date(a.spotlightAt || a.answeredAt || 0));
+      const spotlightDoc = spotlightCandidates[0] || null;
+      const activeSpotlightId = spotlightDoc ? spotlightDoc.id : '';
       if (featured) {
         if (spotlightDoc) {
           featured.hidden = false;
-          featured.innerHTML = amaQuestionCard(spotlightDoc, { featured: true });
+          featured.innerHTML = amaQuestionCard(spotlightDoc, { featured: true, activeSpotlight: true });
           wireAmaActions(featured);
         } else {
           featured.hidden = true;
           featured.innerHTML = '';
         }
       }
-      const arr = sorted().filter(q => !(featured && q.spotlight));
+      const arr = sorted().filter(q => !(featured && q.id === activeSpotlightId));
       const pages = Math.max(1, Math.ceil(arr.length / PER_PAGE));
       if (page > pages) page = pages;
       const slice = arr.slice((page - 1) * PER_PAGE, page * PER_PAGE);
-      list.innerHTML = slice.length ? slice.map(q => amaQuestionCard(q)).join('') : (spotlightDoc ? '<div class="ama-empty-note">No more answered questions yet.</div>' : '');
+      list.innerHTML = slice.length ? slice.map(q => amaQuestionCard(q, { activeSpotlight: !featured && q.id === activeSpotlightId })).join('') : (spotlightDoc ? '<div class="ama-empty-note">No more answered questions yet.</div>' : '');
       renderPager(arr.length ? pages : 1);
       wireAmaActions(list);
     }
