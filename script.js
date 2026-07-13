@@ -1167,13 +1167,13 @@
         const reacted = reactedSet.has(q.id + ':' + emoji);
         return '<button class="ama-react-btn ' + (reacted ? 'react-active' : '') + '" data-id="' + q.id + '" data-emoji="' + emoji + '">' + emoji + '<span>' + count + '</span></button>';
       }).join('');
-      const pinBadge = q.pinned ? '<span class="ama-pin-badge"><span class="material-symbols-outlined ama-pin-icon">push_pin</span>Pinned</span>' : '';
       const spotlightBadge = q.spotlight ? '<span class="ama-spotlight-badge"><span class="material-symbols-outlined ama-spotlight-icon">hotel_class</span>Featured</span>' : '';
+      const pinBadge = q.pinned ? '<span class="ama-pin-badge"><span class="material-symbols-outlined ama-pin-icon">push_pin</span>Pinned</span>' : '';
+      const badgeRow = (q.spotlight || q.pinned) ? '<div class="ama-badge-row">' + (q.spotlight ? spotlightBadge : pinBadge) + (q.spotlight && q.pinned ? pinBadge : '') + '</div>' : '';
       const reactionEntries = Object.entries(q.reactions || {}).filter(([, v]) => v > 0);
       const reactionSummary = reactionEntries.length ? '<div class="ama-reaction-summary">' + reactionEntries.map(([e, c]) => '<span>' + e + ' ' + c + '</span>').join(' ') + '</div>' : '';
       return '<div class="ama-q' + (q.pinned ? ' ama-q-pinned' : '') + (q.spotlight ? ' ama-q-spotlight' : '') + (opts.featured ? ' ama-q-featured-card' : '') + '">' +
-        (opts.featured ? '<div class="ama-featured-label"><span class="material-symbols-outlined">hotel_class</span><span>Featured AMA</span></div>' : '') +
-        spotlightBadge + pinBadge +
+        badgeRow +
         '<div class="ama-q-text">' + esc(q.question) + '</div>' +
         '<div class="ama-q-ans">' + esc(q.answer) + '</div>' +
         '<div class="ama-q-meta">' +
