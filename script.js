@@ -1115,6 +1115,20 @@
         });
       } catch (e) { return ''; }
     }
+    function autoTopicForQuestionClient(question, answer) {
+      const text = ((question || '') + ' ' + (answer || '')).toLowerCase();
+      const topics = [
+        ['AI/ML', ['ai','ml','machine learning','model','rag','llm','neural','data']],
+        ['React', ['react','frontend','component','vite','tailwind','css','javascript','typescript']],
+        ['Career', ['career','job','intern','internship','resume','roadmap','learn','start']],
+        ['Projects', ['project','portfolio','smarthealthcare','yatini','github','build']],
+        ['Anime', ['anime','manga','naruto','gaara','one piece','bleach']],
+        ['Personal', ['you','your','life','hobby','music','food','college']]
+      ];
+      for (const [name, keys] of topics) if (keys.some(k => text.includes(k))) return name;
+      return 'General';
+    }
+
     function fromDoc(doc) {
       const f = doc.fields || {};
       const reactions = {};
@@ -1136,6 +1150,9 @@
         pinned: !!f.pinned?.booleanValue,
         spotlight: !!f.spotlight?.booleanValue,
         spotlightAt: f.spotlightAt?.stringValue || '',
+        topic: f.topic?.stringValue || autoTopicForQuestionClient(f.question?.stringValue || '', f.answer?.stringValue || ''),
+        topicManual: !!f.topicManual?.booleanValue,
+        topicAt: f.topicAt?.stringValue || '',
         dismissed: !!(f.dismissed && f.dismissed.booleanValue)
       };
     }
@@ -1169,7 +1186,8 @@
       }).join('');
       const spotlightBadge = q.spotlight ? '<span class="ama-spotlight-badge"><span class="material-symbols-outlined ama-spotlight-icon">hotel_class</span>Featured</span>' : '';
       const pinBadge = q.pinned ? '<span class="ama-pin-badge"><span class="material-symbols-outlined ama-pin-icon">push_pin</span>Pinned</span>' : '';
-      const badgeRow = (q.spotlight || q.pinned) ? '<div class="ama-badge-row">' + (q.spotlight ? spotlightBadge : pinBadge) + (q.spotlight && q.pinned ? pinBadge : '') + '</div>' : '';
+      const topicBadge = q.topic ? '<span class="ama-topic-badge" title="' + (q.topicManual ? 'Manual topic' : 'Auto topic') + '">' + esc(q.topic) + '</span>' : '';
+      const badgeRow = (q.spotlight || q.pinned || q.topic) ? '<div class="ama-badge-row">' + (q.spotlight ? spotlightBadge : (q.pinned ? pinBadge : '')) + (q.spotlight && q.pinned ? pinBadge : '') + topicBadge + '</div>' : '';
       const reactionEntries = Object.entries(q.reactions || {}).filter(([, v]) => v > 0);
       const reactionSummary = reactionEntries.length ? '<div class="ama-reaction-summary">' + reactionEntries.map(([e, c]) => '<span>' + e + ' ' + c + '</span>').join(' ') + '</div>' : '';
       return '<div class="ama-q' + (q.pinned ? ' ama-q-pinned' : '') + (q.spotlight ? ' ama-q-spotlight' : '') + (opts.featured ? ' ama-q-featured-card' : '') + '">' +
@@ -1303,11 +1321,13 @@
       // not reuse localStorage or browser-autofilled values here.
       const name = (typedName || 'Anonymous').slice(0, 60);
       const id = uuid(), createdAt = new Date().toISOString();
+      const autoTopic = autoTopicForQuestionClient(text, '');
       const question = {
         id: { stringValue: id }, name: { stringValue: name }, question: { stringValue: text },
         answer: { stringValue: '' }, answered: { booleanValue: false },
         createdAt: { stringValue: createdAt }, answeredAt: { nullValue: null }, votes: { integerValue: 0 },
-        pinned: { booleanValue: false }, dismissed: { booleanValue: false }
+        pinned: { booleanValue: false }, dismissed: { booleanValue: false },
+        topic: { stringValue: autoTopic }, topicManual: { booleanValue: false }, topicAt: { stringValue: createdAt }
       };
       status.textContent = 'Sending…'; status.className = 'ama-status';
       const notify = () => fetch('/api/telegram', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, question: text, id, createdAt }) }).catch(() => {});

@@ -18,7 +18,8 @@ service cloud.firestore {
       // Pinned defaults to false — admin can set it later via the bot (service account bypasses rules).
       allow create: if request.resource.data.keys().hasOnly([
         "id", "name", "question", "answer", "answered",
-        "createdAt", "answeredAt", "votes", "pinned", "dismissed"
+        "createdAt", "answeredAt", "votes", "pinned", "dismissed",
+        "topic", "topicManual", "topicAt"
       ])
         && request.resource.data.id is string
         && request.resource.data.name is string
@@ -35,7 +36,13 @@ service cloud.firestore {
         && request.resource.data.pinned is bool
         && request.resource.data.pinned == false
         && request.resource.data.dismissed is bool
-        && request.resource.data.dismissed == false;
+        && request.resource.data.dismissed == false
+        && request.resource.data.topic is string
+        && request.resource.data.topic.size() > 0
+        && request.resource.data.topic.size() <= 40
+        && request.resource.data.topicManual is bool
+        && request.resource.data.topicManual == false
+        && request.resource.data.topicAt is string;
 
       // Only admin can update/delete directly. Reactions + votes are handled
       // server-side by the service account (bypasses these rules entirely).

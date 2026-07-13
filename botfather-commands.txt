@@ -30,3 +30,6 @@ featured - Show the currently featured AMA.
 health - Check Telegram, Firestore, webhook and database status.
 cancel - Abort active session (answer, edit, lookup). Returns to normal mode.
 unspotlight - Clear the currently featured AMA.
+topic - Set manual topic for a question. Usage: /topic <id> <topic>
+topicof - Show active/manual/auto topic for a question. Usage: /topicof <id>
+cleartopic - Remove manual topic and return to auto topic. Usage: /cleartopic <id>

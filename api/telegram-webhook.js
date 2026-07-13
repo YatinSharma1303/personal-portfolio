@@ -289,6 +289,36 @@ async function clearSpotlightQuestion(id) {
   });
 }
 
+async function setQuestionTopic(id, topic) {
+  return firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['topic', 'topicManual', 'topicAt']), {
+    fields: {
+      topic: { stringValue: normalizeTopic(topic) },
+      topicManual: { booleanValue: true },
+      topicAt: { stringValue: new Date().toISOString() }
+    }
+  });
+}
+
+async function setAutoQuestionTopic(id, topic) {
+  return firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['topic', 'topicManual', 'topicAt']), {
+    fields: {
+      topic: { stringValue: normalizeTopic(topic) },
+      topicManual: { booleanValue: false },
+      topicAt: { stringValue: new Date().toISOString() }
+    }
+  });
+}
+
+async function clearQuestionTopic(id) {
+  return firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['topic', 'topicManual', 'topicAt']), {
+    fields: {
+      topic: { stringValue: '' },
+      topicManual: { booleanValue: false },
+      topicAt: { stringValue: new Date().toISOString() }
+    }
+  });
+}
+
 /* -- Edit session -- */
 async function saveEditSession(chatId, questionId) {
   return firestore('PATCH', docPath(EDIT_SESSION_COLLECTION, String(chatId)), {
@@ -372,6 +402,9 @@ function fromFirestoreDoc(doc) {
     pinned: !!(f.pinned && f.pinned.booleanValue),
     spotlight: !!(f.spotlight && f.spotlight.booleanValue),
     spotlightAt: (f.spotlightAt && f.spotlightAt.stringValue) || '',
+    topic: (f.topic && f.topic.stringValue) || '',
+    topicManual: !!(f.topicManual && f.topicManual.booleanValue),
+    topicAt: (f.topicAt && f.topicAt.stringValue) || '',
     createdAt: (f.createdAt && f.createdAt.stringValue) || '',
     answeredAt: (f.answeredAt && f.answeredAt.stringValue) || '',
     editedAt: (f.editedAt && f.editedAt.stringValue) || '',
@@ -632,14 +665,27 @@ function topicsButtons(topics) {
   return navMarkup(rows);
 }
 
-function topicForQuestion(q) {
+function normalizeTopic(input) {
+  var raw = String(input || '').trim();
+  var t = raw.toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+  if (!t) return 'General';
+  if (['ai', 'ml', 'ai ml', 'aiml', 'machine learning', 'artificial intelligence', 'llm', 'rag', 'data science'].indexOf(t) !== -1) return 'AI/ML';
+  if (['react', 'frontend', 'front end', 'javascript', 'js', 'typescript', 'ts', 'tailwind', 'css', 'html'].indexOf(t) !== -1) return 'React';
+  if (['career', 'job', 'jobs', 'intern', 'internship', 'resume', 'roadmap', 'learning', 'learn'].indexOf(t) !== -1) return 'Career';
+  if (['project', 'projects', 'portfolio', 'github', 'smarthealthcare', 'yatini', 'build'].indexOf(t) !== -1) return 'Projects';
+  if (['anime', 'manga', 'naruto', 'gaara', 'one piece', 'bleach', 'aot'].indexOf(t) !== -1) return 'Anime';
+  if (['personal', 'life', 'hobby', 'music', 'food', 'college', 'about you'].indexOf(t) !== -1) return 'Personal';
+  return raw.split(' ').map(function(w) { return w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : ''; }).join(' ').slice(0, 40);
+}
+
+function autoTopicForQuestion(q) {
   var text = ((q.question || '') + ' ' + (q.answer || '')).toLowerCase();
   var topics = [
     { name: 'AI/ML', keys: ['ai', 'ml', 'machine learning', 'model', 'rag', 'llm', 'neural', 'data'] },
     { name: 'React', keys: ['react', 'frontend', 'component', 'vite', 'tailwind', 'css', 'javascript', 'typescript'] },
     { name: 'Career', keys: ['career', 'job', 'intern', 'internship', 'resume', 'roadmap', 'learn', 'start'] },
     { name: 'Projects', keys: ['project', 'portfolio', 'smarthealthcare', 'yatini', 'github', 'build'] },
-    { name: 'Anime', keys: ['anime', 'manga', 'naruto', 'gaara', 'one piece', 'favorite'] },
+    { name: 'Anime', keys: ['anime', 'manga', 'naruto', 'gaara', 'one piece', 'bleach'] },
     { name: 'Personal', keys: ['you', 'your', 'life', 'hobby', 'music', 'food', 'college'] }
   ];
   for (var i = 0; i < topics.length; i++) {
@@ -649,6 +695,30 @@ function topicForQuestion(q) {
   }
   return 'General';
 }
+
+function resolvedTopic(q) {
+  if (q && q.topic && String(q.topic).trim()) return normalizeTopic(q.topic);
+  return autoTopicForQuestion(q || {});
+}
+
+function topicSource(q) {
+  return q && q.topic && q.topicManual ? 'manual' : 'auto';
+}
+
+async function ensureTopicStored(q) {
+  if (!q || !q.id) return q;
+  if (q.topic && String(q.topic).trim()) return q;
+  var topic = autoTopicForQuestion(q);
+  try { await setAutoQuestionTopic(q.id, topic); q.topic = topic; q.topicManual = false; q.topicAt = new Date().toISOString(); } catch (e) {}
+  return q;
+}
+
+async function ensureTopicsStored(all) {
+  for (var i = 0; i < all.length; i++) await ensureTopicStored(all[i]);
+  return all;
+}
+
+function topicForQuestion(q) { return resolvedTopic(q); }
 
 function topTopics(all) {
   var counts = {};
@@ -754,6 +824,12 @@ var HELP_TEXT = [
   BOX_V + '   Smart priority queue.',
   BOX_V + ' /topics',
   BOX_V + '   Topic breakdown.',
+  BOX_V + ' /topic &lt;id&gt; &lt;topic&gt;',
+  BOX_V + '   Set manual topic.',
+  BOX_V + ' /topicof &lt;id&gt;',
+  BOX_V + '   Show topic source.',
+  BOX_V + ' /cleartopic &lt;id&gt;',
+  BOX_V + '   Return to auto topic.',
   BOX_V + ' /quality',
   BOX_V + '   Answers to improve.',
   BOX_V + ' /health',
@@ -908,9 +984,11 @@ async function sendSmartInbox(chatId, replyToId, editMessageId) {
 }
 
 async function sendTopics(chatId, replyToId, editMessageId) {
-  var all = await listAllQuestions();
+  var all = await ensureTopicsStored(await listAllQuestions());
   var topics = topTopics(all);
-  var lines = [cardTop('\uD83C\uDFF7 <b>AMA TOPICS</b>'), BOX_V, BOX_V + ' Keyword-based topic map.', BOX_V];
+  var manualCount = all.filter(function(q) { return q.topic && q.topicManual; }).length;
+  var autoCount = all.length - manualCount;
+  var lines = [cardTop('\uD83C\uDFF7 <b>AMA TOPICS</b>'), BOX_V, BOX_V + ' Stored topic map.', BOX_V + ' Manual \u2500 <b>' + manualCount + '</b> · Auto \u2500 <b>' + autoCount + '</b>', BOX_V];
   lines = lines.concat(topicLines(all, 8));
   lines.push(BOX_V);
   lines.push(BOX_V + ' Tap a topic to search deeper.');
@@ -965,6 +1043,36 @@ async function sendHealth(chatId, replyToId, editMessageId) {
     cardBottom
   ];
   await respondTelegram(chatId, lines.join('\n'), replyToId, healthButtons(), editMessageId);
+}
+
+async function sendTopicInfo(chatId, questionId, replyToId, editMessageId) {
+  var q = await getQuestion(questionId);
+  if (!q) {
+    await respondTelegram(chatId,
+      cardTop('\u26A0\uFE0F <b>QUESTION NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No AMA entry exists for this ID.\n' + BOX_V + ' ID \u2500 <code>' + esc(questionId) + '</code>\n' + BOX_V + '\n' + cardBottom,
+      replyToId, REPLY_KEYBOARD, editMessageId);
+    return;
+  }
+  var autoTopic = autoTopicForQuestion(q);
+  var activeTopic = resolvedTopic(q);
+  var source = topicSource(q);
+  var lines = [
+    cardTop('\uD83C\uDFF7 <b>QUESTION TOPIC</b>'),
+    BOX_V,
+    BOX_V + ' Active \u2500 <b>' + esc(activeTopic) + '</b> (' + source + ')',
+    BOX_V + ' Auto \u2500 <b>' + esc(autoTopic) + '</b>',
+    BOX_V + ' Manual \u2500 <b>' + (q.topicManual ? esc(q.topic) : 'not set') + '</b>',
+    BOX_V,
+    BOX_V + ' ID \u2500 <code>' + esc(q.id) + '</code>',
+    BOX_V + ' “' + esc(clipText(q.question, 130)) + '”',
+    BOX_V,
+    cardBottom
+  ];
+  await respondTelegram(chatId, lines.join('\n'), replyToId, navMarkup([
+    [getBtn('\uD83D\uDCCB Open Question', q.id)],
+    [{ text: '\uD83E\uDDF9 Clear Topic', callback_data: 'cleartopic:' + q.id }],
+    [cmdBtn('\uD83C\uDFF7 Topics', 'topics')]
+  ]), editMessageId);
 }
 
 async function sendFeatured(chatId, replyToId, editMessageId) {
@@ -1058,6 +1166,7 @@ function buildCardForQuestion(q) {
       BOX_V,
       BOX_V + ' \uD83D\uDC64 Visitor \u2500 <b>' + esc(name) + '</b>' + pinLine,
       BOX_V + ' \uD83C\uDD94 ID \u2500 <code>' + esc(q.id) + '</code>',
+      BOX_V + ' \uD83C\uDFF7 Topic \u2500 <b>' + esc(resolvedTopic(q)) + '</b> (' + topicSource(q) + ')',
       BOX_V,
       BOX_V + ' \uD83D\uDCAC <b>Question</b>',
       BOX_V + ' “' + esc(clipText(q.question, 170)) + '”',
@@ -1074,6 +1183,7 @@ function buildCardForQuestion(q) {
       inline_keyboard: [
         [{ text: '\u270F\uFE0F Edit Answer', callback_data: 'edit:' + q.id }],
         [{ text: q.pinned ? '\uD83D\uDCCD Unpin' : '\uD83D\uDCCD Pin', callback_data: (q.pinned ? 'unpin:' : 'pin:') + q.id }],
+        [{ text: '\uD83C\uDFF7 Topic Info', callback_data: 'topicof:' + q.id }],
         [{ text: '\uD83D\uDE48 Dismiss', callback_data: 'dismiss:' + q.id }, { text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + q.id }]
       ]
     } };
@@ -1089,6 +1199,7 @@ function buildCardForQuestion(q) {
       BOX_V,
       BOX_V + ' \uD83D\uDC64 Visitor \u2500 <b>' + esc(name) + '</b>' + pinLine,
       BOX_V + ' \uD83C\uDD94 ID \u2500 <code>' + esc(q.id) + '</code>',
+      BOX_V + ' \uD83C\uDFF7 Topic \u2500 <b>' + esc(resolvedTopic(q)) + '</b> (' + topicSource(q) + ')',
       BOX_V,
       BOX_V + ' \uD83D\uDCAC <b>Question</b>',
       BOX_V + ' “' + esc(clipText(q.question, 170)) + '”'
@@ -1106,6 +1217,7 @@ function buildCardForQuestion(q) {
         [{ text: '\u21A9\uFE0F Retrieve', callback_data: 'retrieve:' + q.id }],
         [{ text: '\uD83D\uDCAC Answer', callback_data: 'answer:' + q.id }],
         [{ text: q.pinned ? '\uD83D\uDCCD Unpin' : '\uD83D\uDCCD Pin', callback_data: (q.pinned ? 'unpin:' : 'pin:') + q.id }],
+        [{ text: '\uD83C\uDFF7 Topic Info', callback_data: 'topicof:' + q.id }],
         [{ text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + q.id }]
       ]
     } };
@@ -1117,6 +1229,7 @@ function buildCardForQuestion(q) {
     BOX_V + ' \uD83D\uDC64 Visitor \u2500 <b>' + esc(name) + '</b>' + pinLine,
     BOX_V + ' \uD83D\uDD50 Asked \u2500 ' + esc(formatTime(q.createdAt)) + ' IST' + (qAge ? ' · ' + esc(qAge) : ''),
     BOX_V + ' \uD83C\uDD94 ID \u2500 <code>' + esc(q.id) + '</code>',
+    BOX_V + ' \uD83C\uDFF7 Topic \u2500 <b>' + esc(resolvedTopic(q)) + '</b> (' + topicSource(q) + ')',
     BOX_V,
     BOX_V + ' \uD83D\uDCAC <b>Question</b>',
     BOX_V + ' “' + esc(clipText(q.question, 220)) + '”',
@@ -1129,6 +1242,7 @@ function buildCardForQuestion(q) {
     inline_keyboard: [
       [{ text: '\uD83D\uDCAC Answer', callback_data: 'answer:' + q.id }],
       [{ text: q.pinned ? '\uD83D\uDCCD Unpin' : '\uD83D\uDCCD Pin', callback_data: (q.pinned ? 'unpin:' : 'pin:') + q.id }],
+      [{ text: '\uD83C\uDFF7 Topic Info', callback_data: 'topicof:' + q.id }],
       [{ text: '\uD83D\uDE48 Dismiss', callback_data: 'dismiss:' + q.id }, { text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + q.id }]
     ]
   } };
@@ -1157,6 +1271,7 @@ async function sendFullDetailCard(chatId, questionId, replyToId, editMessageId) 
     BOX_V + ' ' + stateEmoji + ' Status \u2500 <b>' + state + '</b>' + (q.pinned ? ' · \uD83D\uDCCD pinned' : ''),
     BOX_V + ' \uD83D\uDC64 Visitor \u2500 <b>' + esc(name) + '</b>',
     BOX_V + ' \uD83C\uDD94 ID \u2500 <code>' + esc(q.id) + '</code>',
+    BOX_V + ' \uD83C\uDFF7 Topic \u2500 <b>' + esc(resolvedTopic(q)) + '</b> (' + topicSource(q) + ')',
     BOX_V + ' \uD83D\uDD50 Asked \u2500 ' + esc(formatTime(q.createdAt)) + ' IST' + (qAge ? ' · ' + esc(qAge) : ''),
     BOX_V,
     BOX_V + ' \uD83D\uDCAC <b>Question</b>',
@@ -1188,6 +1303,7 @@ async function sendFullDetailCard(chatId, questionId, replyToId, editMessageId) 
     buttons.push([{ text: '\u270F\uFE0F Edit Answer', callback_data: 'edit:' + q.id }]);
     buttons.push([{ text: q.pinned ? '\uD83D\uDCCD Unpin' : '\uD83D\uDCCD Pin', callback_data: (q.pinned ? 'unpin:' : 'pin:') + q.id }]);
   }
+  buttons.push([{ text: '\uD83C\uDFF7 Topic Info', callback_data: 'topicof:' + q.id }]);
   buttons.push([{ text: '\uD83D\uDE48 Dismiss', callback_data: 'dismiss:' + q.id }, { text: '\uD83D\uDDD1 Delete', callback_data: 'delete:' + q.id }]);
 
   await respondTelegram(chatId, lines.join('\n'), replyToId, { inline_keyboard: buttons }, editMessageId);
@@ -1245,7 +1361,8 @@ async function searchQuestions(chatId, searchText, replyToId, editMessageId) {
   var results = all.filter(function(q) {
     return (q.question || '').toLowerCase().includes(query) ||
            (q.answer || '').toLowerCase().includes(query) ||
-           (q.name || '').toLowerCase().includes(query);
+           (q.name || '').toLowerCase().includes(query) ||
+           resolvedTopic(q).toLowerCase().includes(query);
   }).sort(function(a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); }).slice(0, 8);
 
   if (!results.length) {
@@ -1882,6 +1999,25 @@ module.exports = async function handler(req, res) {
         try { await answerCallback(callback.id, 'Searching…'); await searchQuestions(cbChatId, questionId, undefined, cbMessageId); }
         catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Search failed'); }
       }
+      else if (action === 'topicof') {
+        try { await answerCallback(callback.id, 'Topic info'); await sendTopicInfo(cbChatId, questionId, undefined, cbMessageId); }
+        catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not load topic'); }
+      }
+      else if (action === 'cleartopic') {
+        try {
+          await answerCallback(callback.id, 'Clearing topic…');
+          var q = await getQuestion(questionId);
+          if (!q) { await editMessage(cbChatId, cbMessageId, cardTop('\u26A0\uFE0F <b>QUESTION NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question exists for this ID.\n' + BOX_V + '\n' + cardBottom); }
+          else {
+            await clearQuestionTopic(questionId);
+            q.topic = autoTopicForQuestion(q); q.topicManual = false;
+            await setAutoQuestionTopic(questionId, q.topic);
+            await editMessage(cbChatId, cbMessageId,
+              cardTop('\uD83E\uDDF9 <b>TOPIC CLEARED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Manual topic removed.\n' + BOX_V + ' Auto topic is now active.\n' + BOX_V + '\n' + BOX_V + ' Topic \u2500 <b>' + esc(q.topic) + '</b>\n' + BOX_V + ' ID \u2500 <code>' + esc(questionId) + '</code>\n' + BOX_V + '\n' + cardBottom,
+              navMarkup([[getBtn('\uD83D\uDCCB Open Question', questionId)], [cmdBtn('\uD83C\uDFF7 Topics', 'topics')]]));
+          }
+        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not clear topic'); }
+      }
       else if (action === 'featured') {
         try {
           await answerCallback(callback.id, 'Featured AMA');
@@ -2153,6 +2289,84 @@ module.exports = async function handler(req, res) {
         await respondTelegram(chatId,
           cardTop('\u26A0\uFE0F <b>CLEAR FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not clear spotlight.\n' + BOX_V + ' Try again in a moment.\n' + BOX_V + '\n' + cardBottom,
           message.message_id, REPLY_KEYBOARD, loadingId);
+      }
+      return res.status(200).json({ ok: true });
+    }
+
+    /* /topic <id> <topic> */
+    if (command === '/topic') {
+      var parts = text.split(/\s+/);
+      var qid = parts[1];
+      var topicText = parts.slice(2).join(' ').trim();
+      if (!qid || !topicText) {
+        await sendTelegram(chatId,
+          cardTop('\uD83C\uDFF7 <b>SET TOPIC</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Assign a manual topic.\n' + BOX_V + '\n' + BOX_V + ' Usage: /topic &lt;id&gt; &lt;topic&gt;\n' + BOX_V + ' Example: /topic abc123 React\n' + BOX_V + '\n' + cardBottom,
+          message.message_id, REPLY_KEYBOARD);
+        return res.status(200).json({ ok: true });
+      }
+      var loadingId = await sendLoadingCard(chatId, '\uD83C\uDFF7 <b>SETTING TOPIC\u2026</b>', 'Saving manual topic to Firestore...', message.message_id);
+      try {
+        var q = await getQuestion(qid);
+        if (!q) {
+          await respondTelegram(chatId,
+            cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question exists for this ID.\n' + BOX_V + ' ID \u2500 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
+            message.message_id, REPLY_KEYBOARD, loadingId);
+          return res.status(200).json({ ok: true });
+        }
+        var topic = normalizeTopic(topicText);
+        await setQuestionTopic(qid, topic);
+        await respondTelegram(chatId,
+          cardTop('\uD83C\uDFF7 <b>TOPIC SET</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Manual topic saved.\n' + BOX_V + '\n' + BOX_V + ' Topic \u2500 <b>' + esc(topic) + '</b>\n' + BOX_V + ' Auto suggestion \u2500 <b>' + esc(autoTopicForQuestion(q)) + '</b>\n' + BOX_V + ' ID \u2500 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
+          message.message_id,
+          navMarkup([[getBtn('\uD83D\uDCCB Open Question', qid)], [{ text: '\uD83E\uDDF9 Clear Topic', callback_data: 'cleartopic:' + qid }], [cmdBtn('\uD83C\uDFF7 Topics', 'topics')]]),
+          loadingId);
+      } catch (e) {
+        await respondTelegram(chatId,
+          cardTop('\u26A0\uFE0F <b>TOPIC FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not save topic.\n' + BOX_V + ' Try again in a moment.\n' + BOX_V + '\n' + cardBottom,
+          message.message_id, REPLY_KEYBOARD, loadingId);
+      }
+      return res.status(200).json({ ok: true });
+    }
+
+    /* /topicof <id> */
+    if (command === '/topicof') {
+      var qid = text.split(/\s+/)[1];
+      if (!qid) {
+        await sendTelegram(chatId,
+          cardTop('\uD83C\uDFF7 <b>TOPIC INFO</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Usage: /topicof &lt;id&gt;\n' + BOX_V + '\n' + cardBottom,
+          message.message_id, REPLY_KEYBOARD);
+        return res.status(200).json({ ok: true });
+      }
+      var loadingId = await sendLoadingCard(chatId, '\uD83C\uDFF7 <b>LOADING TOPIC\u2026</b>', 'Checking manual and auto topics...', message.message_id);
+      await sendTopicInfo(chatId, qid, message.message_id, loadingId);
+      return res.status(200).json({ ok: true });
+    }
+
+    /* /cleartopic <id> */
+    if (command === '/cleartopic') {
+      var qid = text.split(/\s+/)[1];
+      if (!qid) {
+        await sendTelegram(chatId,
+          cardTop('\uD83E\uDDF9 <b>CLEAR TOPIC</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Usage: /cleartopic &lt;id&gt;\n' + BOX_V + '\n' + cardBottom,
+          message.message_id, REPLY_KEYBOARD);
+        return res.status(200).json({ ok: true });
+      }
+      var loadingId = await sendLoadingCard(chatId, '\uD83E\uDDF9 <b>CLEARING TOPIC\u2026</b>', 'Returning question to auto topic...', message.message_id);
+      try {
+        var q = await getQuestion(qid);
+        if (!q) {
+          await respondTelegram(chatId, cardTop('\u26A0\uFE0F <b>NOT FOUND</b>') + '\n' + BOX_V + '\n' + BOX_V + ' No question exists for this ID.\n' + BOX_V + '\n' + cardBottom, message.message_id, REPLY_KEYBOARD, loadingId);
+          return res.status(200).json({ ok: true });
+        }
+        var autoT = autoTopicForQuestion(q);
+        await setAutoQuestionTopic(qid, autoT);
+        await respondTelegram(chatId,
+          cardTop('\uD83E\uDDF9 <b>TOPIC CLEARED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Manual topic removed.\n' + BOX_V + ' Auto topic is active.\n' + BOX_V + '\n' + BOX_V + ' Topic \u2500 <b>' + esc(autoT) + '</b>\n' + BOX_V + ' ID \u2500 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
+          message.message_id,
+          navMarkup([[getBtn('\uD83D\uDCCB Open Question', qid)], [cmdBtn('\uD83C\uDFF7 Topics', 'topics')]]),
+          loadingId);
+      } catch (e) {
+        await respondTelegram(chatId, cardTop('\u26A0\uFE0F <b>CLEAR FAILED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Could not clear topic.\n' + BOX_V + '\n' + cardBottom, message.message_id, REPLY_KEYBOARD, loadingId);
       }
       return res.status(200).json({ ok: true });
     }

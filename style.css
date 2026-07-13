@@ -1990,3 +1990,26 @@ html.light .ama-pin-badge { background: rgba(0,108,186,0.08) !important; }
   content: none !important;
   display: none !important;
 }
+
+/* ============ AMA topic pill ============ */
+.ama-topic-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  border-radius: 999px;
+  padding: 4px 9px;
+  color: var(--gray);
+  background: rgba(255,255,255,0.055);
+  border: 1px solid var(--border);
+  margin-left: auto;
+}
+.ama-badge-row .ama-topic-badge:first-child { margin-left: 0; }
+.ama-badge-row .ama-pin-badge:nth-child(2) + .ama-topic-badge { margin-left: 8px; }
+html.light .ama-topic-badge {
+  color: var(--gray);
+  background: rgba(0,0,0,0.035);
+  border-color: var(--border);
+}
