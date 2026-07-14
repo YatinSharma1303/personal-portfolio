@@ -32,6 +32,7 @@ var SESSION_TTL_MS = 10 * 60 * 1000;
    - _cachedToken / _cachedTokenExpiry reuse the Google OAuth token across Firestore calls. */
 var _questionsCache = null;
 var _currentActor = null;
+var _suppressItemLogs = false;
 
 function isSessionExpired(sessionDoc) {
   if (!sessionDoc || !sessionDoc.fields) return true;
@@ -196,53 +197,121 @@ function logThreadIdFor(category) {
 
 function logCategoryLabel(category) {
   var labels = {
-    site: '🌐 Site Activity',
-    bot: '🤖 Bot Interaction',
-    security: '🚫 Security',
-    answer: '✅ Answer Workflow',
-    moderation: '🛠 Moderation',
-    delete: '🗑 Delete Audit',
-    pin: '📌 Pin Actions',
-    spotlight: '🌟 Featured AMA',
-    topic: '🏷 Topic Management',
-    health: '🩺 Health',
-    error: '⚠️ Errors'
+    site: '🌐 Site Activity Logs',
+    bot: '🤖 Bot Command Logs',
+    security: '🚫 Unauthorized Access Logs',
+    answer: '✅ Answer Workflow Logs',
+    moderation: '🛠 Moderation Action Logs',
+    delete: '🗑 Delete Audit Logs',
+    pin: '📌 Pin Action Logs',
+    spotlight: '🌟 Featured AMA Logs',
+    topic: '🏷 Topic Management Logs',
+    health: '🩺 System Health Logs',
+    error: '⚠️ Error Logs'
   };
-  return labels[category] || '🧾 General';
+  return labels[category] || '🧾 General Logs';
+}
+
+function humanLogTitle(title) {
+  return String(title || 'LOG')
+    .toLowerCase()
+    .split(/[_\s]+/)
+    .map(function(w) { return w ? w.charAt(0).toUpperCase() + w.slice(1) : ''; })
+    .join(' ');
 }
 
 function prettyFieldName(key) {
-  return String(key || '').replace(/([a-z])([A-Z])/g, '$1 $2');
+  var map = {
+    ID: 'Question ID', id: 'Question ID', qid: 'Question ID',
+    ToSite: 'Restored To Site', ToPending: 'Restored To Pending',
+    PreservedManual: 'Preserved Manual', AutoTopic: 'Auto Topic',
+    OldTopic: 'Old Topic', NewTopic: 'New Topic',
+    Text: 'Command Text', Value: 'Callback Value'
+  };
+  return map[key] || String(key || '').replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
+function severityForLog(title, category) {
+  var t = String(title || '').toUpperCase();
+  if (category === 'security') return 'Warning';
+  if (category === 'error' || t.indexOf('FAILED') !== -1 || t.indexOf('ERROR') !== -1) return 'Warning';
+  if (category === 'delete' || t.indexOf('DELETE') !== -1 || t.indexOf('DELETED') !== -1) return 'Critical';
+  if (t.indexOf('BULK') !== -1) return 'Important';
+  return 'Info';
+}
+
+function summaryForLog(title, fields, category) {
+  var t = String(title || '').toUpperCase();
+  fields = fields || {};
+  if (t === 'SITE QUESTION RECEIVED') return 'A visitor submitted a new AMA question.';
+  if (t.indexOf('UNAUTHORIZED') !== -1) return 'An unauthorized Telegram user attempted to use the bot.';
+  if (t === 'BOT COMMAND') return 'A bot command was received and processed.';
+  if (t === 'BOT CALLBACK') return 'An inline button interaction was received.';
+  if (t === 'ANSWER PUBLISHED') return 'An answer was published to the site.';
+  if (t === 'ANSWER UPDATED') return 'A published answer was updated.';
+  if (t.indexOf('ANSWER PREVIEW') === 0) return 'An answer preview workflow changed state.';
+  if (t === 'QUESTION DISMISSED') return 'A question was hidden from the public site.';
+  if (t === 'QUESTION RETRIEVED') return 'A hidden question was restored.';
+  if (t === 'QUESTION DELETED') return 'A question was permanently deleted.';
+  if (t === 'BULK DELETE ALL') return 'A bulk delete operation completed.';
+  if (t === 'BULK DISMISS ALL') return 'A bulk dismiss operation completed.';
+  if (t === 'BULK RETRIEVE ALL') return 'A bulk retrieve operation completed.';
+  if (t === 'QUESTION PINNED') return 'A question was pinned on the site.';
+  if (t === 'QUESTION UNPINNED') return 'A question pin was removed.';
+  if (t === 'SPOTLIGHT SET') return 'The featured AMA was changed.';
+  if (t === 'SPOTLIGHT CLEARED') return 'The featured AMA was cleared.';
+  if (t === 'TOPIC SET') return 'A manual topic was assigned.';
+  if (t === 'TOPIC CLEARED') return 'A manual topic was removed and auto topic restored.';
+  if (t === 'TOPIC RECOMPUTED') return 'An automatic topic was recomputed.';
+  if (t === 'TOPICS RECOMPUTED') return 'Automatic topics were recomputed in bulk.';
+  if (t === 'HEALTH CHECK') return 'The bot health check was run.';
+  return 'A bot log event was recorded.';
+}
+
+function isIdField(key) {
+  return /(^id$|id$|question id|chat)$/i.test(String(key || ''));
+}
+
+function formatFieldValue(key, value) {
+  var v = esc(clipText(String(value), 180));
+  return isIdField(key) ? '<code>' + v + '</code>' : v;
 }
 
 function buildLogMessage(title, fields, emoji, actor, category) {
   fields = fields || {};
   emoji = emoji || '🧾';
+  var eventCode = String(title || 'LOG').toUpperCase().replace(/\s+/g, '_');
+  var severity = severityForLog(title, category);
+  var env = process.env.VERCEL_ENV || process.env.NODE_ENV || 'production';
   var lines = [
-    '┌─' + emoji + ' <b>' + esc(title) + '</b>',
+    '┌─' + emoji + ' <b>' + esc(humanLogTitle(title)) + '</b>',
     '│',
-    '│ <b>Category</b>',
-    '│ ' + esc(logCategoryLabel(category))
+    '│ <b>Summary</b>',
+    '│ ' + esc(summaryForLog(title, fields, category)),
+    '│',
+    '│ <b>Event</b>',
+    '│ Code: <code>' + esc(eventCode) + '</code>',
+    '│ Severity: <b>' + esc(severity) + '</b>',
+    '│ Category: ' + esc(logCategoryLabel(category)),
+    '│ Env: <code>' + esc(env) + '</code>'
   ];
 
   if (actor) {
     lines.push('│');
     lines.push('│ <b>Actor</b>');
-    lines.push('│ ' + esc(actor.name));
+    lines.push('│ Name: ' + esc(actor.name));
     lines.push('│ ID: <code>' + esc(actor.id) + '</code>' + ((actor.username && actor.username !== '—') ? ' · ' + esc(actor.username) : ''));
   }
 
-  var keys = Object.keys(fields).filter(function(k) {
-    var v = fields[k];
-    return !(v === undefined || v === null || v === '');
-  });
+  var preferred = ['ID','Question ID','Command','Text','Action','Value','Topic','OldTopic','NewTopic','AutoTopic','Previous','Visitor','Question','Answer','Draft','Restored','Updated','Deleted','Dismissed','Answered','Unanswered','ToSite','ToPending','Requested','PreservedManual','Source','Chat','Attempt','Error'];
+  var keys = [];
+  preferred.forEach(function(k) { if (Object.prototype.hasOwnProperty.call(fields, k)) keys.push(k); });
+  Object.keys(fields).forEach(function(k) { if (keys.indexOf(k) === -1) keys.push(k); });
+  keys = keys.filter(function(k) { var v = fields[k]; return !(v === undefined || v === null || v === ''); });
   if (keys.length) {
     lines.push('│');
     lines.push('│ <b>Details</b>');
-    keys.forEach(function(k) {
-      var value = String(fields[k]);
-      lines.push('│ ' + esc(prettyFieldName(k)) + ': ' + esc(clipText(value, 160)));
-    });
+    keys.forEach(function(k) { lines.push('│ ' + esc(prettyFieldName(k)) + ': ' + formatFieldValue(k, fields[k])); });
   }
 
   try {
@@ -250,8 +319,7 @@ function buildLogMessage(title, fields, emoji, actor, category) {
     lines.push('│ <b>Time</b>');
     lines.push('│ ' + esc(formatTime(new Date().toISOString())) + ' IST');
   } catch (e) {}
-
-  lines.push('└──────────────────────────────');
+  lines.push('└─ portfolio-bot');
   return lines.join('\n');
 }
 
@@ -334,7 +402,7 @@ async function answerQuestion(id, answer) {
       dismissed: { booleanValue: false }
     }
   });
-  await sendLog('ANSWER PUBLISHED', { ID: id, Answer: clipText(answer, 120) }, '\u2705');
+  if (!_suppressItemLogs) await sendLog('ANSWER PUBLISHED', { ID: id, Answer: clipText(answer, 120) }, '\u2705');
   return result;
 }
 
@@ -345,7 +413,7 @@ async function editAnswer(id, answer) {
       editedAt: { stringValue: new Date().toISOString() }
     }
   });
-  await sendLog('ANSWER UPDATED', { ID: id, Answer: clipText(answer, 120) }, '\u270F\uFE0F');
+  if (!_suppressItemLogs) await sendLog('ANSWER UPDATED', { ID: id, Answer: clipText(answer, 120) }, '\u270F\uFE0F');
   return result;
 }
 
@@ -357,7 +425,7 @@ async function dismissQuestion(id) {
   var result = await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['dismissed', 'answered']), {
     fields: { dismissed: { booleanValue: true }, answered: { booleanValue: false } }
   });
-  await sendLog('QUESTION DISMISSED', { ID: id }, '\uD83D\uDE48');
+  if (!_suppressItemLogs) await sendLog('QUESTION DISMISSED', { ID: id }, '\uD83D\uDE48');
   return result;
 }
 
@@ -372,20 +440,20 @@ async function retrieveQuestion(id) {
     await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['dismissed', 'answered']), {
       fields: { dismissed: { booleanValue: false }, answered: { booleanValue: true } }
     });
-    await sendLog('QUESTION RETRIEVED', { ID: id, Restored: 'site with answer' }, '\u21A9\uFE0F');
+    if (!_suppressItemLogs) await sendLog('QUESTION RETRIEVED', { ID: id, Restored: 'site with answer' }, '\u21A9\uFE0F');
     return { restoredAs: 'answered', question: q };
   } else {
     await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['dismissed', 'answered']), {
       fields: { dismissed: { booleanValue: false }, answered: { booleanValue: false } }
     });
-    await sendLog('QUESTION RETRIEVED', { ID: id, Restored: 'pending queue' }, '\u21A9\uFE0F');
+    if (!_suppressItemLogs) await sendLog('QUESTION RETRIEVED', { ID: id, Restored: 'pending queue' }, '\u21A9\uFE0F');
     return { restoredAs: 'unanswered', question: q };
   }
 }
 
 async function deleteQuestion(id) {
   var result = await firestore('DELETE', docPath(COLLECTION, id));
-  await sendLog('QUESTION DELETED', { ID: id }, '\uD83D\uDDD1');
+  if (!_suppressItemLogs) await sendLog('QUESTION DELETED', { ID: id }, '\uD83D\uDDD1');
   return result;
 }
 
@@ -394,7 +462,7 @@ async function pinQuestion(id) {
   var result = await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['pinned']), {
     fields: { pinned: { booleanValue: true } }
   });
-  await sendLog('QUESTION PINNED', { ID: id }, '\uD83D\uDCCD');
+  if (!_suppressItemLogs) await sendLog('QUESTION PINNED', { ID: id }, '\uD83D\uDCCD');
   return result;
 }
 
@@ -402,7 +470,7 @@ async function unpinQuestion(id) {
   var result = await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['pinned']), {
     fields: { pinned: { booleanValue: false } }
   });
-  await sendLog('QUESTION UNPINNED', { ID: id }, '\uD83D\uDCCD');
+  if (!_suppressItemLogs) await sendLog('QUESTION UNPINNED', { ID: id }, '\uD83D\uDCCD');
   return result;
 }
 
@@ -420,7 +488,7 @@ async function setSpotlightQuestion(id) {
   var result = await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['spotlight', 'spotlightAt']), {
     fields: { spotlight: { booleanValue: true }, spotlightAt: { stringValue: new Date().toISOString() } }
   });
-  await sendLog('SPOTLIGHT SET', { ID: id }, '\uD83C\uDF1F');
+  if (!_suppressItemLogs) await sendLog('SPOTLIGHT SET', { ID: id }, '\uD83C\uDF1F');
   return result;
 }
 
@@ -428,11 +496,11 @@ async function clearSpotlightQuestion(id) {
   var result = await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['spotlight']), {
     fields: { spotlight: { booleanValue: false } }
   });
-  await sendLog('SPOTLIGHT CLEARED', { ID: id }, '\uD83C\uDF1F');
+  if (!_suppressItemLogs) await sendLog('SPOTLIGHT CLEARED', { ID: id }, '\uD83C\uDF1F');
   return result;
 }
 
-async function setQuestionTopic(id, topic) {
+async function setQuestionTopic(id, topic, oldTopic) {
   var normalized = normalizeTopic(topic);
   var result = await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['topic', 'topicManual', 'topicAt']), {
     fields: {
@@ -441,7 +509,7 @@ async function setQuestionTopic(id, topic) {
       topicAt: { stringValue: new Date().toISOString() }
     }
   });
-  await sendLog('TOPIC SET', { ID: id, Topic: normalized, Source: 'manual' }, '\uD83C\uDFF7');
+  if (!_suppressItemLogs) await sendLog('TOPIC SET', { ID: id, OldTopic: oldTopic || '—', NewTopic: normalized, Source: 'manual' }, '\uD83C\uDFF7');
   return result;
 }
 
@@ -2132,14 +2200,16 @@ module.exports = async function handler(req, res) {
             cardTop('\uD83D\uDDD1 <b>DELETING ALL\u2026</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Removing ' + count + ' questions\u2026\n' + BOX_V + '\n' + cardBottom
           );
           var deleted = 0;
+          _suppressItemLogs = true;
           for (var di = 0; di < all.length; di++) {
             try { await deleteQuestion(all[di].id); deleted++; } catch (e) {}
           }
+          _suppressItemLogs = false;
           await sendLog('BULK DELETE ALL', { Requested: count, Deleted: deleted }, '\uD83D\uDDD1');
           await editMessage(cbChatId, cbMessageId,
             cardTop('\u2705 <b>ALL DELETED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Successfully deleted <b>' + deleted + '</b> question' + (deleted === 1 ? '' : 's') + '.\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n' + BOX_V + '\n' + cardBottom
           );
-        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Delete all failed'); }
+        } catch (e) { _suppressItemLogs = false; await answerCallback(callback.id, '\u26A0\uFE0F Delete all failed'); }
       }
       else if (action === 'canceldeleteall') {
         await answerCallback(callback.id, 'Delete all cancelled');
@@ -2156,11 +2226,13 @@ module.exports = async function handler(req, res) {
           var all = await listAllQuestions();
           var dismissed = all.filter(function(q) { return questionState(q) === 'DISMISSED'; });
           var toPending = 0, toSite = 0;
+          _suppressItemLogs = true;
           for (var ri = 0; ri < dismissed.length; ri++) {
             var hasA = dismissed[ri].answer && String(dismissed[ri].answer).trim().length > 0;
             if (hasA) toSite++; else toPending++;
             await retrieveQuestion(dismissed[ri].id);
           }
+          _suppressItemLogs = false;
           await answerCallback(callback.id, '\u21A9\uFE0F All retrieved!');
           var detailLines = BOX_V + ' All dismissed questions restored.\n';
           if (toPending > 0) detailLines += BOX_V + ' \u23F3 <b>' + toPending + '</b> \u2192 pending queue\n';
@@ -2169,7 +2241,7 @@ module.exports = async function handler(req, res) {
           await editMessage(cbChatId, cbMessageId,
             cardTop('\u2705 <b>ALL RETRIEVED</b>') + '\n' + BOX_V + '\n' + detailLines + BOX_V + '\n' + BOX_V + ' \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n' + BOX_V + '\n' + cardBottom
           );
-        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Retrieve all failed'); }
+        } catch (e) { _suppressItemLogs = false; await answerCallback(callback.id, '\u26A0\uFE0F Retrieve all failed'); }
       }
       else if (action === 'cancelretrieveall') {
         await answerCallback(callback.id, 'Retrieve all cancelled');
@@ -2189,6 +2261,7 @@ module.exports = async function handler(req, res) {
           var active = all.filter(function(q) { return questionState(q) !== 'DISMISSED'; });
           var answeredCount = 0, unansweredCount = 0;
           var dismissedCount = 0;
+          _suppressItemLogs = true;
           for (var di = 0; di < active.length; di++) {
             var st = questionState(active[di]);
             if (st === 'ANSWERED') answeredCount++; else unansweredCount++;
@@ -2197,6 +2270,7 @@ module.exports = async function handler(req, res) {
               dismissedCount++;
             } catch (e) {}
           }
+          _suppressItemLogs = false;
           await answerCallback(callback.id, '\uD83D\uDE48 All dismissed!');
           var detailLines = BOX_V + ' Successfully dismissed <b>' + dismissedCount + '</b> question' + (dismissedCount === 1 ? '' : 's') + '.\n';
           if (answeredCount > 0) detailLines += BOX_V + ' \u2705 <b>' + answeredCount + '</b> answered \u2192 hidden (retrieve \u2192 back on site)\n';
@@ -2209,6 +2283,7 @@ module.exports = async function handler(req, res) {
           );
           return res.status(200).json({ ok: true, callback: 'confirmdismissall' });
         } catch (e) {
+          _suppressItemLogs = false;
           await answerCallback(callback.id, '\u26A0\uFE0F Dismiss all failed - try again');
           return res.status(200).json({ ok: true, error: e.message });
         }
@@ -2652,7 +2727,7 @@ module.exports = async function handler(req, res) {
           return res.status(200).json({ ok: true });
         }
         var topic = normalizeTopic(topicText);
-        await setQuestionTopic(qid, topic);
+        await setQuestionTopic(qid, topic, q.topic || '—');
         await respondTelegram(chatId,
           cardTop('\uD83C\uDFF7 <b>TOPIC SET</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Manual topic saved.\n' + BOX_V + '\n' + BOX_V + ' Topic \u2500 <b>' + esc(topic) + '</b>\n' + BOX_V + ' Auto suggestion \u2500 <b>' + esc(autoTopicForQuestion(q)) + '</b>\n' + BOX_V + ' ID \u2500 <code>' + esc(qid) + '</code>\n' + BOX_V + '\n' + cardBottom,
           message.message_id,

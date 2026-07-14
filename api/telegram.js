@@ -43,40 +43,67 @@ function logThreadIdFor(category) {
 }
 
 function logCategoryLabel(category) {
-  var labels = {
-    site: '🌐 Site Activity',
-    error: '⚠️ Errors'
-  };
-  return labels[category] || '🧾 General';
+  var labels = { site: '🌐 Site Activity Logs', error: '⚠️ Error Logs' };
+  return labels[category] || '🧾 General Logs';
+}
+
+function humanLogTitle(title) {
+  return String(title || 'LOG').toLowerCase().split(/[_\s]+/).map(function(w) { return w ? w.charAt(0).toUpperCase() + w.slice(1) : ''; }).join(' ');
 }
 
 function prettyFieldName(key) {
-  return String(key || '').replace(/([a-z])([A-Z])/g, '$1 $2');
+  var map = { ID: 'Question ID', id: 'Question ID', AutoTopic: 'Auto Topic' };
+  return map[key] || String(key || '').replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
+function severityForLog(title, category) {
+  var t = String(title || '').toUpperCase();
+  if (category === 'error' || t.indexOf('FAILED') !== -1 || t.indexOf('ERROR') !== -1) return 'Warning';
+  return 'Info';
+}
+
+function summaryForLog(title) {
+  var t = String(title || '').toUpperCase();
+  if (t === 'SITE QUESTION RECEIVED') return 'A visitor submitted a new AMA question.';
+  if (t.indexOf('FAILED') !== -1) return 'A site-to-bot notification failed.';
+  return 'A site log event was recorded.';
+}
+
+function isIdField(key) { return /(^id$|id$|question id)$/i.test(String(key || '')); }
+function formatFieldValue(key, value) {
+  var v = escapeHtml(clip(String(value), 180));
+  return isIdField(key) ? '<code>' + v + '</code>' : v;
 }
 
 function buildLogMessage(title, fields, emoji, category) {
   fields = fields || {};
   emoji = emoji || '🧾';
+  var eventCode = String(title || 'LOG').toUpperCase().replace(/\s+/g, '_');
+  var severity = severityForLog(title, category);
+  var env = process.env.VERCEL_ENV || process.env.NODE_ENV || 'production';
   var lines = [
-    '┌─' + emoji + ' <b>' + escapeHtml(title) + '</b>',
+    '┌─' + emoji + ' <b>' + escapeHtml(humanLogTitle(title)) + '</b>',
     '│',
-    '│ <b>Category</b>',
-    '│ ' + escapeHtml(logCategoryLabel(category))
+    '│ <b>Summary</b>',
+    '│ ' + escapeHtml(summaryForLog(title)),
+    '│',
+    '│ <b>Event</b>',
+    '│ Code: <code>' + escapeHtml(eventCode) + '</code>',
+    '│ Severity: <b>' + escapeHtml(severity) + '</b>',
+    '│ Category: ' + escapeHtml(logCategoryLabel(category)),
+    '│ Env: <code>' + escapeHtml(env) + '</code>'
   ];
-
-  var keys = Object.keys(fields).filter(function(k) {
-    var v = fields[k];
-    return !(v === undefined || v === null || v === '');
-  });
+  var preferred = ['ID','Visitor','Topic','Question','Time','Error'];
+  var keys = [];
+  preferred.forEach(function(k) { if (Object.prototype.hasOwnProperty.call(fields, k)) keys.push(k); });
+  Object.keys(fields).forEach(function(k) { if (keys.indexOf(k) === -1) keys.push(k); });
+  keys = keys.filter(function(k) { var v = fields[k]; return !(v === undefined || v === null || v === ''); });
   if (keys.length) {
     lines.push('│');
     lines.push('│ <b>Details</b>');
-    keys.forEach(function(k) {
-      lines.push('│ ' + escapeHtml(prettyFieldName(k)) + ': ' + escapeHtml(clip(fields[k], 160)));
-    });
+    keys.forEach(function(k) { lines.push('│ ' + escapeHtml(prettyFieldName(k)) + ': ' + formatFieldValue(k, fields[k])); });
   }
-
-  lines.push('└──────────────────────────────');
+  lines.push('└─ portfolio-site');
   return lines.join('\n');
 }
 
