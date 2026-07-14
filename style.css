@@ -2022,3 +2022,57 @@ html.light .ama-topic-badge { background: rgba(0,0,0,0.035); border-color: var(-
   font-variation-settings: 'FILL' 1, 'wght' 600, 'opsz' 20;
 }
 html.light .ama-topic-icon { color: var(--gray-dim); }
+
+/* ============ Global mobile tap/hold highlight reset ============ */
+html, body,
+a, button, input, textarea, select, label,
+[role="button"], [tabindex], summary,
+.topbar-music-widget, .tb-icon-btn, .theme-toggle,
+.btn-primary, .btn-ghost, .project-dl-btn, .project-live-btn,
+.skill-tab, .al-tab, .ama-sort-btn, .ama-vote-btn, .ama-react-btn,
+.ama-page, .ama-refresh-btn, .pg-card, .diff-btn,
+.sp-close, .sp-play-btn, .sp-progress-bar, .sp-vol-slider,
+.cmd-search-toggle, .cmd-submit-btn, .cmd-item,
+.lfm-link, .al-link, .presence-link, .footer-link, .footer-nav a,
+.interest-card, .project-card, .gh-card, .glass-card {
+  -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
+  -webkit-touch-callout: none;
+}
+
+button, a, [role="button"], summary,
+.topbar-music-widget, .tb-icon-btn, .theme-toggle,
+.btn-primary, .btn-ghost, .project-dl-btn, .project-live-btn,
+.skill-tab, .al-tab, .ama-sort-btn, .ama-vote-btn, .ama-react-btn,
+.ama-page, .ama-refresh-btn, .pg-card, .diff-btn,
+.sp-close, .sp-play-btn, .cmd-search-toggle, .cmd-submit-btn, .cmd-item,
+.presence-link, .footer-link, .footer-nav a {
+  touch-action: manipulation;
+}
+
+/* Keep UI chrome from showing browser/native red press surfaces. */
+button:active, a:active, [role="button"]:active, summary:active,
+.topbar-music-widget:active, .tb-icon-btn:active, .theme-toggle:active,
+.btn-primary:active, .btn-ghost:active, .project-dl-btn:active, .project-live-btn:active,
+.skill-tab:active, .al-tab:active, .ama-sort-btn:active, .ama-vote-btn:active, .ama-react-btn:active,
+.ama-page:active, .ama-refresh-btn:active, .pg-card:active, .diff-btn:active,
+.sp-close:active, .sp-play-btn:active, .cmd-search-toggle:active, .cmd-submit-btn:active, .cmd-item:active,
+.presence-link:active, .footer-link:active, .footer-nav a:active {
+  -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
+  outline: none;
+}
+
+/* Inputs keep focus usability but remove native mobile hold/tap overlays. */
+input:active, textarea:active, select:active,
+input:focus, textarea:focus, select:focus {
+  -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
+}
+
+/* Preserve readable text selection, but make selected text blue/cyan instead of red. */
+::selection {
+  background: rgba(0,200,255,0.24) !important;
+  color: var(--white);
+}
+html.light ::selection {
+  background: rgba(103,80,164,0.22) !important;
+  color: var(--white);
+}
