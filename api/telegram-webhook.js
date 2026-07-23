@@ -285,7 +285,7 @@ function buildLogMessage(title, fields, emoji, actor, category) {
   var env = process.env.VERCEL_ENV || process.env.NODE_ENV || 'production';
   var D = CARD_W - 2;
   var lines = [
-    '<pre>\u2502 ' + severityBadge(severity) + ' ' + emoji + ' <b>' + esc(humanLogTitle(title)) + '</b>',
+    '\u2502 ' + severityBadge(severity) + ' ' + emoji + ' <b>' + esc(humanLogTitle(title)) + '</b>',
     '\u2502 ' + BOX_H.repeat(D),
     '\u2502 <b>' + esc(severity) + '</b>  \u00b7  ' + esc(logCategoryShort(category)) + '  \u00b7  <code>' + esc(eventCode) + '</code>',
     '\u2502',
@@ -315,7 +315,7 @@ function buildLogMessage(title, fields, emoji, actor, category) {
     lines.push('\u2502 ' + esc(formatTime(new Date().toISOString())) + ' IST \u00b7 ' + esc(env));
   } catch (e) {}
   lines.push('\u2502 ' + BOX_H.repeat(D));
-  lines.push('\u2514\u2500\u2500 portfolio-bot</pre>');
+  lines.push('\u2514\u2500\u2500 portfolio-bot');
   return lines.join('\n');
 }
 
@@ -745,9 +745,9 @@ function reactionLine(reactions) {
  ============================================================ */
 
 /* Box-drawing shortcuts */
-/* Box-drawing shortcuts — rounded modern panel. The whole card is wrapped in
-   <pre> by cardTop/cardBottom so box-drawing, bars and tables align perfectly
-   in monospace across every Telegram client. */
+/* Box-drawing shortcuts — rounded modern panel. cardTop/cardBottom frame each
+   message; bars and tables render inline (no <pre> code-box, so messages are
+   not one big copyable block). */
 var BOX_TL = '\u256D', BOX_TR = '\u256E', BOX_BL = '\u2570', BOX_BR = '\u256F';
 var BOX_H = '\u2500', BOX_V = '\u2502';
 var CARD_W = 34;
@@ -760,11 +760,11 @@ function visLen(html) {
 function cardTop(title) {
   var pad = CARD_W - 2 - visLen(title);
   if (pad < 2) pad = 2;
-  return '<pre>' + BOX_TL + BOX_H + title + ' ' + BOX_H.repeat(pad) + BOX_TR;
+  return BOX_TL + BOX_H + title + ' ' + BOX_H.repeat(pad) + BOX_TR;
 }
-var cardBottom = BOX_BL + BOX_H.repeat(CARD_W) + BOX_BR + '</pre>';
+var cardBottom = BOX_BL + BOX_H.repeat(CARD_W) + BOX_BR;
 
-/* ── Dashboard widgets (rendered inside the card's <pre>) ── */
+/* ── Dashboard widgets (rendered inline in the card) ── */
 function bar(value, max, width) {
   width = width || 10;
   if (!max) return '\u2591'.repeat(width);
