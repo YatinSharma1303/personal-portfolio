@@ -38,7 +38,7 @@
   const lfmAPI = '/api/lastfm';
   function lfmImg(images) {
     if (!images || !images.length) return '';
-    const sizes = ['extralarge', 'large', 'medium', 'small', 'mega'];
+    const sizes = ['mega', 'extralarge', 'large', 'medium', 'small'];
     const map = {};
     // Last.fm's default missing-art image hashes (solid white/grey placeholders)
     const defaultHashes = ['2a96cbd8b46e442fc41c2b86b821562f', 'c6f59c1e5e7240a4c0d427abd71f3dbb', '4128a6eb29f94943c9d206c08e025042'];
@@ -565,6 +565,18 @@
       renderRecent(d.recenttracks);
     }
 
+    // Resolve crisp cover art for a recent / now-playing track. Prefers the
+    // server-enriched iTunes art (from the bundle), caches it so the 12s live
+    // poll stays sharp without another server call, then falls back to Last.fm.
+    function recentTrackArt(tr) {
+      if (!tr) return '';
+      const a = (tr.artist && (tr.artist['#text'] || tr.artist.name)) || '';
+      const n = tr.name || '';
+      if (tr.artUrl) { try { localStorage.setItem('lfm_track_art_' + a + '::' + n, tr.artUrl); } catch (e) {} return tr.artUrl; }
+      try { const c = localStorage.getItem('lfm_track_art_' + a + '::' + n); if (c) return c; } catch (e) {}
+      return lfmImg(tr.image);
+    }
+
     function renderRecent(recenttracks) {
       const tracks = (recenttracks && recenttracks.track) || [];
       if (!tracks.length) return;
@@ -572,7 +584,7 @@
       const isLive = first['@attr'] && first['@attr'].nowplaying === 'true';
       const npArtEl = $('lfm-np-art');
       if (npArtEl) {
-        const url = lfmImg(first.image);
+        const url = recentTrackArt(first);
         if (url) { npArtEl.style.cssText = 'background:#141414 url(\'' + url + '\') center/cover no-repeat'; npArtEl.classList.remove('lfm-noart'); npArtEl.textContent = ''; }
         else { npArtEl.style.cssText = 'background:#141414'; npArtEl.classList.add('lfm-noart'); npArtEl.textContent = '♪'; }
         npArtEl.style.visibility = 'visible';
@@ -587,7 +599,7 @@
         recentWrap.innerHTML = tickerTracks.map(tr => {
           const name = esc(tr.name || '—');
           const artist = esc((tr.artist && (tr.artist['#text'] || tr.artist.name)) || '');
-          return '<div class="lfm-recent-item">' + artDiv('lfm-recent-img', lfmImg(tr.image), '♪') + '<div class="lfm-recent-info"><div class="lfm-recent-name">' + name + '</div><div class="lfm-recent-artist">' + artist + '</div></div></div>';
+          return '<div class="lfm-recent-item">' + artDiv('lfm-recent-img', recentTrackArt(tr), '♪') + '<div class="lfm-recent-info"><div class="lfm-recent-name">' + name + '</div><div class="lfm-recent-artist">' + artist + '</div></div></div>';
         }).join('');
       }
     }

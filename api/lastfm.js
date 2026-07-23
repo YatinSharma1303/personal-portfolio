@@ -50,28 +50,28 @@ async function fetchItunesArt(term) {
     var j = await res.json();
     var hit = j && j.results && j.results[0];
     var art = hit && hit.artworkUrl100;
-    return art ? art.replace('100x100bb', '400x400bb') : '';
+    return art ? art.replace('100x100bb', '600x600bb') : '';
   } catch (e) { return ''; }
 }
 
-/* user.gettoptracks / user.gettopartists return NO real cover art (only the
-   Last.fm placeholder). Attach an `artUrl` to each item via iTunes, in parallel.
-   Items that already have artUrl (from a cached bundle) are skipped. */
-async function enrichArt(toptracks, topartists) {
-  var tracks = (toptracks && toptracks.track) || [];
-  var artists = (topartists && topartists.artist) || [];
+/* user.gettoptracks / user.gettopartists (and the low-res recent / now-playing
+   images) return poor cover art. Attach a high-res `artUrl` to each item via
+   iTunes, in parallel. Items that already have artUrl are skipped. */
+async function enrichArt(toptracks, topartists, recenttracks) {
   var items = [];
-  tracks.forEach(function (tr) {
-    if (tr.artUrl) return;
+  function addTrack(tr) {
+    if (!tr || tr.artUrl) return;
     var a = tr.artist ? (tr.artist.name || tr.artist['#text'] || '') : '';
     var term = (a + ' ' + (tr.name || '')).trim();
     if (term) items.push({ obj: tr, term: term });
-  });
-  artists.forEach(function (ar) {
-    if (ar.artUrl) return;
+  }
+  (toptracks && toptracks.track || []).forEach(addTrack);
+  (topartists && topartists.artist || []).forEach(function (ar) {
+    if (!ar || ar.artUrl) return;
     var term = (ar.name || '').trim();
     if (term) items.push({ obj: ar, term: term });
   });
+  (recenttracks && recenttracks.track || []).slice(0, 8).forEach(addTrack);
   if (!items.length) return;
   await Promise.all(items.map(function (it) {
     return fetchItunesArt(it.term).then(function (url) { if (url) it.obj.artUrl = url; });
@@ -121,12 +121,13 @@ module.exports = async function handler(req, res) {
       var topartists = results[2].topartists || (cachedBundle && cachedBundle.body && cachedBundle.body.topartists) || null;
       // Resolve cover art for top tracks/artists (their Last.fm endpoints ship no art).
       // Wrapped so a slow/failing iTunes call never breaks the bundle.
-      try { await enrichArt(toptracks, topartists); } catch (e) {}
+      var recenttracks = results[3].recenttracks || (cachedBundle && cachedBundle.body && cachedBundle.body.recenttracks) || null;
+      try { await enrichArt(toptracks, topartists, recenttracks); } catch (e) {}
       var body = {
         user: results[0].user || (cachedBundle && cachedBundle.body && cachedBundle.body.user) || null,
         toptracks: toptracks,
         topartists: topartists,
-        recenttracks: results[3].recenttracks || (cachedBundle && cachedBundle.body && cachedBundle.body.recenttracks) || null,
+        recenttracks: recenttracks,
         bundledAt: Date.now(),
         partial: settled.some(function(x) { return x.status !== 'fulfilled' || (x.value && x.value.ok === false); })
       };
