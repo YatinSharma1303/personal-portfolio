@@ -525,83 +525,10 @@
       return '<div class="lfm-artist-img lfm-noart lfm-artist-gradient" style="background:' + gradients[idx % gradients.length] + '; color:#ffffff !important;">' + esc((name || '?').charAt(0).toUpperCase()) + '</div>';
     }
 
-    // Apply a resolved cover URL onto a track/artist art element.
-    function applyArt(el, url) {
-      if (!el || !url) return;
-      el.style.cssText = 'background:#141414 url(\'' + url + '\') center/cover no-repeat';
-      el.classList.remove('lfm-noart', 'lfm-artist-gradient');
-      el.textContent = '';
-      el.dataset.hasArt = '1';
-    }
-
-    // user.gettoptracks / user.gettopartists return NO real cover art (only the
-    // Last.fm "star" placeholder). So we hydrate it client-side via other methods.
-    // This tries a list of Last.fm lookups in order and resolves to the first
-    // non-empty (non-placeholder) image URL. Each step = { url, pick(json)->url }.
-    function firstImageUrl(steps) {
-      return steps.reduce(function (p, step) {
-        return p.then(function (url) {
-          if (url) return url;
-          return fetchWithTimeout(step.url, 3500)
-            .then(function (r) { return r.json(); })
-            .then(step.pick)
-            .catch(function () { return ''; });
-        });
-      }, Promise.resolve(''));
-    }
-
-    function hydrateTopTrackArt(tracks) {
-      if (!tracks || !tracks.length) return;
-      tracks.forEach((tr, idx) => {
-        const el = document.querySelector('.lfm-track-img[data-track-art="' + idx + '"]');
-        if (!el || el.dataset.hasArt === '1') return;
-        const artistName = tr.artist ? (tr.artist.name || tr.artist['#text'] || '') : '';
-        const trackName = tr.name || '';
-        if (!artistName || !trackName) return;
-        const cacheKey = 'lfm_track_art_' + artistName + '::' + trackName;
-        try {
-          const cached = localStorage.getItem(cacheKey);
-          if (cached) { applyArt(el, cached); return; }
-        } catch (e) {}
-        // 1) Album art for this exact track; 2) the artist's own image as a
-        //    fallback (recovers anime/OST tracks that have no album art on Last.fm).
-        firstImageUrl([
-          { url: `${lfmAPI}?method=track.getInfo&artist=${encodeURIComponent(artistName)}&track=${encodeURIComponent(trackName)}`,
-            pick: info => lfmImg(info.track && info.track.album ? info.track.album.image : []) },
-          { url: `${lfmAPI}?method=artist.getInfo&artist=${encodeURIComponent(artistName)}`,
-            pick: info => lfmImg(info.artist ? info.artist.image : []) }
-        ]).then(function (url) {
-          if (!url || !document.body.contains(el)) return;
-          applyArt(el, url);
-          try { localStorage.setItem(cacheKey, url); } catch (e) {}
-        });
-      });
-    }
-
-    // Top Artists never ship an image, so fetch each artist's image via artist.getInfo.
-    function hydrateTopArtistArt(artists) {
-      if (!artists || !artists.length) return;
-      artists.forEach((ar, idx) => {
-        const el = document.querySelector('.lfm-artist[data-art-idx="' + idx + '"] .lfm-artist-img');
-        if (!el || el.dataset.hasArt === '1') return;
-        const name = ar.name || '';
-        if (!name) return;
-        const cacheKey = 'lfm_artist_art_' + name;
-        try {
-          const cached = localStorage.getItem(cacheKey);
-          if (cached) { applyArt(el, cached); return; }
-        } catch (e) {}
-        fetchWithTimeout(`${lfmAPI}?method=artist.getInfo&artist=${encodeURIComponent(name)}`, 3500)
-          .then(r => r.json())
-          .then(info => {
-            const url = lfmImg(info.artist ? info.artist.image : []);
-            if (!url || !document.body.contains(el)) return;
-            applyArt(el, url);
-            try { localStorage.setItem(cacheKey, url); } catch (e) {}
-          })
-          .catch(() => {});
-      });
-    }
+    /* Cover art for Top Tracks / Top Artists is resolved server-side inside the
+       /api/lastfm bundle (each item carries an `artUrl`). Last.fm's top endpoints
+       return no real art, and resolving it client-side fired too many calls and
+       rate-limited the key (slowness). See enrichArt() in api/lastfm.js. */
 
     function renderBundle(d) {
       if (!d) return;
@@ -617,24 +544,22 @@
       const tracks = (d.toptracks && d.toptracks.track) || [];
       if (tracksWrap && tracks.length) {
         tracksWrap.innerHTML = tracks.map((tr, idx) => {
-          const url = lfmImg(tr.image);
+          const url = tr.artUrl || lfmImg(tr.image);
           const art = url
-            ? '<div class="lfm-track-img" data-track-art="' + idx + '" data-has-art="1" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>'
-            : '<div class="lfm-track-img lfm-noart" data-track-art="' + idx + '" data-has-art="0" style="background:#141414 !important">♪</div>';
+            ? '<div class="lfm-track-img" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>'
+            : '<div class="lfm-track-img lfm-noart" style="background:#141414 !important">♪</div>';
           return '<div class="lfm-track"><span class="lfm-track-rank">' + (idx+1) + '</span>' + art + '<div class="lfm-track-info"><div class="lfm-track-name">' + esc(tr.name) + '</div><div class="lfm-track-artist">' + (tr.artist ? esc(tr.artist.name || tr.artist['#text'] || '') : '') + '</div></div><span class="lfm-track-plays">' + (tr.playcount||0) + 'x</span></div>';
         }).join('');
-        hydrateTopTrackArt(tracks);
       }
 
       const artistsWrap = $('lfm-artists');
       const artists = (d.topartists && d.topartists.artist) || [];
       if (artistsWrap && artists.length) {
         artistsWrap.innerHTML = artists.map((ar, idx) => {
-          const url = lfmImg(ar.image);
-          const art = url ? '<div class="lfm-artist-img" data-has-art="1" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>' : artistFallback(ar.name, idx);
-          return '<div class="lfm-artist" data-art-idx="' + idx + '">' + art + '<span class="lfm-artist-name">' + esc(ar.name) + '</span><span class="lfm-artist-plays">' + (ar.playcount||0) + 'x</span></div>';
+          const url = ar.artUrl || lfmImg(ar.image);
+          const art = url ? '<div class="lfm-artist-img" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>' : artistFallback(ar.name, idx);
+          return '<div class="lfm-artist">' + art + '<span class="lfm-artist-name">' + esc(ar.name) + '</span><span class="lfm-artist-plays">' + (ar.playcount||0) + 'x</span></div>';
         }).join('');
-        hydrateTopArtistArt(artists);
       }
 
       renderRecent(d.recenttracks);

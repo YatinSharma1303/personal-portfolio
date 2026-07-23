@@ -36,6 +36,48 @@ async function fetchLastfmJson(params, timeoutMs) {
   }
 }
 
+/* Resolve cover art from iTunes (keyless, server-side so no CORS issues,
+   and reliable for anime/OST tracks that Last.fm has no art for).
+   Returns a higher-res URL (400x400) or '' if nothing found. */
+async function fetchItunesArt(term) {
+  if (!term) return '';
+  try {
+    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timer = controller ? setTimeout(function () { controller.abort(); }, 3500) : null;
+    var res = await fetch('https://itunes.apple.com/search?term=' + encodeURIComponent(term) + '&entity=song&limit=1', controller ? { signal: controller.signal } : undefined);
+    if (timer) clearTimeout(timer);
+    if (!res.ok) return '';
+    var j = await res.json();
+    var hit = j && j.results && j.results[0];
+    var art = hit && hit.artworkUrl100;
+    return art ? art.replace('100x100bb', '400x400bb') : '';
+  } catch (e) { return ''; }
+}
+
+/* user.gettoptracks / user.gettopartists return NO real cover art (only the
+   Last.fm placeholder). Attach an `artUrl` to each item via iTunes, in parallel.
+   Items that already have artUrl (from a cached bundle) are skipped. */
+async function enrichArt(toptracks, topartists) {
+  var tracks = (toptracks && toptracks.track) || [];
+  var artists = (topartists && topartists.artist) || [];
+  var items = [];
+  tracks.forEach(function (tr) {
+    if (tr.artUrl) return;
+    var a = tr.artist ? (tr.artist.name || tr.artist['#text'] || '') : '';
+    var term = (a + ' ' + (tr.name || '')).trim();
+    if (term) items.push({ obj: tr, term: term });
+  });
+  artists.forEach(function (ar) {
+    if (ar.artUrl) return;
+    var term = (ar.name || '').trim();
+    if (term) items.push({ obj: ar, term: term });
+  });
+  if (!items.length) return;
+  await Promise.all(items.map(function (it) {
+    return fetchItunesArt(it.term).then(function (url) { if (url) it.obj.artUrl = url; });
+  }));
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -75,10 +117,15 @@ module.exports = async function handler(req, res) {
         fetchLastfmJson(baseParams('user.getrecenttracks', { limit: '10' }), 3200)
       ]);
       var results = settled.map(function(x) { return x.status === 'fulfilled' ? (x.value || {}) : {}; });
+      var toptracks = results[1].toptracks || (cachedBundle && cachedBundle.body && cachedBundle.body.toptracks) || null;
+      var topartists = results[2].topartists || (cachedBundle && cachedBundle.body && cachedBundle.body.topartists) || null;
+      // Resolve cover art for top tracks/artists (their Last.fm endpoints ship no art).
+      // Wrapped so a slow/failing iTunes call never breaks the bundle.
+      try { await enrichArt(toptracks, topartists); } catch (e) {}
       var body = {
         user: results[0].user || (cachedBundle && cachedBundle.body && cachedBundle.body.user) || null,
-        toptracks: results[1].toptracks || (cachedBundle && cachedBundle.body && cachedBundle.body.toptracks) || null,
-        topartists: results[2].topartists || (cachedBundle && cachedBundle.body && cachedBundle.body.topartists) || null,
+        toptracks: toptracks,
+        topartists: topartists,
         recenttracks: results[3].recenttracks || (cachedBundle && cachedBundle.body && cachedBundle.body.recenttracks) || null,
         bundledAt: Date.now(),
         partial: settled.some(function(x) { return x.status !== 'fulfilled' || (x.value && x.value.ok === false); })
