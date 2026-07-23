@@ -54,6 +54,40 @@ async function fetchItunesArt(term) {
   } catch (e) { return ''; }
 }
 
+/* Persistent (warm-instance) cache of resolved cover art by artist+track.
+   Lets the 12s live now-playing poll reuse art without re-hitting iTunes. */
+var _lfmArtCache = {};
+var ART_CACHE_TTL = 6 * 60 * 60 * 1000;
+
+async function resolveTrackArtUrl(artist, name) {
+  if (!artist || !name) return '';
+  var key = artist + '::' + name;
+  var cached = _lfmArtCache[key];
+  if (cached && Date.now() - cached.ts < ART_CACHE_TTL) return cached.url;
+  var url = await fetchItunesArt((artist + ' ' + name).trim());
+  if (url) _lfmArtCache[key] = { url: url, ts: Date.now() };
+  return url;
+}
+
+/* Enrich the live user.getrecenttracks response with high-res `artUrl` per
+   track, so Now Playing / Recently Played stay crisp on every 12s refresh. */
+async function enrichRecentTracksBody(bodyText) {
+  try {
+    var parsed = JSON.parse(bodyText);
+    var tracks = parsed && parsed.recenttracks && parsed.recenttracks.track;
+    if (Array.isArray(tracks)) {
+      await Promise.all(tracks.slice(0, 8).map(async function (tr) {
+        if (!tr || tr.artUrl) return;
+        var artist = (tr.artist && (tr.artist['#text'] || tr.artist.name)) || '';
+        var url = await resolveTrackArtUrl(artist, tr.name || '');
+        if (url) tr.artUrl = url;
+      }));
+      return JSON.stringify(parsed);
+    }
+  } catch (e) {}
+  return bodyText;
+}
+
 /* user.gettoptracks / user.gettopartists (and the low-res recent / now-playing
    images) return poor cover art. Attach a high-res `artUrl` to each item via
    iTunes, in parallel. Items that already have artUrl are skipped. */
@@ -201,6 +235,11 @@ module.exports = async function handler(req, res) {
     if (!response.ok) {
       /* Don't cache errors */
       return res.status(response.status).json({ ok: false, error: 'Last.fm API error', status: response.status });
+    }
+
+    /* Enrich live now-playing / recent art with high-res iTunes covers. */
+    if (method === 'user.getrecenttracks') {
+      body = await enrichRecentTracksBody(body);
     }
 
     if (!isRealtimeMethod) {
