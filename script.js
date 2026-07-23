@@ -666,7 +666,7 @@
       ];
       renderSummary(); render(); renderBanner(allEntries);
     }
-    const query = `query{user:MediaListCollection(userName:"${CONFIG.anilistUser}",type:ANIME){lists{name status entries{media{id title{romaji english}coverImage{large}episodes duration meanScore}score progress updatedAt}}}}`;
+    const query = `query{user:MediaListCollection(userName:"${CONFIG.anilistUser}",type:ANIME){lists{name status entries{media{id title{romaji english}coverImage{extraLarge large medium}episodes duration meanScore}score progress updatedAt}}}}`;
     fetch('https://graphql.anilist.co?_=' + Date.now(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query }) })
       .then(r => { if (!r.ok) throw new Error('AniList HTTP ' + r.status); return r.json(); }).then(d => {
         if (d.errors) throw new Error(d.errors[0]?.message || 'AniList GraphQL error');
@@ -696,7 +696,7 @@
       const item = sorted[0];
       if (!item || !item.media) { banner.style.display = 'none'; return; }
       const t = (item.media.title && (item.media.title.romaji || item.media.title.english)) || '\u2014';
-      const img = (item.media.coverImage && item.media.coverImage.large) || '';
+      const img = (item.media.coverImage && (item.media.coverImage.extraLarge || item.media.coverImage.large || item.media.coverImage.medium)) || '';
       const statusRaw = (item._status || '').toUpperCase();
       const STATUS_LABELS = {
         CURRENT: 'CURRENTLY WATCHING',
@@ -728,7 +728,7 @@
       }
       list.innerHTML = slice.map(e => {
         const t = (e.media && e.media.title && (e.media.title.romaji || e.media.title.english)) || '—';
-        const img = (e.media && e.media.coverImage && e.media.coverImage.large) || '';
+        const img = (e.media && e.media.coverImage && (e.media.coverImage.extraLarge || e.media.coverImage.large || e.media.coverImage.medium)) || '';
         const progress = e.progress ? e.progress + (e.media && e.media.episodes ? '/' + e.media.episodes : '') + ' eps' : '';
         const score = e.score ? '★ ' + e.score : '';
         return '<div class="al-item">' +
