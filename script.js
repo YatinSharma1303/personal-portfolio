@@ -36,22 +36,29 @@
   /* All Last.fm calls now go through /api/lastfm proxy — the API key is
      injected server-side and never exposed to the browser. */
   const lfmAPI = '/api/lastfm';
-  function lfmImg(images) {
-    if (!images || !images.length) return '';
-    const sizes = ['mega', 'extralarge', 'large', 'medium', 'small'];
+  // Build a {size: url} map of Last.fm images, dropping default placeholder art.
+  function lfmImgMap(images) {
     const map = {};
+    if (!images || !images.length) return map;
     // Last.fm's default missing-art image hashes (solid white/grey placeholders)
     const defaultHashes = ['2a96cbd8b46e442fc41c2b86b821562f', 'c6f59c1e5e7240a4c0d427abd71f3dbb', '4128a6eb29f94943c9d206c08e025042'];
-    
-    images.forEach(function (im) { 
-      const url = (im && (im['#text'] || im['text'])) || ''; 
-      if (url) {
-        // Filter out default placeholder images
-        const isDefault = defaultHashes.some(h => url.includes(h));
-        if (!isDefault) map[im.size] = url; 
-      }
+    images.forEach(function (im) {
+      const url = (im && (im['#text'] || im['text'])) || '';
+      if (url && !defaultHashes.some(h => url.includes(h))) map[im.size] = url;
     });
-    
+    return map;
+  }
+  function lfmImg(images) {
+    const map = lfmImgMap(images);
+    const sizes = ['mega', 'extralarge', 'large', 'medium', 'small'];
+    for (let i = 0; i < sizes.length; i++) { if (map[sizes[i]]) return map[sizes[i]]; }
+    return '';
+  }
+  // Only accept large+ sizes (skip low-res medium/small) — used to tell whether
+  // Last.fm art is sharp enough to prefer over the iTunes fallback.
+  function lfmImgHighRes(images) {
+    const map = lfmImgMap(images);
+    const sizes = ['mega', 'extralarge', 'large'];
     for (let i = 0; i < sizes.length; i++) { if (map[sizes[i]]) return map[sizes[i]]; }
     return '';
   }
@@ -568,10 +575,17 @@
     // Resolve crisp cover art for a recent / now-playing track. Prefers the
     // server-enriched iTunes art (from the bundle), caches it so the 12s live
     // poll stays sharp without another server call, then falls back to Last.fm.
+    // Cover-art priority for Now Playing / Recently Played:
+    // 1) Last.fm high-res art if present (always correct + sharp),
+    // 2) iTunes (validated) when Last.fm has no high-res art,
+    // 3) Last.fm low-res art as a last resort (correct, even if soft),
+    // 4) '' -> placeholder.
     function recentTrackArt(tr) {
       if (!tr) return '';
       const a = (tr.artist && (tr.artist['#text'] || tr.artist.name)) || '';
       const n = tr.name || '';
+      const hi = lfmImgHighRes(tr.image);
+      if (hi) return hi;
       if (tr.artUrl) { try { localStorage.setItem('lfm_track_art_' + a + '::' + n, tr.artUrl); } catch (e) {} return tr.artUrl; }
       try { const c = localStorage.getItem('lfm_track_art_' + a + '::' + n); if (c) return c; } catch (e) {}
       return lfmImg(tr.image);
