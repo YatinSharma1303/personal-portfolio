@@ -283,17 +283,13 @@ function buildLogMessage(title, fields, emoji, actor, category) {
   var eventCode = String(title || 'LOG').toUpperCase().replace(/\s+/g, '_');
   var severity = severityForLog(title, category);
   var env = process.env.VERCEL_ENV || process.env.NODE_ENV || 'production';
+  var D = CARD_W - 2;
   var lines = [
-    '┌─' + emoji + ' <b>' + esc(humanLogTitle(title)) + '</b>',
-    '│',
-    '│ <b>Summary</b>',
-    '│ ' + esc(summaryForLog(title, fields, category)),
-    '│',
-    '│ <b>Event</b>',
-    '│ Code: <code>' + esc(eventCode) + '</code>',
-    '│ Severity: <b>' + esc(severity) + '</b>',
-    '│ Category: ' + esc(logCategoryLabel(category)),
-    '│ Env: <code>' + esc(env) + '</code>'
+    '<pre>\u2502 ' + severityBadge(severity) + ' ' + emoji + ' <b>' + esc(humanLogTitle(title)) + '</b>',
+    '\u2502 ' + BOX_H.repeat(D),
+    '\u2502 <b>' + esc(severity) + '</b>  \u00b7  ' + esc(logCategoryShort(category)) + '  \u00b7  <code>' + esc(eventCode) + '</code>',
+    '\u2502',
+    '\u2502 ' + esc(summaryForLog(title, fields, category))
   ];
 
   if (actor) {
@@ -315,11 +311,11 @@ function buildLogMessage(title, fields, emoji, actor, category) {
   }
 
   try {
-    lines.push('│');
-    lines.push('│ <b>Time</b>');
-    lines.push('│ ' + esc(formatTime(new Date().toISOString())) + ' IST');
+    lines.push('\u2502');
+    lines.push('\u2502 ' + esc(formatTime(new Date().toISOString())) + ' IST \u00b7 ' + esc(env));
   } catch (e) {}
-  lines.push('└─ portfolio-bot');
+  lines.push('\u2502 ' + BOX_H.repeat(D));
+  lines.push('\u2514\u2500\u2500 portfolio-bot</pre>');
   return lines.join('\n');
 }
 
@@ -749,13 +745,66 @@ function reactionLine(reactions) {
  ============================================================ */
 
 /* Box-drawing shortcuts */
-var BOX_TL = '\u250C', BOX_TR = '\u2510', BOX_BL = '\u2514', BOX_BR = '\u2518';
+/* Box-drawing shortcuts — rounded modern panel. The whole card is wrapped in
+   <pre> by cardTop/cardBottom so box-drawing, bars and tables align perfectly
+   in monospace across every Telegram client. */
+var BOX_TL = '\u256D', BOX_TR = '\u256E', BOX_BL = '\u2570', BOX_BR = '\u256F';
 var BOX_H = '\u2500', BOX_V = '\u2502';
+var CARD_W = 34;
+
+/* visible (tag/entity-stripped) length, for monospace alignment */
+function visLen(html) {
+  return String(html == null ? '' : html).replace(/<[^>]+>/g, '').replace(/&[a-zA-Z#0-9]+;/g, ' ').length;
+}
 
 function cardTop(title) {
-  return BOX_TL + BOX_H + title + BOX_H.repeat(5) + BOX_TR;
+  var pad = CARD_W - 2 - visLen(title);
+  if (pad < 2) pad = 2;
+  return '<pre>' + BOX_TL + BOX_H + title + ' ' + BOX_H.repeat(pad) + BOX_TR;
 }
-var cardBottom = BOX_BL + BOX_H.repeat(30) + BOX_BR;
+var cardBottom = BOX_BL + BOX_H.repeat(CARD_W) + BOX_BR + '</pre>';
+
+/* ── Dashboard widgets (rendered inside the card's <pre>) ── */
+function bar(value, max, width) {
+  width = width || 10;
+  if (!max) return '\u2591'.repeat(width);
+  var f = Math.max(0, Math.min(width, Math.round((value / max) * width)));
+  return '\u2588'.repeat(f) + '\u2591'.repeat(width - f);
+}
+function padR(s, n) {
+  s = String(s == null ? '' : s);
+  return s.length >= n ? s.slice(0, n) : s + ' '.repeat(n - s.length);
+}
+/* aligned stat row:  │ 📬  Total     ████████████░░░░░░░░  142 */
+function statRow(emoji, label, value, max, width) {
+  width = width || 12;
+  return BOX_V + ' ' + emoji + ' ' + padR(label, 9) + bar(value, max, width) + '  <b>' + esc(value) + '</b>';
+}
+/* aligned key/value row */
+function kvRow(label, value) {
+  return BOX_V + ' ' + padR(label, 13) + esc(value);
+}
+function divider() {
+  return BOX_V + ' ' + BOX_H.repeat(CARD_W - 2);
+}
+function sectionLabel(icon, text) {
+  return BOX_V + ' ' + icon + ' <b>' + esc(text) + '</b>';
+}
+function checkRow(ok, label) {
+  return BOX_V + '  ' + (ok ? '\u2705' : '\u274C') + '  ' + esc(label);
+}
+
+/* ── Logging helpers ── */
+function severityBadge(sev) {
+  return ({ Info: '\u2139\uFE0F', Important: '\uD83D\uDD35', Warning: '\u26A0\uFE0F', Critical: '\uD83D\uDEA8' })[sev] || '\u2139\uFE0F';
+}
+function logCategoryShort(category) {
+  return ({
+    site: 'Site', bot: 'Bot', security: 'Security', answer: 'Answer',
+    moderation: 'Moderation', delete: 'Delete', pin: 'Pin', spotlight: 'Spotlight',
+    topic: 'Topic', health: 'Health', error: 'Error'
+  })[category] || 'General';
+}
 
 function loadingCard(title, line) {
   return cardTop(title) + '\n' + BOX_V + '\n' + BOX_V + ' ' + line + '\n' + BOX_V + '\n' + cardBottom;
@@ -1099,28 +1148,30 @@ async function buildWelcomeText() {
   var s = { total: 0, unanswered: 0, answered: 0, dismissed: 0, pinned: 0, totalVotes: 0, avgResponseMs: 0 };
   try { s = await getStats(); } catch (e) {}
   var health = s.unanswered === 0 ? 'Clear' : (s.unanswered <= 3 ? 'Active' : 'Busy');
-  var avg = s.avgResponseMs > 0 ? formatDuration(s.avgResponseMs) : '—';
-
+  var healthEmoji = s.unanswered === 0 ? '\uD83D\uDFE2' : (s.unanswered <= 3 ? '\uD83D\uDFE1' : '\uD83D\uDD34');
+  var avg = s.avgResponseMs > 0 ? formatDuration(s.avgResponseMs) : '\u2014';
+  var mx = Math.max(s.total, 1);
   return [
     cardTop('\u2728 <b>AMA CONTROL ROOM</b>'),
     BOX_V,
     BOX_V + ' Portfolio inbox is online.',
-    BOX_V + ' Inbox health \u2500 <b>' + health + '</b>',
-    BOX_V,
-    BOX_V + ' \uD83D\uDCEC Total     \u2500 <b>' + s.total + '</b>',
-    BOX_V + ' \u23F3 Pending   \u2500 <b>' + s.unanswered + '</b>',
-    BOX_V + ' \u2705 Answered  \u2500 <b>' + s.answered + '</b>',
-    BOX_V + ' \uD83D\uDE48 Hidden    \u2500 <b>' + s.dismissed + '</b>',
-    BOX_V + ' \uD83D\uDCCD Pinned    \u2500 <b>' + s.pinned + '</b>',
-    BOX_V + ' \u26A1 Avg reply \u2500 <b>' + esc(avg) + '</b>',
-    BOX_V,
-    BOX_V + ' <b>Quick actions</b>',
-    BOX_V + ' /inbox    · priority queue',
-    BOX_V + ' /digest   · 7-day summary',
-    BOX_V + ' /pending  · unanswered queue',
-    BOX_V + ' /featured · featured AMA',
-    BOX_V + ' /health   · system check',
-    BOX_V + ' /help     · command guide',
+    BOX_V + ' ' + healthEmoji + ' Inbox health \u2500 <b>' + health + '</b>',
+    divider(),
+    statRow('\uD83D\uDCEC', 'Total', s.total, mx),
+    statRow('\u23F3', 'Pending', s.unanswered, mx),
+    statRow('\u2705', 'Answered', s.answered, mx),
+    statRow('\uD83D\uDE48', 'Hidden', s.dismissed, mx),
+    statRow('\uD83D\uDCCD', 'Pinned', s.pinned, Math.max(s.answered, 1)),
+    divider(),
+    kvRow('Avg reply', avg),
+    kvRow('Total votes', s.totalVotes),
+    divider(),
+    sectionLabel('\u26A1', 'Quick actions'),
+    BOX_V + '   /inbox    \u00b7 priority queue',
+    BOX_V + '   /digest   \u00b7 7-day summary',
+    BOX_V + '   /pending  \u00b7 unanswered queue',
+    BOX_V + '   /featured \u00b7 featured AMA',
+    BOX_V + '   /health   \u00b7 system check',
     BOX_V,
     BOX_V + ' Tip: tap <b>Answer</b> or reply to any',
     BOX_V + ' question card to publish with preview.',
@@ -1249,6 +1300,8 @@ async function sendStats(chatId, replyToId, editMessageId) {
     var s = await getStats();
     var maxStat = Math.max(s.total, 1);
     var health = s.unanswered === 0 ? 'Clean' : (s.unanswered <= 3 ? 'Healthy' : 'Needs attention');
+    var healthEmoji = s.unanswered === 0 ? '\uD83D\uDFE2' : (s.unanswered <= 3 ? '\uD83D\uDFE1' : '\uD83D\uDD34');
+    var answerRate = s.total ? Math.round((s.answered / s.total) * 100) : 0;
     var avg = s.avgResponseMs > 0 ? formatDuration(s.avgResponseMs) : '—';
 
     var topQ = '';
@@ -1261,19 +1314,28 @@ async function sendStats(chatId, replyToId, editMessageId) {
     var statsText = [
       cardTop('\uD83D\uDCCA <b>AMA DASHBOARD</b>'),
       BOX_V,
-      BOX_V + ' Inbox health \u2500 <b>' + health + '</b>',
-      BOX_V,
-      BOX_V + ' \uD83D\uDCEC Total     ' + progressBar(s.total, maxStat, 8) + ' <b>' + s.total + '</b>',
-      BOX_V + ' \u23F3 Pending   ' + progressBar(s.unanswered, maxStat, 8) + ' <b>' + s.unanswered + '</b>',
-      BOX_V + ' \u2705 Answered  ' + progressBar(s.answered, maxStat, 8) + ' <b>' + s.answered + '</b>',
-      BOX_V + ' \uD83D\uDE48 Hidden    ' + progressBar(s.dismissed, maxStat, 8) + ' <b>' + s.dismissed + '</b>',
-      BOX_V + ' \uD83D\uDCCD Pinned    ' + progressBar(s.pinned, Math.max(s.answered, 1), 8) + ' <b>' + s.pinned + '</b>',
-      BOX_V,
-      BOX_V + ' \uD83D\uDC4D Votes     \u2500 <b>' + s.totalVotes + '</b>',
-      BOX_V + ' \u26A1 Avg reply \u2500 <b>' + esc(avg) + '</b>' + topQ,
-      BOX_V,
-      cardBottom
-    ].join('\n');
+      BOX_V + ' ' + healthEmoji + ' Inbox \u2500 <b>' + health + '</b>   \uD83D\uDC4D Answer rate \u2500 <b>' + answerRate + '%</b>',
+      divider(),
+      sectionLabel('\uD83D\uDCCA', 'Volume'),
+      statRow('\uD83D\uDCEC', 'Total', s.total, maxStat),
+      statRow('\u23F3', 'Pending', s.unanswered, maxStat),
+      statRow('\u2705', 'Answered', s.answered, maxStat),
+      statRow('\uD83D\uDE48', 'Hidden', s.dismissed, maxStat),
+      statRow('\uD83D\uDCCD', 'Pinned', s.pinned, Math.max(s.answered, 1)),
+      divider(),
+      sectionLabel('\u26A1', 'Performance'),
+      kvRow('Avg reply', esc(avg)),
+      kvRow('Total votes', s.totalVotes)
+    ];
+    if (s.mostVoted) {
+      statsText.push(divider());
+      statsText.push(sectionLabel('\uD83D\uDD25', 'Top question'));
+      statsText.push(BOX_V + ' \u201C' + esc(clipText(s.mostVoted.question, 60)) + '\u201D');
+      statsText.push(BOX_V + ' ' + bar((s.mostVoted.votes || 0), Math.max(s.mostVoted.votes || 0, 1), 12) + '  <b>' + (s.mostVoted.votes || 0) + '</b> votes');
+    }
+    statsText.push(BOX_V);
+    statsText.push(cardBottom);
+    statsText = statsText.join('\n');
     await respondTelegram(chatId, statsText, replyToId, statsButtons(), editMessageId);
   } catch (e) {
     await respondTelegram(chatId,
@@ -1291,20 +1353,26 @@ async function sendDigest(chatId, replyToId, editMessageId) {
   var top = all.filter(function(q) { return questionState(q) === 'ANSWERED'; })
     .sort(function(a, b) { return (b.votes || 0) - (a.votes || 0); })[0];
   var topics = topTopics(week.length ? week : all);
+  var weekRate = week.length ? Math.round((answeredWeek.length / week.length) * 100) : 0;
+  var mx = Math.max(week.length, 1);
   var suggestion = pending.length ? 'Answer oldest pending question.' : 'Inbox is clear. Review /quality.';
   var lines = [
     cardTop('\uD83D\uDDDE <b>AMA DIGEST</b>'),
     BOX_V,
     BOX_V + ' Window \u2500 <b>last 7 days</b>',
-    BOX_V + ' New questions \u2500 <b>' + week.length + '</b>',
-    BOX_V + ' Answered \u2500 <b>' + answeredWeek.length + '</b>',
-    BOX_V + ' Still pending \u2500 <b>' + pending.length + '</b>',
+    divider(),
+    statRow('\uD83D\uDCDD', 'New', week.length, mx),
+    statRow('\u2705', 'Answered', answeredWeek.length, mx),
+    statRow('\u23F3', 'Pending', pending.length, mx),
     BOX_V,
-    BOX_V + ' Top topic \u2500 <b>' + esc((topics[0] && topics[0].name) || '—') + '</b>',
-    top ? BOX_V + ' Top Q \u2500 “' + esc(clipText(top.question, 80)) + '”' : BOX_V + ' Top Q \u2500 —',
+    kvRow('Reply rate', weekRate + '%'),
+    kvRow('Top topic', (topics[0] && topics[0].name) || '—'),
+    divider(),
+    sectionLabel('\uD83C\uDFAF', 'Top question'),
+    top ? BOX_V + ' \u201C' + esc(clipText(top.question, 70)) + '\u201D' : BOX_V + ' —',
     BOX_V,
-    BOX_V + ' Suggested action:',
-    BOX_V + ' ' + suggestion,
+    sectionLabel('\u2705', 'Suggested action'),
+    BOX_V + ' ' + esc(suggestion),
     BOX_V,
     cardBottom
   ];
@@ -1325,9 +1393,10 @@ async function sendSmartInbox(chatId, replyToId, editMessageId) {
   var lines = [cardTop('\uD83D\uDCE5 <b>SMART INBOX</b>'), BOX_V, BOX_V + ' Priority questions to handle first.', BOX_V];
   items.forEach(function(q, i) {
     var st = questionState(q);
-    lines.push(BOX_V + ' ' + (i + 1) + '. <b>' + st + '</b>' + (q.pinned ? ' · \uD83D\uDCCD' : '') + ' · ' + esc(visitorName(q.name)));
-    lines.push(BOX_V + ' “' + esc(clipText(q.question, 110)) + '”');
-    lines.push(BOX_V + ' ID: <code>' + esc(q.id) + '</code>');
+    var badge = st === 'UNANSWERED' ? '\u23F3' : '\uD83D\uDE48';
+    lines.push(BOX_V + ' ' + badge + ' <b>' + (i + 1) + '.</b> ' + esc(visitorName(q.name)) + (q.pinned ? '  \uD83D\uDCCD' : ''));
+    lines.push(BOX_V + '   \u201C' + esc(clipText(q.question, 100)) + '\u201D');
+    lines.push(BOX_V + '   ID \u2500 <code>' + esc(q.id) + '</code>');
     lines.push(BOX_V);
   });
   lines.push(BOX_V + ' Use /get &lt;id&gt; or tap Answer.');
@@ -1340,8 +1409,18 @@ async function sendTopics(chatId, replyToId, editMessageId) {
   var topics = topTopics(all);
   var manualCount = all.filter(function(q) { return q.topic && q.topicManual; }).length;
   var autoCount = all.length - manualCount;
-  var lines = [cardTop('\uD83C\uDFF7 <b>AMA TOPICS</b>'), BOX_V, BOX_V + ' Stored topic map.', BOX_V + ' Manual \u2500 <b>' + manualCount + '</b> · Auto \u2500 <b>' + autoCount + '</b>', BOX_V];
-  lines = lines.concat(topicLines(all, 8));
+  var topics8 = topics.slice(0, 8);
+  var maxCount = Math.max(topics8.length ? topics8[0].count : 0, 1);
+  var lines = [cardTop('\uD83C\uDFF7 <b>AMA TOPICS</b>'), BOX_V, BOX_V + ' Manual \u2500 <b>' + manualCount + '</b>  \u00b7  Auto \u2500 <b>' + autoCount + '</b>', divider()];
+  if (!topics8.length) {
+    lines.push(BOX_V + ' No topic data yet.');
+  } else {
+    topics8.forEach(function(t, i) {
+      var lbl = (i + 1) + '. ' + t.name;
+      lbl = lbl.length > 16 ? lbl.slice(0, 15) + '\u2026' : lbl;
+      lines.push(BOX_V + ' ' + padR(esc(lbl), 16) + bar(t.count, maxCount, 10) + '  <b>' + t.count + '</b>');
+    });
+  }
   lines.push(BOX_V);
   lines.push(BOX_V + ' Tap a topic to search deeper.');
   lines.push(cardBottom);
@@ -1369,9 +1448,9 @@ async function sendQuality(chatId, replyToId, editMessageId) {
   }
   var lines = [cardTop('\uD83E\uDDEA <b>ANSWER QUALITY</b>'), BOX_V, BOX_V + ' Answers worth improving:', BOX_V];
   weak.forEach(function(x, i) {
-    lines.push(BOX_V + ' ' + (i + 1) + '. ' + x.reasons.join(', '));
-    lines.push(BOX_V + ' “' + esc(clipText(x.q.question, 95)) + '”');
-    lines.push(BOX_V + ' ID: <code>' + esc(x.q.id) + '</code>');
+    lines.push(BOX_V + ' \u26A0\uFE0F <b>' + (i + 1) + '.</b> ' + esc(x.reasons.join(', ')));
+    lines.push(BOX_V + '   \u201C' + esc(clipText(x.q.question, 92)) + '\u201D');
+    lines.push(BOX_V + '   ID \u2500 <code>' + esc(x.q.id) + '</code>');
     lines.push(BOX_V);
   });
   lines.push(BOX_V + ' Use /edit &lt;id&gt; to improve.');
@@ -1382,15 +1461,22 @@ async function sendQuality(chatId, replyToId, editMessageId) {
 async function sendHealth(chatId, replyToId, editMessageId) {
   var okFirestore = false, count = 0, tokenOk = !!process.env.TELEGRAM_BOT_TOKEN;
   try { var all = await listAllQuestions(); okFirestore = true; count = all.length; } catch (e) {}
-  var envOk = !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY && !!(process.env.FIREBASE_PROJECT_ID || true) && !!process.env.TELEGRAM_WEBHOOK_SECRET;
+  var saOk = !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  var secretOk = !!process.env.TELEGRAM_WEBHOOK_SECRET;
+  var overall = (tokenOk && saOk && okFirestore && secretOk);
   var lines = [
     cardTop('\uD83E\uDE7A <b>BOT HEALTH</b>'),
     BOX_V,
-    BOX_V + ' Telegram token \u2500 <b>' + (tokenOk ? 'OK' : 'MISSING') + '</b>',
-    BOX_V + ' Firestore \u2500 <b>' + (okFirestore ? 'OK' : 'ERROR') + '</b>',
-    BOX_V + ' Webhook secret \u2500 <b>' + (process.env.TELEGRAM_WEBHOOK_SECRET ? 'OK' : 'MISSING') + '</b>',
-    BOX_V + ' Questions read \u2500 <b>' + count + '</b>',
-    BOX_V + ' Checked \u2500 ' + esc(formatTime(new Date().toISOString())) + ' IST',
+    BOX_V + ' ' + (overall ? '\uD83D\uDFE2' : '\uD83D\uDD34') + ' Overall \u2500 <b>' + (overall ? 'Operational' : 'Issues detected') + '</b>',
+    divider(),
+    sectionLabel('\uD83D\uDD27', 'Checks'),
+    checkRow(tokenOk, 'Telegram token'),
+    checkRow(saOk, 'Firebase service account'),
+    checkRow(okFirestore, 'Firestore connection'),
+    checkRow(secretOk, 'Webhook secret'),
+    divider(),
+    kvRow('Questions', count),
+    kvRow('Checked', formatTime(new Date().toISOString()) + ' IST'),
     BOX_V,
     cardBottom
   ];
