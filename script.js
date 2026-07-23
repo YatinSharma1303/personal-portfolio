@@ -580,12 +580,14 @@
     // 2) iTunes (validated) when Last.fm has no high-res art,
     // 3) Last.fm low-res art as a last resort (correct, even if soft),
     // 4) '' -> placeholder.
+    // Cover-art priority for Now Playing / Recently Played — favor the SHARPEST
+    // correct cover. iTunes is validated server-side (correct artist) AND 600px,
+    // so it goes first; Last.fm (always correct but maxes ~300px, often 174px) is
+    // the fallback only when iTunes has no confident match. Then placeholder.
     function recentTrackArt(tr) {
       if (!tr) return '';
       const a = (tr.artist && (tr.artist['#text'] || tr.artist.name)) || '';
       const n = tr.name || '';
-      const hi = lfmImgHighRes(tr.image);
-      if (hi) return hi;
       if (tr.artUrl) { try { localStorage.setItem('lfm_track_art_' + a + '::' + n, tr.artUrl); } catch (e) {} return tr.artUrl; }
       try { const c = localStorage.getItem('lfm_track_art_' + a + '::' + n); if (c) return c; } catch (e) {}
       return lfmImg(tr.image);
