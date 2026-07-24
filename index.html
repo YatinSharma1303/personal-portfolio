@@ -59,7 +59,7 @@
   <link rel="dns-prefetch" href="https://api.github.com"/>
   <link rel="dns-prefetch" href="https://www.youtube.com"/>
   <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml"/>
-  <link rel="stylesheet" href="style.css?v=7.0"/>
+  <link rel="stylesheet" href="style.css?v=7.1"/>
 </head>
 <body>
 
@@ -147,6 +147,12 @@
   <!-- ============ MINI MUSIC PLAYER (Spotify-style, theme-aware) ============ -->
   <div class="mini-player" id="mini-player" aria-hidden="true">
     <div class="mp-backdrop" id="mp-backdrop"></div>
+    <div class="mp-head">
+      <button class="mp-btn mp-expand" id="mp-expand" aria-label="Expand" title="Expand">
+        <svg viewBox="0 0 24 24"><path d="M12 8l6 6-1.4 1.4L12 10.8 7.4 15.4 6 14z"/></svg>
+      </button>
+      <button class="mp-btn mp-close" id="mp-close" aria-label="Close player" title="Close">✕</button>
+    </div>
 
     <div class="mp-expand-panel">
       <div class="mp-big-art" id="mp-big-art"></div>
@@ -176,10 +182,6 @@
         <span class="material-symbols-outlined mp-vol-ic" id="mp-vol-icon">volume_up</span>
         <input type="range" id="mp-vol" class="mp-vol-range" min="0" max="100" value="70" aria-label="Volume"/>
         <a class="mp-btn mp-yt" id="mp-yt" href="https://youtu.be/XtwqzajH_8A" target="_blank" rel="noopener" aria-label="Open on YouTube"><span class="material-symbols-outlined">open_in_new</span></a>
-        <button class="mp-btn mp-expand" id="mp-expand" aria-label="Expand">
-          <svg viewBox="0 0 24 24"><path d="M12 8l6 6-1.4 1.4L12 10.8 7.4 15.4 6 14z"/></svg>
-        </button>
-        <button class="mp-btn mp-close" id="mp-close" aria-label="Close player" title="Close">✕</button>
       </div>
     </div>
   </div>
@@ -642,7 +644,7 @@
     </div>
   </div>
 
-  <script src="script.js?v=7.0"></script>
+  <script src="script.js?v=7.1"></script>
   <script src="games.js"></script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2005ff61d008fcd',t:'MTc4NDg2OTM2OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a20075c76d8b3d24',t:'MTc4NDg3MDI2Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
