@@ -59,7 +59,7 @@
   <link rel="dns-prefetch" href="https://api.github.com"/>
   <link rel="dns-prefetch" href="https://www.youtube.com"/>
   <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml"/>
-  <link rel="stylesheet" href="style.css?v=6.8"/>
+  <link rel="stylesheet" href="style.css?v=6.9"/>
 </head>
 <body>
 
@@ -158,31 +158,29 @@
     </div>
 
     <div class="mp-bar">
-      <div class="mp-thumb" id="mp-thumb"></div>
-      <div class="mp-bar-main">
-        <div class="mp-title">FMA Brotherhood OST</div>
-        <div class="mp-seek-row">
-          <span class="mp-time" id="mp-cur">0:00</span>
-          <div class="mp-seek-bar" id="mp-seek-bar"><div class="mp-seek-fill" id="mp-seek-fill"></div></div>
-          <span class="mp-time" id="mp-dur">0:00</span>
+      <div class="mp-top">
+        <div class="mp-thumb" id="mp-thumb"></div>
+        <div class="mp-bar-main">
+          <div class="mp-title">FMA Brotherhood OST</div>
+          <div class="mp-seek-row">
+            <span class="mp-time" id="mp-cur">0:00</span>
+            <div class="mp-seek-bar" id="mp-seek-bar"><div class="mp-seek-fill" id="mp-seek-fill"></div></div>
+            <span class="mp-time" id="mp-dur">0:00</span>
+          </div>
         </div>
+        <button class="mp-btn mp-play" id="mp-play" aria-label="Play / Pause">
+          <svg class="mp-icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <svg class="mp-icon-pause" viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+        </button>
       </div>
-      <button class="mp-btn mp-play" id="mp-play" aria-label="Play / Pause">
-        <svg class="mp-icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        <svg class="mp-icon-pause" viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
-      </button>
-      <div class="mp-vol-wrap" id="mp-vol-wrap">
-        <button class="mp-btn mp-vol-btn" id="mp-vol-btn" aria-label="Volume"><span class="material-symbols-outlined" id="mp-vol-icon">volume_up</span></button>
-        <div class="mp-vol-pop">
-          <span class="material-symbols-outlined mp-vol-pop-ic">volume_up</span>
-          <input type="range" id="mp-vol" min="0" max="100" value="70" aria-label="Volume"/>
-          <span class="mp-vol-val" id="mp-vol-val">70</span>
-        </div>
+      <div class="mp-bottom">
+        <span class="material-symbols-outlined mp-vol-ic" id="mp-vol-icon">volume_up</span>
+        <input type="range" id="mp-vol" class="mp-vol-range" min="0" max="100" value="70" aria-label="Volume"/>
+        <a class="mp-btn mp-yt" id="mp-yt" href="https://youtu.be/XtwqzajH_8A" target="_blank" rel="noopener" aria-label="Open on YouTube"><span class="material-symbols-outlined">open_in_new</span></a>
+        <button class="mp-btn mp-expand" id="mp-expand" aria-label="Expand">
+          <svg viewBox="0 0 24 24"><path d="M12 8l6 6-1.4 1.4L12 10.8 7.4 15.4 6 14z"/></svg>
+        </button>
       </div>
-      <a class="mp-btn mp-yt" id="mp-yt" href="https://youtu.be/XtwqzajH_8A" target="_blank" rel="noopener" aria-label="Open on YouTube"><span class="material-symbols-outlined">open_in_new</span></a>
-      <button class="mp-btn mp-expand" id="mp-expand" aria-label="Expand">
-        <svg viewBox="0 0 24 24"><path d="M12 8l6 6-1.4 1.4L12 10.8 7.4 15.4 6 14z"/></svg>
-      </button>
     </div>
   </div>
 
@@ -644,7 +642,7 @@
     </div>
   </div>
 
-  <script src="script.js?v=6.8"></script>
+  <script src="script.js?v=6.9"></script>
   <script src="games.js"></script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a20048077a374938',t:'MTc4NDg2ODM4OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a200548f1b854007',t:'MTc4NDg2ODkwMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

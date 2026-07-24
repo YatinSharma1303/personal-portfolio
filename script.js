@@ -358,15 +358,9 @@
   if (musicWidget) musicWidget.addEventListener('click', openPlayer);
   const mpClose = $('mp-close'); if (mpClose) mpClose.addEventListener('click', closePlayer);
   const mpPlay = $('mp-play'); if (mpPlay) mpPlay.addEventListener('click', togglePlay);
-  const mpVolBtn = $('mp-vol-btn'), mpVolWrap = $('mp-vol-wrap'), mpVol = $('mp-vol'), mpVolIcon = $('mp-vol-icon'), mpVolVal = $('mp-vol-val');
-  function updateVolIcon(v) {
-    var n = Number(v);
-    if (mpVolIcon) mpVolIcon.textContent = (n === 0) ? 'volume_off' : (n < 50 ? 'volume_down' : 'volume_up');
-    if (mpVolVal) mpVolVal.textContent = v;
-  }
-  if (mpVolBtn && mpVolWrap) mpVolBtn.addEventListener('click', function () { mpVolWrap.classList.toggle('open'); });
+  const mpVol = $('mp-vol'), mpVolIcon = $('mp-vol-icon');
+  function updateVolIcon(v) { var n = Number(v); if (mpVolIcon) mpVolIcon.textContent = (n === 0) ? 'volume_off' : (n < 50 ? 'volume_down' : 'volume_up'); }
   if (mpVol) mpVol.addEventListener('input', function (e) { var v = e.target.value; setVolume(v); updateVolIcon(v); });
-  document.addEventListener('click', function (e) { if (mpVolWrap && mpVolWrap.classList.contains('open') && !mpVolWrap.contains(e.target)) mpVolWrap.classList.remove('open'); });
   const mpExpand = $('mp-expand'); if (mpExpand) mpExpand.addEventListener('click', function () { if (miniPlayer) miniPlayer.classList.toggle('expanded'); });
   // Seek bar (click + drag).
   const seekBar = $('mp-seek-bar');
