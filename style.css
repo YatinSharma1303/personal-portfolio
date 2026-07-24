@@ -84,8 +84,7 @@ a { color: inherit; text-decoration: none; }
 .mini-player.open { opacity: 1; transform: none; pointer-events: auto; }
 .mini-player .mp-backdrop { position: absolute; inset: -24px; background-size: cover; background-position: center; opacity: 0; filter: blur(28px) saturate(1.4); transition: opacity .4s ease; }
 .mini-player.expanded .mp-backdrop { opacity: .55; }
-.mini-player .mp-close { position: absolute; top: 8px; right: 8px; z-index: 4; width: 28px; height: 28px; border-radius: 50%; color: var(--gray); display: grid; place-items: center; font-size: 13px; }
-.mini-player .mp-close:hover { color: var(--white); background: rgba(255,255,255,0.1); }
+.mini-player .mp-close { font-size: 14px; flex-shrink: 0; }
 .mini-player .mp-expand-panel { position: relative; z-index: 2; padding: 18px 16px 6px; text-align: center; display: none; }
 .mini-player.expanded .mp-expand-panel { display: block; }
 .mini-player .mp-big-art { width: 150px; height: 150px; margin: 0 auto 14px; border-radius: 16px; background-size: cover; background-position: center; background-color: #141414; box-shadow: 0 12px 30px rgba(0,0,0,0.4); }
