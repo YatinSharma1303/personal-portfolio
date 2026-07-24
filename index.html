@@ -59,7 +59,7 @@
   <link rel="dns-prefetch" href="https://api.github.com"/>
   <link rel="dns-prefetch" href="https://www.youtube.com"/>
   <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml"/>
-  <link rel="stylesheet" href="style.css?v=6.7"/>
+  <link rel="stylesheet" href="style.css?v=6.8"/>
 </head>
 <body>
 
@@ -119,10 +119,7 @@
       <!-- Music widget (left) -->
       <button class="topbar-music-widget" id="topbar-music-icon" title="Toggle music player" aria-label="Toggle music player">
         <span class="tb-art" id="tb-art"></span>
-        <span class="tb-music-meta">
-          <span class="tb-track-title" id="topbar-track-title">FMA Brotherhood OST</span>
-          <span class="tb-eq-mini" id="tb-eq-bars"><i></i><i></i><i></i><i></i></span>
-        </span>
+        <span class="tb-eq-mini" id="tb-eq-bars"><i></i><i></i><i></i></span>
         <span class="tb-music-tooltip" id="tb-music-tooltip">Tap to play</span>
       </button>
 
@@ -174,10 +171,14 @@
         <svg class="mp-icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
         <svg class="mp-icon-pause" viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
       </button>
-      <label class="mp-vol">
-        <span class="material-symbols-outlined">volume_up</span>
-        <input type="range" id="mp-vol" min="0" max="100" value="70" aria-label="Volume"/>
-      </label>
+      <div class="mp-vol-wrap" id="mp-vol-wrap">
+        <button class="mp-btn mp-vol-btn" id="mp-vol-btn" aria-label="Volume"><span class="material-symbols-outlined" id="mp-vol-icon">volume_up</span></button>
+        <div class="mp-vol-pop">
+          <span class="material-symbols-outlined mp-vol-pop-ic">volume_up</span>
+          <input type="range" id="mp-vol" min="0" max="100" value="70" aria-label="Volume"/>
+          <span class="mp-vol-val" id="mp-vol-val">70</span>
+        </div>
+      </div>
       <a class="mp-btn mp-yt" id="mp-yt" href="https://youtu.be/XtwqzajH_8A" target="_blank" rel="noopener" aria-label="Open on YouTube"><span class="material-symbols-outlined">open_in_new</span></a>
       <button class="mp-btn mp-expand" id="mp-expand" aria-label="Expand">
         <svg viewBox="0 0 24 24"><path d="M12 8l6 6-1.4 1.4L12 10.8 7.4 15.4 6 14z"/></svg>
@@ -643,7 +644,7 @@
     </div>
   </div>
 
-  <script src="script.js?v=6.7"></script>
+  <script src="script.js?v=6.8"></script>
   <script src="games.js"></script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a20035042a414710',t:'MTc4NDg2NzYxMA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a20048077a374938',t:'MTc4NDg2ODM4OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
