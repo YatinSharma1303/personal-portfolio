@@ -281,14 +281,14 @@
   const miniPlayer = $('mini-player');
   const musicWidget = $('topbar-music-icon');
   const YT_ART = 'https://img.youtube.com/vi/' + CONFIG.ytVideoId + '/maxresdefault.jpg';
-  ['mp-thumb', 'mp-big-art', 'mp-backdrop'].forEach(function (id) {
+  ['mp-thumb', 'mp-big-art', 'mp-backdrop', 'tb-art'].forEach(function (id) {
     const el = $(id); if (el) el.style.backgroundImage = "url('" + YT_ART + "')";
   });
 
   function setVisuals(playing) {
     isPlaying = playing;
     if (miniPlayer) miniPlayer.classList.toggle('playing', playing);
-    [$('tb-music-disc'), $('tb-eq-bars'), $('mp-eq'), $('mp-play')].forEach(function (el) { if (el) el.classList.toggle('playing', playing); });
+    [$('tb-eq-bars'), $('mp-eq'), $('mp-play')].forEach(function (el) { if (el) el.classList.toggle('playing', playing); });
     const tip = $('tb-music-tooltip'); if (tip) tip.textContent = playing ? 'Now playing' : 'Tap to play';
   }
 
@@ -376,6 +376,41 @@
     window.addEventListener('mouseup', function () { dragging = false; });
     seekBar.addEventListener('touchstart', function (e) { seekTo(e.touches[0].clientX); }, { passive: true });
     seekBar.addEventListener('touchmove', function (e) { seekTo(e.touches[0].clientX); }, { passive: true });
+  }
+
+  // Drag the mini player anywhere on screen (persists position in localStorage).
+  // Clicks on controls (buttons, inputs, links, the seek bar) are not treated as drags.
+  if (miniPlayer) {
+    try {
+      var saved = JSON.parse(localStorage.getItem('mp_pos') || 'null');
+      if (saved && typeof saved.l === 'number' && typeof saved.t === 'number') {
+        miniPlayer.style.left = saved.l + 'px'; miniPlayer.style.top = saved.t + 'px';
+        miniPlayer.style.right = 'auto'; miniPlayer.style.bottom = 'auto';
+      }
+    } catch (e) {}
+    var drag = null;
+    miniPlayer.addEventListener('pointerdown', function (e) {
+      if (!miniPlayer.classList.contains('open')) return;
+      if (e.target.closest('button, input, a, .mp-seek-bar')) return;
+      var r = miniPlayer.getBoundingClientRect();
+      drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
+      miniPlayer.classList.add('dragging');
+    });
+    window.addEventListener('pointermove', function (e) {
+      if (!drag) return;
+      var w = miniPlayer.offsetWidth, h = miniPlayer.offsetHeight;
+      var x = Math.max(8, Math.min(window.innerWidth - w - 8, e.clientX - drag.dx));
+      var y = Math.max(8, Math.min(window.innerHeight - h - 8, e.clientY - drag.dy));
+      miniPlayer.style.left = x + 'px'; miniPlayer.style.top = y + 'px';
+      miniPlayer.style.right = 'auto'; miniPlayer.style.bottom = 'auto';
+    });
+    window.addEventListener('pointerup', function () {
+      if (!drag) return;
+      drag = null;
+      miniPlayer.classList.remove('dragging');
+      var r = miniPlayer.getBoundingClientRect();
+      try { localStorage.setItem('mp_pos', JSON.stringify({ l: Math.round(r.left), t: Math.round(r.top) })); } catch (e) {}
+    });
   }
 
   /* ============================================================
