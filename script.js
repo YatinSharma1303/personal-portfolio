@@ -278,15 +278,17 @@
      4. MUSIC PLAYER (YouTube IFrame API — bulletproof edition)
      ============================================================ */
   let ytPlayer = null, ytReady = false, ytError = false, wantPlay = false, isPlaying = false;
-  const playerPanel = $('slide-music-player');
+  const miniPlayer = $('mini-player');
   const musicWidget = $('topbar-music-icon');
+  const YT_ART = 'https://img.youtube.com/vi/' + CONFIG.ytVideoId + '/maxresdefault.jpg';
+  ['mp-thumb', 'mp-big-art', 'mp-backdrop'].forEach(function (id) {
+    const el = $(id); if (el) el.style.backgroundImage = "url('" + YT_ART + "')";
+  });
 
   function setVisuals(playing) {
     isPlaying = playing;
-    if (playerPanel) playerPanel.classList.toggle('playing', playing);
-    const disc = $('tb-music-disc'); if (disc) disc.classList.toggle('playing', playing);
-    const eq = $('tb-eq-bars'); if (eq) eq.classList.toggle('playing', playing);
-    const vinyl = $('sp-vinyl'); if (vinyl) vinyl.classList.toggle('playing', playing);
+    if (miniPlayer) miniPlayer.classList.toggle('playing', playing);
+    [$('tb-music-disc'), $('tb-eq-bars'), $('mp-eq'), $('mp-play')].forEach(function (el) { if (el) el.classList.toggle('playing', playing); });
     const tip = $('tb-music-tooltip'); if (tip) tip.textContent = playing ? 'Now playing' : 'Tap to play';
   }
 
@@ -339,35 +341,42 @@
       if (!ytReady || !isPlaying) return;
       let cur = 0, dur = 0;
       try { cur = ytPlayer.getCurrentTime() || 0; dur = ytPlayer.getDuration() || 0; } catch (e) {}
-      const ct = $('sp-curr-time'), dt = $('sp-duration'), fl = $('sp-progress-fill');
+      const ct = $('mp-cur'), dt = $('mp-dur'), fl = $('mp-seek-fill');
       if (ct) ct.textContent = fmt(cur); if (dt) dt.textContent = fmt(dur);
       if (fl) fl.style.width = (dur ? (cur / dur * 100) : 0) + '%';
       loopId = requestAnimationFrame(step);
     })();
   }
 
-  if (musicWidget) musicWidget.addEventListener('click', function () {
-    if (playerPanel) playerPanel.classList.toggle('open');
-    if (playerPanel && playerPanel.classList.contains('open') && !isPlaying) doPlay();
-  });
-  // Panel close button.
-  const spClose = $('sp-close');
-  if (spClose) spClose.addEventListener('click', function () { if (playerPanel) playerPanel.classList.remove('open'); });
-  // Panel play/pause button.
-  const playBtn = $('sp-play-btn');
-  if (playBtn) playBtn.addEventListener('click', togglePlay);
-  // Volume slider.
-  const volSlider = $('sp-vol-slider');
-  if (volSlider) volSlider.addEventListener('input', function (e) {
-    const v = e.target.value; setVolume(v);
-  });
-  // Seek bar.
-  const pBar = $('sp-progress-bar');
-  if (pBar) pBar.addEventListener('click', function (e) {
-    if (!ytReady) return;
-    const r = pBar.getBoundingClientRect();
-    try { ytPlayer.seekTo(((e.clientX - r.left) / r.width) * (ytPlayer.getDuration() || 0), true); } catch (err) {}
-  });
+  function openPlayer() {
+    if (miniPlayer) { miniPlayer.classList.add('open'); miniPlayer.setAttribute('aria-hidden', 'false'); }
+    if (!isPlaying && !wantPlay) doPlay();
+  }
+  function closePlayer() {
+    if (miniPlayer) { miniPlayer.classList.remove('open', 'expanded'); miniPlayer.setAttribute('aria-hidden', 'true'); }
+  }
+  if (musicWidget) musicWidget.addEventListener('click', openPlayer);
+  const mpClose = $('mp-close'); if (mpClose) mpClose.addEventListener('click', closePlayer);
+  const mpPlay = $('mp-play'); if (mpPlay) mpPlay.addEventListener('click', togglePlay);
+  const mpVol = $('mp-vol'); if (mpVol) mpVol.addEventListener('input', function (e) { setVolume(e.target.value); });
+  const mpExpand = $('mp-expand'); if (mpExpand) mpExpand.addEventListener('click', function () { if (miniPlayer) miniPlayer.classList.toggle('expanded'); });
+  // Seek bar (click + drag).
+  const seekBar = $('mp-seek-bar');
+  if (seekBar) {
+    let dragging = false;
+    function seekTo(clientX) {
+      if (!ytReady) return;
+      const r = seekBar.getBoundingClientRect();
+      const ratio = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+      try { ytPlayer.seekTo(ratio * (ytPlayer.getDuration() || 0), true); } catch (e) {}
+      const fl = $('mp-seek-fill'); if (fl) fl.style.width = (ratio * 100) + '%';
+    }
+    seekBar.addEventListener('mousedown', function (e) { dragging = true; seekTo(e.clientX); });
+    window.addEventListener('mousemove', function (e) { if (dragging) seekTo(e.clientX); });
+    window.addEventListener('mouseup', function () { dragging = false; });
+    seekBar.addEventListener('touchstart', function (e) { seekTo(e.touches[0].clientX); }, { passive: true });
+    seekBar.addEventListener('touchmove', function (e) { seekTo(e.touches[0].clientX); }, { passive: true });
+  }
 
   /* ============================================================
      5. SKILLS
@@ -1810,7 +1819,7 @@
       { icon: 'sports_esports', label: 'Go to Playground', hint: '', action: () => document.getElementById('playground')?.scrollIntoView({ behavior: 'smooth' }) },
       { icon: 'public', label: 'Go to Presence', hint: '', action: () => document.getElementById('presence')?.scrollIntoView({ behavior: 'smooth' }) },
       { icon: 'dark_mode', label: 'Toggle Theme', hint: 'T', action: () => document.getElementById('theme-toggle-btn')?.click() },
-      { icon: 'play_arrow', label: 'Play / Pause Music', hint: 'M', action: () => document.getElementById('sp-play-btn')?.click() },
+      { icon: 'play_arrow', label: 'Play / Pause Music', hint: 'M', action: () => document.getElementById('topbar-music-icon')?.click() },
       { icon: 'arrow_upward', label: 'Scroll to Top', hint: '', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
       { icon: 'open_in_new', label: 'Open GitHub Profile', hint: '', action: () => window.open('https://github.com/YatinSharma1303', '_blank') },
       { icon: 'content_copy', label: 'Copy Email Address', hint: '', action: () => document.getElementById('copy-email')?.click() },

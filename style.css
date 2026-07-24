@@ -78,6 +78,59 @@ body {
 html { scrollbar-width: thin; scrollbar-color: var(--accent) var(--bg); }
 
 a { color: inherit; text-decoration: none; }
+
+/* ============ MINI MUSIC PLAYER (theme-aware) ============ */
+.mini-player { position: fixed; left: 16px; bottom: 16px; z-index: 130; width: 340px; max-width: calc(100vw - 32px); border-radius: 18px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); box-shadow: 0 24px 60px rgba(0,0,0,0.5); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); opacity: 0; transform: translateY(24px) scale(0.97); pointer-events: none; transition: opacity .35s ease, transform .35s cubic-bezier(.22,1,.36,1); }
+.mini-player.open { opacity: 1; transform: none; pointer-events: auto; }
+.mini-player .mp-backdrop { position: absolute; inset: -24px; background-size: cover; background-position: center; opacity: 0; filter: blur(28px) saturate(1.4); transition: opacity .4s ease; }
+.mini-player.expanded .mp-backdrop { opacity: .55; }
+.mini-player .mp-close { position: absolute; top: 8px; right: 8px; z-index: 4; width: 28px; height: 28px; border-radius: 50%; color: var(--gray); display: grid; place-items: center; font-size: 13px; }
+.mini-player .mp-close:hover { color: var(--white); background: rgba(255,255,255,0.1); }
+.mini-player .mp-expand-panel { position: relative; z-index: 2; padding: 18px 16px 6px; text-align: center; display: none; }
+.mini-player.expanded .mp-expand-panel { display: block; }
+.mini-player .mp-big-art { width: 150px; height: 150px; margin: 0 auto 14px; border-radius: 16px; background-size: cover; background-position: center; background-color: #141414; box-shadow: 0 12px 30px rgba(0,0,0,0.4); }
+.mini-player .mp-eq { display: none; justify-content: center; align-items: flex-end; gap: 3px; height: 18px; margin-bottom: 10px; }
+.mini-player.expanded .mp-eq { display: flex; }
+.mini-player .mp-eq i { width: 3px; height: 5px; border-radius: 2px; background: var(--accent); }
+.mini-player .mp-eq.playing i { animation: mpEq .9s ease-in-out infinite; }
+.mini-player .mp-eq i:nth-child(2){animation-delay:.15s}.mini-player .mp-eq i:nth-child(3){animation-delay:.3s}.mini-player .mp-eq i:nth-child(4){animation-delay:.45s}.mini-player .mp-eq i:nth-child(5){animation-delay:.2s}.mini-player .mp-eq i:nth-child(6){animation-delay:.35s}.mini-player .mp-eq i:nth-child(7){animation-delay:.5s}
+@keyframes mpEq { 0%,100%{height:5px} 50%{height:18px} }
+.mini-player .mp-now-label { font-family: var(--mono); font-size: 9px; letter-spacing: .2em; color: var(--accent); }
+.mini-player .mp-big-title { font-size: 15px; font-weight: 700; margin-top: 3px; }
+.mini-player .mp-big-artist { font-size: 12px; color: var(--gray); }
+.mini-player .mp-bar { position: relative; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 12px; }
+.mini-player .mp-thumb { width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0; background-size: cover; background-position: center; background-color: #141414; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+.mini-player .mp-bar-main { flex: 1; min-width: 0; }
+.mini-player .mp-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 6px; }
+.mini-player .mp-seek-row { display: flex; align-items: center; gap: 8px; }
+.mini-player .mp-time { font-family: var(--mono); font-size: 9px; color: var(--gray); flex-shrink: 0; }
+.mini-player .mp-seek-bar { position: relative; flex: 1; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.14); cursor: pointer; }
+.mini-player .mp-seek-fill { position: absolute; top: 0; bottom: 0; left: 0; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+.mini-player .mp-btn { width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; color: var(--gray); transition: transform .15s ease, color .2s ease, background .2s ease; }
+.mini-player .mp-btn:hover { color: var(--white); background: rgba(255,255,255,0.08); transform: scale(1.06); }
+.mini-player .mp-btn svg { width: 16px; height: 16px; fill: currentColor; }
+.mini-player .mp-btn .material-symbols-outlined { font-size: 18px; }
+.mini-player .mp-play { width: 40px; height: 40px; background: var(--white); color: var(--bg); box-shadow: 0 6px 16px rgba(0,200,255,0.35); }
+.mini-player .mp-play:hover { color: var(--bg); background: var(--white); }
+.mini-player .mp-play svg { width: 18px; height: 18px; }
+.mini-player .mp-play .mp-icon-pause { display: none; }
+.mini-player .mp-play.playing .mp-icon-play { display: none; }
+.mini-player .mp-play.playing .mp-icon-pause { display: block; }
+.mini-player .mp-vol { display: flex; align-items: center; gap: 4px; color: var(--gray); }
+.mini-player .mp-vol .material-symbols-outlined { font-size: 18px; }
+.mini-player .mp-vol input[type=range] { width: 60px; height: 4px; -webkit-appearance: none; appearance: none; background: rgba(255,255,255,0.14); border-radius: 999px; outline: none; }
+.mini-player .mp-vol input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); cursor: pointer; }
+.mini-player .mp-vol input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border: none; border-radius: 50%; background: var(--accent); cursor: pointer; }
+.mini-player .mp-expand svg { transition: transform .3s ease; }
+.mini-player.expanded .mp-expand svg { transform: rotate(180deg); }
+.mini-player .mp-yt { text-decoration: none; }
+@media (max-width: 480px) { .mini-player { width: calc(100vw - 24px); left: 12px; bottom: 12px; } .mini-player .mp-vol input[type=range] { width: 44px; } }
+html.light .mini-player { background: rgba(255,255,255,0.82); border-color: rgba(80,80,140,0.18); box-shadow: 0 24px 60px rgba(80,80,140,0.22); }
+html.light .mini-player .mp-seek-bar, html.light .mini-player .mp-vol input[type=range] { background: rgba(80,80,140,0.2); }
+html.light .mini-player .mp-btn:hover { background: rgba(80,80,140,0.1); }
+html.light .mini-player .mp-play { box-shadow: 0 6px 16px rgba(100,80,220,0.3); }
+html.light .mini-player .mp-big-art, html.light .mini-player .mp-thumb { background-color: #dddde8; }
+html.light .mini-player.expanded .mp-backdrop { opacity: 0.3; }
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
 
 /* ── THEME TRANSITIONS ── */

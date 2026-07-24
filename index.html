@@ -59,7 +59,7 @@
   <link rel="dns-prefetch" href="https://api.github.com"/>
   <link rel="dns-prefetch" href="https://www.youtube.com"/>
   <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml"/>
-  <link rel="stylesheet" href="style.css?v=6.1"/>
+  <link rel="stylesheet" href="style.css?v=6.6"/>
 </head>
 <body>
 
@@ -151,43 +151,41 @@
     </nav>
   </div>
 
-  <!-- ============ SLIDE-IN MUSIC PLAYER (Cyberpunk Glass) ============ -->
-  <div class="slide-player-panel" id="slide-music-player">
-    <button class="sp-close" id="sp-close" aria-label="Close player">✕</button>
+  <!-- ============ MINI MUSIC PLAYER (Spotify-style, theme-aware) ============ -->
+  <div class="mini-player" id="mini-player" aria-hidden="true">
+    <div class="mp-backdrop" id="mp-backdrop"></div>
+    <button class="mp-close" id="mp-close" aria-label="Close player">✕</button>
 
-    <div class="sp-art-stage">
-      <div class="sp-cd-sleeve">
-        <div class="sp-cd-disc" id="sp-vinyl">
-          <div class="sp-cd-label"></div>
+    <div class="mp-expand-panel">
+      <div class="mp-big-art" id="mp-big-art"></div>
+      <div class="mp-eq" id="mp-eq"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="mp-now-label">NOW PLAYING</div>
+      <div class="mp-big-title">FMA Brotherhood OST</div>
+      <div class="mp-big-artist">Anime OST</div>
+    </div>
+
+    <div class="mp-bar">
+      <div class="mp-thumb" id="mp-thumb"></div>
+      <div class="mp-bar-main">
+        <div class="mp-title">FMA Brotherhood OST</div>
+        <div class="mp-seek-row">
+          <span class="mp-time" id="mp-cur">0:00</span>
+          <div class="mp-seek-bar" id="mp-seek-bar"><div class="mp-seek-fill" id="mp-seek-fill"></div></div>
+          <span class="mp-time" id="mp-dur">0:00</span>
         </div>
-        <div class="sp-cd-cover"></div>
       </div>
-      <div class="sp-vinyl-glow"></div>
-    </div>
-
-    <div class="sp-track-info">
-      <div class="sp-now-label">NOW PLAYING</div>
-      <div class="sp-title" id="sp-title">FMA Brotherhood OST</div>
-      <div class="sp-artist" id="sp-artist">Anime OST</div>
-    </div>
-
-    <div class="sp-progress">
-      <div class="sp-progress-bar" id="sp-progress-bar"><div class="sp-progress-fill" id="sp-progress-fill"></div></div>
-      <div class="sp-times"><span id="sp-curr-time">0:00</span><span id="sp-duration">0:00</span></div>
-    </div>
-
-    <div class="sp-controls">
-      <button class="sp-play-btn" id="sp-play-btn" title="Play / Pause" aria-label="Play / Pause">
-        <svg class="sp-icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        <svg class="sp-icon-pause" viewBox="0 0 24 24"><path d="M6 5h4v14H6z M14 5h4v14h-4z"/></svg>
+      <button class="mp-btn mp-play" id="mp-play" aria-label="Play / Pause">
+        <svg class="mp-icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        <svg class="mp-icon-pause" viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
       </button>
-    </div>
-
-    <div class="sp-toolbar">
-      <input type="range" class="sp-vol-slider" id="sp-vol-slider" min="0" max="100" value="70"/>
-      <a class="sp-yt-link" id="sp-yt-link" href="https://youtu.be/XtwqzajH_8A" target="_blank" rel="noopener" aria-label="Open on YouTube">
-        <svg viewBox="0 0 24 24"><path d="M21 7a3 3 0 0 0-2-2c-2-.5-7-.5-7-.5s-5 0-7 .5a3 3 0 0 0-2 2 31 31 0 0 0 0 10 3 3 0 0 0 2 2c2 .5 7 .5 7 .5s5 0 7-.5a3 3 0 0 0 2-2 31 31 0 0 0 0-10z M10 9l5 3-5 3z"/></svg>
-      </a>
+      <label class="mp-vol">
+        <span class="material-symbols-outlined">volume_up</span>
+        <input type="range" id="mp-vol" min="0" max="100" value="70" aria-label="Volume"/>
+      </label>
+      <a class="mp-btn mp-yt" id="mp-yt" href="https://youtu.be/XtwqzajH_8A" target="_blank" rel="noopener" aria-label="Open on YouTube"><span class="material-symbols-outlined">open_in_new</span></a>
+      <button class="mp-btn mp-expand" id="mp-expand" aria-label="Expand">
+        <svg viewBox="0 0 24 24"><path d="M12 8l6 6-1.4 1.4L12 10.8 7.4 15.4 6 14z"/></svg>
+      </button>
     </div>
   </div>
 
@@ -649,7 +647,7 @@
     </div>
   </div>
 
-  <script src="script.js?v=6.5"></script>
+  <script src="script.js?v=6.6"></script>
   <script src="games.js"></script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a20024b47e6547ca',t:'MTc4NDg2Njk0Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
