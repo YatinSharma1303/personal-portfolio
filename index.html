@@ -59,7 +59,7 @@
   <link rel="dns-prefetch" href="https://api.github.com"/>
   <link rel="dns-prefetch" href="https://www.youtube.com"/>
   <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml"/>
-  <link rel="stylesheet" href="style.css?v=7.1"/>
+  <link rel="stylesheet" href="style.css?v=7.2"/>
 </head>
 <body>
 
@@ -89,7 +89,7 @@
   <div class="intro-overlay" id="intro-overlay">
     <div class="intro-topbar">
       <span class="intro-status"><span class="intro-dot"></span> <span id="intro-status-text">compiling portfolio</span></span>
-      <span class="intro-tag">v3.0 · <span id="intro-time"></span></span>
+      <span class="intro-tag">v4.2 · <span id="intro-time"></span></span>
     </div>
 
     <div class="intro-center">
@@ -137,9 +137,10 @@
       <span class="topbar-divider"></span>
 
       <!-- Theme toggle -->
-      <button class="tb-icon-btn theme-toggle" id="theme-toggle-btn" title="Toggle theme" aria-label="Toggle theme">
+      <button class="tb-icon-btn theme-toggle mode-auto" id="theme-toggle-btn" title="Toggle theme" aria-label="Toggle theme">
         <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
         <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2 M12 20v2 M2 12h2 M20 12h2 M5 5l1.5 1.5 M17.5 17.5L19 19 M19 5l-1.5 1.5 M6.5 17.5L5 19"/></svg>
+        <svg class="icon-auto" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2v16a8 8 0 0 1 0-16z"/></svg>
       </button>
     </nav>
   </div>
@@ -173,10 +174,12 @@
             <span class="mp-time" id="mp-dur">0:00</span>
           </div>
         </div>
+        <button class="mp-btn mp-prev" id="mp-prev" aria-label="Previous" title="Previous"><svg viewBox="0 0 24 24"><path d="M6 19V5h2v14H6zm3.5-7L18 5v14L9.5 12z"/></svg></button>
         <button class="mp-btn mp-play" id="mp-play" aria-label="Play / Pause">
           <svg class="mp-icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
           <svg class="mp-icon-pause" viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
         </button>
+        <button class="mp-btn mp-next" id="mp-next" aria-label="Next" title="Next"><svg viewBox="0 0 24 24"><path d="M6 19V5l8.5 7L6 19zm10.5-14h2v14h-2z"/></svg></button>
       </div>
       <div class="mp-bottom">
         <span class="material-symbols-outlined mp-vol-ic" id="mp-vol-icon">volume_up</span>
@@ -644,7 +647,7 @@
     </div>
   </div>
 
-  <script src="script.js?v=7.1"></script>
+  <script src="script.js?v=7.2"></script>
   <script src="games.js"></script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a20075c76d8b3d24',t:'MTc4NDg3MDI2Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a202415a8b5ed895',t:'MTc4NDg4OTA4Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

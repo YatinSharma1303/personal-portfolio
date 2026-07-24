@@ -957,7 +957,8 @@ function digestButtons() {
   return navMarkup([
     [cmdBtn('\uD83D\uDCE5 Smart Inbox', 'inbox')],
     [cmdBtn('\uD83C\uDFF7 Topics', 'topics'), cmdBtn('\uD83E\uDDEA Quality', 'quality')],
-    [cmdBtn('\uD83D\uDCCA Stats', 'stats'), cmdBtn('\uD83E\uDE7A Health', 'health')]
+    [cmdBtn('\uD83D\uDCCA Stats', 'stats'), cmdBtn('\uD83E\uDE7A Health', 'health')],
+    [exportEntryBtn()]
   ]);
 }
 function inboxButtons(firstId) {
@@ -981,10 +982,22 @@ function healthButtons() {
   ]);
 }
 
+function exportButtons() {
+  return { inline_keyboard: [[
+    { text: '\uD83D\uDCC4 Text', callback_data: 'export:text' },
+    { text: '{ } JSON', callback_data: 'export:json' },
+    { text: '\uD83D\uDCE9 CSV', callback_data: 'export:csv' }
+  ]] };
+}
+function exportEntryBtn() { return { text: '\uD83D\uDCE4 Export', callback_data: 'export:menu' }; }
+function exportMenuCard() {
+  return cardTop('\uD83D\uDCE4 <b>EXPORT FORMAT</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Choose a format for your AMA export.\n' + BOX_V + '\n' + BOX_V + '  \uD83D\uDCC4  Text   \u2500 readable summary\n' + BOX_V + '  { }  JSON   \u2500 structured data\n' + BOX_V + '  \uD83D\uDCE9  CSV    \u2500 spreadsheet-ready\n' + BOX_V + '\n' + cardBottom;
+}
 function statsButtons() {
   return navMarkup([
     [cmdBtn('\uD83D\uDDDE Digest', 'digest'), cmdBtn('\uD83D\uDCE5 Inbox', 'inbox')],
-    [cmdBtn('\uD83C\uDFF7 Topics', 'topics'), cmdBtn('\uD83E\uDE7A Health', 'health')]
+    [cmdBtn('\uD83C\uDFF7 Topics', 'topics'), cmdBtn('\uD83E\uDE7A Health', 'health')],
+    [exportEntryBtn()]
   ]);
 }
 function featuredButtons(hasFeatured) {
@@ -1214,7 +1227,8 @@ var HELP_TEXT = [
   BOX_V + ' /lookup',
   BOX_V + '   Paste an ID to inspect.',
   BOX_V + ' /export',
-  BOX_V + '   Export all Q&amp;A text.',
+  BOX_V + '   Export as Text / JSON / CSV.',
+  BOX_V + '   /export json \u00b7 /export csv',
   BOX_V,
   BOX_V + ' <b>Insights</b>',
   BOX_V + ' /digest',
@@ -1835,7 +1849,7 @@ async function searchQuestions(chatId, searchText, replyToId, editMessageId) {
 }
 
 /* -- /export -- */
-async function exportQuestions(chatId, replyToId, editMessageId) {
+async function exportQuestions(chatId, replyToId, editMessageId, format) {
   var all = await listAllQuestions();
   if (!all.length) {
         await respondTelegram(chatId,
@@ -1843,49 +1857,52 @@ async function exportQuestions(chatId, replyToId, editMessageId) {
           replyToId, REPLY_KEYBOARD, editMessageId);
     return;
   }
-
+  format = (format || 'text').toLowerCase();
   var sorted = all.sort(function(a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
-  var lines = ['\uD83D\uDCCB AMA EXPORT \u2014 ' + new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST', ''];
+  var stamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST';
+  var content;
 
-  for (var idx = 0; idx < sorted.length; idx++) {
-    var q = sorted[idx];
-    var st = questionState(q);
-    lines.push('\u2500\u2500\u2500 ' + st + (q.pinned ? ' \u00B7 \uD83D\uDCCD PINNED' : '') + ' \u2500\u2500\u2500');
-    lines.push('From: ' + q.name);
-    lines.push('Asked: ' + formatTime(q.createdAt));
-    lines.push('Q: ' + q.question);
-    if (q.answer) {
-      lines.push('A: ' + q.answer);
-      lines.push('Answered: ' + formatTime(q.answeredAt));
-    if (q.editedAt) lines.push('Edited: ' + formatTime(q.editedAt));
+  if (format === 'json') {
+    var payload = sorted.map(function(q) {
+      return { id: q.id, name: q.name, question: q.question, answer: q.answer || '', state: questionState(q), pinned: !!q.pinned, topic: resolvedTopic(q), votes: q.votes || 0, reactions: q.reactions || {}, createdAt: q.createdAt || '', answeredAt: q.answeredAt || '', editedAt: q.editedAt || '' };
+    });
+    content = JSON.stringify({ exportedAt: new Date().toISOString(), window: stamp, count: payload.length, questions: payload }, null, 2);
+  } else if (format === 'csv') {
+    var cell = function(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
+    var rows = [['id','name','question','answer','state','pinned','topic','votes','createdAt','answeredAt'].join(',')];
+    sorted.forEach(function(q) {
+      rows.push([cell(q.id), cell(q.name), cell(q.question), cell(q.answer || ''), cell(questionState(q)), cell(q.pinned ? 'yes' : 'no'), cell(resolvedTopic(q)), cell(q.votes || 0), cell(q.createdAt || ''), cell(q.answeredAt || '')].join(','));
+    });
+    content = '# AMA Export \u2014 ' + stamp + '\n' + rows.join('\n');
+  } else {
+    var lines = ['\uD83D\uDCCB AMA EXPORT \u2014 ' + stamp, ''];
+    for (var idx = 0; idx < sorted.length; idx++) {
+      var q = sorted[idx];
+      var st = questionState(q);
+      lines.push('\u2500\u2500\u2500 ' + st + (q.pinned ? ' \u00B7 \uD83D\uDCCD PINNED' : '') + ' \u2500\u2500\u2500');
+      lines.push('From: ' + q.name);
+      lines.push('Asked: ' + formatTime(q.createdAt));
+      lines.push('Q: ' + q.question);
+      if (q.answer) {
+        lines.push('A: ' + q.answer);
+        lines.push('Answered: ' + formatTime(q.answeredAt));
+        if (q.editedAt) lines.push('Edited: ' + formatTime(q.editedAt));
+      }
+      if (q.votes > 0) lines.push('Votes: ' + q.votes);
+      var rLine = reactionLine(q.reactions);
+      if (rLine) lines.push('Reactions: ' + rLine);
+      lines.push('ID: ' + q.id);
+      lines.push('');
     }
-    if (q.votes > 0) lines.push('Votes: ' + q.votes);
-    var rLine = reactionLine(q.reactions);
-    if (rLine) lines.push('Reactions: ' + rLine);
-    lines.push('ID: ' + q.id);
-    lines.push('');
+    lines.push('Total: ' + all.length + ' questions');
+    content = lines.join('\n');
   }
 
-  lines.push('Total: ' + all.length + ' questions');
-
-  // Split into chunks if too long (Telegram limit: 4096 chars)
-  var chunks = [];
-  var current = '';
-  for (var li = 0; li < lines.length; li++) {
-    if ((current + lines[li] + '\n').length > 3800) {
-      chunks.push(current.trim());
-      current = '';
-    }
-    current += lines[li] + '\n';
-  }
-  if (current.trim()) chunks.push(current.trim());
-
-  for (var ci = 0; ci < chunks.length; ci++) {
-    if (ci === 0 && editMessageId) {
-      await editMessage(chatId, editMessageId, '<pre>' + esc(chunks[ci]) + '</pre>');
-    } else {
-      await sendTelegram(chatId, '<pre>' + esc(chunks[ci]) + '</pre>', ci === 0 ? replyToId : undefined);
-    }
+  // Chunk + send (Telegram limit ~4096 chars/message).
+  for (var ci = 0; ci < content.length; ci += 3800) {
+    var chunk = content.slice(ci, ci + 3800);
+    if (ci === 0 && editMessageId) await editMessage(chatId, editMessageId, '<pre>' + esc(chunk) + '</pre>');
+    else await sendTelegram(chatId, '<pre>' + esc(chunk) + '</pre>', ci === 0 ? replyToId : undefined);
   }
 }
 
@@ -1927,7 +1944,7 @@ function buildAllPageButtons(page, pages) {
   if (page > 1) row.push({ text: '\u25C0 Prev', callback_data: 'all:' + (page - 1) });
   row.push({ text: page + ' / ' + pages, callback_data: 'all:noop' });
   if (page < pages) row.push({ text: 'Next \u25B6', callback_data: 'all:' + (page + 1) });
-  return { inline_keyboard: [row] };
+  return { inline_keyboard: [row, [exportEntryBtn()]] };
 }
 
 var QUEUE_PER_PAGE = 4;
@@ -2004,7 +2021,7 @@ function buildDismissedPageButtons(page, pages) {
   if (page > 1) row.push({ text: '\u25C0 Prev', callback_data: 'dismissed:' + (page - 1) });
   row.push({ text: page + ' / ' + pages, callback_data: 'dismissed:noop' });
   if (page < pages) row.push({ text: 'Next \u25B6', callback_data: 'dismissed:' + (page + 1) });
-  return { inline_keyboard: [row] };
+  return { inline_keyboard: [row, [exportEntryBtn()]] };
 }
 
 /* -- Extract question ID from message text -- */
@@ -2531,6 +2548,19 @@ module.exports = async function handler(req, res) {
           await editMessage(cbChatId, cbMessageId, result.text, buildQueuePageButtons('refresh', result.page, result.pages));
         } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Error loading page'); }
       }
+      else if (action === 'export') {
+        var ef = questionId;
+        if (ef === 'text' || ef === 'json' || ef === 'csv') {
+          await answerCallback(callback.id, 'Exporting ' + ef + '\u2026');
+          try {
+            await editMessage(cbChatId, cbMessageId, loadingCard('\uD83D\uDCE6 <b>EXPORTING\u2026</b>', 'Preparing ' + ef + ' export...'));
+            await exportQuestions(cbChatId, undefined, cbMessageId, ef);
+          } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Export failed'); }
+        } else {
+          await answerCallback(callback.id, 'Export menu');
+          await editMessage(cbChatId, cbMessageId, exportMenuCard(), exportButtons());
+        }
+      }
       else {
         await answerCallback(callback.id, 'Unknown action');
       }
@@ -2681,8 +2711,13 @@ module.exports = async function handler(req, res) {
 
     /* /export */
     if (command === '/export') {
-      var loadingId = await sendLoadingCard(chatId, '\uD83D\uDCE6 <b>EXPORTING\u2026</b>', 'Preparing your AMA export...', message.message_id);
-      await exportQuestions(chatId, message.message_id, loadingId);
+      var fmt = (text.split(/\s+/)[1] || '').toLowerCase();
+      if (fmt === 'text' || fmt === 'json' || fmt === 'csv') {
+        var loadingId = await sendLoadingCard(chatId, '\uD83D\uDCE6 <b>EXPORTING\u2026</b>', 'Preparing ' + fmt + ' export...', message.message_id);
+        await exportQuestions(chatId, message.message_id, loadingId, fmt);
+      } else {
+        await sendTelegram(chatId, exportMenuCard(), message.message_id, exportButtons());
+      }
       return res.status(200).json({ ok: true });
     }
 

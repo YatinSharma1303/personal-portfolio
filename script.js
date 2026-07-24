@@ -16,7 +16,11 @@
        /api/lastfm proxy which injects the key server-side.
        Set LASTFM_API_KEY in Vercel environment variables. */
     lastfmKey: '',
-    ytVideoId: 'XtwqzajH_8A', // Fullmetal Alchemist Brotherhood OST (YouTube embed)
+    ytVideoId: 'XtwqzajH_8A', // legacy single-track id (fallback)
+    playlist: [
+      { id: 'XtwqzajH_8A', title: 'FMA Brotherhood OST', artist: 'Akira Senju' }
+      // add more tracks here, e.g. { id: '<youtubeVideoId>', title: 'Title', artist: 'Artist' }
+    ],
     amaLimit: 20,
     firebase: {
       apiKey: 'AIzaSyBA2du9aSIi7xoDttbICzmEd-nq0W39zrU',
@@ -266,11 +270,25 @@
      ============================================================ */
   (function theme() {
     const btn = $('theme-toggle-btn');
-    const saved = localStorage.getItem('theme');
-    if (saved === 'light') document.documentElement.classList.add('light');
-    if (btn) btn.addEventListener('click', () => {
-      document.documentElement.classList.toggle("light"); window.unlockAchievement ? window.unlockAchievement("theme", "Stylish!", "Toggled the theme.") : null;
-      localStorage.setItem('theme', document.documentElement.classList.contains('light') ? 'light' : 'dark');
+    const MODES = ['auto', 'light', 'dark'];
+    const root = document.documentElement;
+    let mode = localStorage.getItem('theme');
+    if (MODES.indexOf(mode) === -1) mode = 'auto';
+    const mq = window.matchMedia('(prefers-color-scheme: light)');
+    function isLight(m) { if (m === 'light') return true; if (m === 'dark') return false; return mq.matches; }
+    function apply(m) {
+      mode = m;
+      root.classList.toggle('light', isLight(m));
+      if (btn) { btn.classList.remove('mode-auto', 'mode-light', 'mode-dark'); btn.classList.add('mode-' + m); btn.title = 'Theme: ' + m + ' (click to switch)'; }
+    }
+    apply(mode);
+    if (mq.addEventListener) mq.addEventListener('change', function () { if (mode === 'auto') apply('auto'); });
+    else if (mq.addListener) mq.addListener(function () { if (mode === 'auto') apply('auto'); });
+    if (btn) btn.addEventListener('click', function () {
+      const next = MODES[(MODES.indexOf(mode) + 1) % MODES.length];
+      localStorage.setItem('theme', next);
+      apply(next);
+      if (window.unlockAchievement) window.unlockAchievement('theme', 'Stylish!', 'Theme: ' + next + '.');
     });
   })();
 
@@ -280,10 +298,23 @@
   let ytPlayer = null, ytReady = false, ytError = false, wantPlay = false, isPlaying = false;
   const miniPlayer = $('mini-player');
   const musicWidget = $('topbar-music-icon');
-  const YT_ART = 'https://img.youtube.com/vi/' + CONFIG.ytVideoId + '/maxresdefault.jpg';
-  ['mp-thumb', 'mp-big-art', 'mp-backdrop', 'tb-art'].forEach(function (id) {
-    const el = $(id); if (el) el.style.backgroundImage = "url('" + YT_ART + "')";
-  });
+  const PLAYLIST = (CONFIG.playlist && CONFIG.playlist.length) ? CONFIG.playlist : [{ id: CONFIG.ytVideoId, title: 'FMA Brotherhood OST', artist: 'Anime OST' }];
+  let currentTrack = 0;
+  function applyTrackMeta(i) {
+    const t = PLAYLIST[i] || PLAYLIST[0];
+    const art = 'https://img.youtube.com/vi/' + t.id + '/maxresdefault.jpg';
+    ['mp-thumb', 'mp-big-art', 'mp-backdrop', 'tb-art'].forEach(function (id) { const el = $(id); if (el) el.style.backgroundImage = "url('" + art + "')"; });
+    const set = function (id, txt) { const el = $(id); if (el) el.textContent = txt; };
+    set('mp-title', t.title); set('mp-big-title', t.title); set('mp-big-artist', t.artist);
+    const yt = $('mp-yt'); if (yt) yt.href = 'https://youtu.be/' + t.id;
+  }
+  applyTrackMeta(0);
+  function loadTrack(i) {
+    currentTrack = ((i % PLAYLIST.length) + PLAYLIST.length) % PLAYLIST.length;
+    applyTrackMeta(currentTrack);
+    wantPlay = true;
+    if (ytReady) { try { ytPlayer.loadVideoById(PLAYLIST[currentTrack].id); } catch (e) {} }
+  }
 
   function setVisuals(playing) {
     isPlaying = playing;
@@ -296,7 +327,7 @@
     if (typeof YT === 'undefined' || !YT.Player) { ytError = true; return; }
     try {
       ytPlayer = new YT.Player('yt-music-iframe', {
-        videoId: CONFIG.ytVideoId,
+        videoId: PLAYLIST[currentTrack].id,
         playerVars: { autoplay: 0, controls: 0, disablekb: 1, modestbranding: 1, playsinline: 1, rel: 0, iv_load_policy: 3 },
         events: {
           onReady: function () {
@@ -308,7 +339,10 @@
             if (e.data === 1) { setVisuals(true); progressLoop(); }
             else if (e.data === 2) { setVisuals(false); }
             else if (e.data === 0) {
-              if (wantPlay) { try { ytPlayer.seekTo(0); ytPlayer.playVideo(); } catch (er) {} }
+              if (wantPlay) {
+                if (PLAYLIST.length > 1) { loadTrack(currentTrack + 1); }
+                else { try { ytPlayer.seekTo(0); ytPlayer.playVideo(); } catch (er) {} }
+              }
               else setVisuals(false);
             }
           },
@@ -362,6 +396,10 @@
   function updateVolIcon(v) { var n = Number(v); if (mpVolIcon) mpVolIcon.textContent = (n === 0) ? 'volume_off' : (n < 50 ? 'volume_down' : 'volume_up'); }
   if (mpVol) mpVol.addEventListener('input', function (e) { var v = e.target.value; setVolume(v); updateVolIcon(v); });
   const mpExpand = $('mp-expand'); if (mpExpand) mpExpand.addEventListener('click', function () { if (miniPlayer) miniPlayer.classList.toggle('expanded'); });
+  const mpPrev = $('mp-prev'), mpNext = $('mp-next');
+  if (mpPrev) mpPrev.addEventListener('click', function () { loadTrack(currentTrack - 1); });
+  if (mpNext) mpNext.addEventListener('click', function () { loadTrack(currentTrack + 1); });
+  if (PLAYLIST.length < 2) { if (mpPrev) mpPrev.style.display = 'none'; if (mpNext) mpNext.style.display = 'none'; }
   // Seek bar (click + drag).
   const seekBar = $('mp-seek-bar');
   if (seekBar) {

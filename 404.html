@@ -95,9 +95,10 @@
     }
     .theme-toggle:hover { border-color: var(--border-hover); transform: translateY(-2px); }
     .theme-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .icon-sun { display: none; }
-    html.light .icon-moon { display: none; }
-    html.light .icon-sun { display: block; }
+    .icon-auto, .icon-sun, .icon-moon { display: none; }
+    .theme-toggle.mode-auto .icon-auto,
+    .theme-toggle.mode-light .icon-sun,
+    .theme-toggle.mode-dark .icon-moon { display: block; }
 
     /* ── Card ── */
     .wrap { position: relative; z-index: 2; width: 100%; max-width: 600px; text-align: center; }
@@ -206,9 +207,10 @@
   <canvas class="particles" id="particles"></canvas>
   <div class="cursor-glow" id="cursor-glow"></div>
 
-  <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" title="Toggle theme">
+  <button class="theme-toggle mode-auto" id="theme-toggle" aria-label="Toggle theme" title="Toggle theme">
     <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
     <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.4M12 19.6V22M2 12h2.4M19.6 12H22M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M19.4 4.6l-1.7 1.7M6.3 17.7l-1.7 1.7"/></svg>
+    <svg class="icon-auto" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2v16a8 8 0 0 1 0-16z"/></svg>
   </button>
 
   <main class="wrap">
@@ -259,14 +261,20 @@
   (function () {
     'use strict';
 
-    /* ── Theme (persisted, matches main site key) ── */
+    /* ── Theme (3-state: auto / light / dark, matches main site key) ── */
     var root = document.documentElement;
-    try { if (localStorage.getItem('theme') === 'light') root.classList.add('light'); } catch (e) {}
+    var MODES = ['auto', 'light', 'dark'];
+    var mode = 'auto'; try { if (MODES.indexOf(localStorage.getItem('theme')) !== -1) mode = localStorage.getItem('theme'); } catch (e) {}
+    var mq = window.matchMedia('(prefers-color-scheme: light)');
+    function isLight(m) { if (m === 'light') return true; if (m === 'dark') return false; return mq.matches; }
+    function apply(m) {
+      mode = m; root.classList.toggle('light', isLight(m));
+      var b = document.getElementById('theme-toggle'); if (b) { b.classList.remove('mode-auto', 'mode-light', 'mode-dark'); b.classList.add('mode-' + m); }
+    }
+    apply(mode);
+    if (mq.addEventListener) mq.addEventListener('change', function () { if (mode === 'auto') apply('auto'); });
     var tt = document.getElementById('theme-toggle');
-    if (tt) tt.addEventListener('click', function () {
-      var light = root.classList.toggle('light');
-      try { localStorage.setItem('theme', light ? 'light' : 'dark'); } catch (e) {}
-    });
+    if (tt) tt.addEventListener('click', function () { var next = MODES[(MODES.indexOf(mode) + 1) % MODES.length]; try { localStorage.setItem('theme', next); } catch (e) {} apply(next); });
 
     /* ── Bad path into terminal ── */
     try {
@@ -360,5 +368,5 @@
     })();
   })();
   </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a202480a08113a28',t:'MTc4NDg4OTM2MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
