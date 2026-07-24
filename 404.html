@@ -3,50 +3,56 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="color-scheme" content="dark light"/>
   <title>404 — Yatin Sharma</title>
+  <meta name="robots" content="noindex"/>
+  <meta name="description" content="Page not found — Yatin Sharma's portfolio."/>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%2305050a'/%3E%3Ctext x='50' y='70' font-size='60' font-family='sans-serif' font-weight='bold' text-anchor='middle' fill='%2300c8ff'%3EY%3C/text%3E%3C/svg%3E"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
       --bg: #05050a;
-      --surface: rgba(8,8,12,0.8);
+      --surface: rgba(14,14,20,0.72);
       --white: #ffffff;
-      --gray: rgba(255,255,255,0.5);
-      --gray-dim: rgba(255,255,255,0.25);
-      --border: rgba(255,255,255,0.08);
-      --border-hover: rgba(255,255,255,0.18);
+      --gray: rgba(255,255,255,0.55);
+      --gray-dim: rgba(255,255,255,0.3);
+      --border: rgba(255,255,255,0.09);
+      --border-hover: rgba(255,255,255,0.2);
       --accent: #00c8ff;
       --accent2: #7850ff;
-      --grid: rgba(255,255,255,0.02);
-      --term-bg: rgba(8,8,12,0.8);
-      --pill-bg: rgba(12,12,12,0.6);
-      --pill-border: rgba(255,255,255,0.08);
-      --pill-hover: rgba(255,255,255,0.05);
+      --grid: rgba(255,255,255,0.028);
+      --pill-bg: rgba(255,255,255,0.04);
+      --pill-hover: rgba(255,255,255,0.07);
+      --err: #ff6b6b;
+      --ok: #34d399;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Inter', system-ui, sans-serif;
     }
-
     html.light {
       --bg: #f0f0f8;
-      --surface: rgba(240,240,248,0.9);
+      --surface: rgba(255,255,255,0.78);
       --white: #1a1a2e;
-      --gray: rgba(80,80,120,0.6);
-      --gray-dim: rgba(80,80,120,0.35);
-      --border: rgba(80,80,140,0.14);
-      --border-hover: rgba(80,80,140,0.32);
+      --gray: rgba(80,80,120,0.7);
+      --gray-dim: rgba(80,80,120,0.4);
+      --border: rgba(80,80,140,0.16);
+      --border-hover: rgba(80,80,140,0.34);
       --accent: #0077cc;
       --accent2: #6c3ce0;
-      --grid: rgba(100,80,200,0.06);
-      --term-bg: rgba(240,240,248,0.9);
+      --grid: rgba(100,80,200,0.07);
       --pill-bg: rgba(255,255,255,0.6);
-      --pill-border: rgba(80,80,140,0.14);
-      --pill-hover: rgba(0,0,0,0.03);
+      --pill-hover: rgba(0,0,0,0.04);
     }
 
+    html { font-size: 16px; }
     body {
       background: var(--bg); color: var(--white);
-      font-family: 'Inter', sans-serif;
+      font-family: var(--sans);
       min-height: 100vh; display: flex; align-items: center; justify-content: center;
-      overflow-x: hidden; position: relative;
+      overflow-x: hidden; position: relative; padding: 32px 20px;
       -webkit-font-smoothing: antialiased;
     }
 
@@ -57,395 +63,301 @@
         linear-gradient(var(--grid) 1px, transparent 1px),
         linear-gradient(90deg, var(--grid) 1px, transparent 1px);
       background-size: 56px 56px;
+      mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, #000 40%, transparent 100%);
+      -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, #000 40%, transparent 100%);
     }
     body::before {
       content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
       background:
-        radial-gradient(ellipse 60% 50% at 50% 30%, rgba(0,200,255,0.06), transparent 60%),
-        radial-gradient(ellipse 40% 40% at 80% 80%, rgba(120,80,255,0.04), transparent 60%);
+        radial-gradient(ellipse 55% 45% at 18% 22%, rgba(0,200,255,0.10), transparent 60%),
+        radial-gradient(ellipse 50% 40% at 82% 78%, rgba(120,80,255,0.10), transparent 60%);
     }
-    html.light body::before {
-      background:
-        radial-gradient(ellipse 60% 50% at 50% 30%, rgba(100,80,220,0.05), transparent 60%),
-        radial-gradient(ellipse 40% 40% at 80% 80%, rgba(120,80,255,0.03), transparent 60%);
-    }
-
-    /* ── Particles canvas ── */
-    .particles { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.4; }
-    html.light .particles { opacity: 0.7; }
-
-    /* ── Cursor glow ── */
+    .particles { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.5; }
+    html.light .particles { opacity: 0.75; }
     .cursor-glow {
-      position: fixed; width: 300px; height: 300px; border-radius: 50%;
+      position: fixed; width: 360px; height: 360px; border-radius: 50%;
       background: radial-gradient(circle, rgba(0,200,255,0.08), transparent 60%);
-      pointer-events: none; z-index: 9998; transform: translate(-50%, -50%);
+      pointer-events: none; z-index: 1; transform: translate(-50%, -50%);
       transition: opacity 0.3s ease; opacity: 0;
     }
-    html.light .cursor-glow { background: radial-gradient(circle, rgba(100,80,220,0.1), transparent 60%); }
+    html.light .cursor-glow { background: radial-gradient(circle, rgba(108,60,224,0.1), transparent 60%); }
     @media (hover: hover) { body:hover .cursor-glow { opacity: 1; } }
     @media (hover: none) { .cursor-glow { display: none; } }
 
-    /* ── Container ── */
-    .container { position: relative; z-index: 1; text-align: center; padding: 40px 24px; max-width: 560px; width: 100%; }
+    /* ── Theme toggle ── */
+    .theme-toggle {
+      position: fixed; top: 18px; right: 18px; z-index: 20;
+      width: 42px; height: 42px; border-radius: 50%;
+      background: var(--surface); border: 1px solid var(--border);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      color: var(--white); cursor: pointer; display: grid; place-items: center;
+      transition: border-color 0.2s ease, transform 0.15s ease;
+    }
+    .theme-toggle:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+    .theme-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .icon-sun { display: none; }
+    html.light .icon-moon { display: none; }
+    html.light .icon-sun { display: block; }
 
-    /* ── Terminal ── */
-    .terminal {
-      max-width: 460px; margin: 0 auto 36px; text-align: left;
-      background: var(--term-bg); border: 1px solid rgba(0,200,255,0.2); border-radius: 12px;
-      overflow: hidden; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 30px rgba(0,200,255,0.05);
+    /* ── Card ── */
+    .wrap { position: relative; z-index: 2; width: 100%; max-width: 600px; text-align: center; }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--gray); padding: 7px 14px; border-radius: 999px;
+      background: var(--pill-bg); border: 1px solid var(--border); margin-bottom: 26px;
     }
-    html.light .terminal {
-      border-color: rgba(0,0,0,0.1);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.08), 0 0 30px rgba(0,200,255,0.03);
-    }
-    .term-dots { display: flex; gap: 6px; padding: 12px 16px; background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.06); }
-    .term-dots i { width: 10px; height: 10px; border-radius: 50%; }
-    .term-dots i:nth-child(1) { background: #ff5f57; }
-    .term-dots i:nth-child(2) { background: #febc2e; }
-    .term-dots i:nth-child(3) { background: #28c840; }
-    .term-body { padding: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.9; min-height: 130px; }
-    .term-line { opacity: 0; transform: translateY(6px); transition: opacity 0.3s ease, transform 0.3s ease; }
-    .term-line.visible { opacity: 1; transform: translateY(0); }
-    .cmd { color: var(--accent); }
-    .err { color: #ff6b6b; }
-    .ok { color: #34d399; }
-    .dim { color: var(--gray-dim); }
-    .term-caret {
-      display: inline-block; width: 8px; height: 14px; background: var(--accent);
-      animation: blink 1s step-end infinite; vertical-align: text-bottom;
-    }
-    @keyframes blink { 0%,50% { opacity: 1; } 50.01%,100% { opacity: 0; } }
+    .status-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--err); box-shadow: 0 0 10px var(--err); animation: pulse 1.6s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
 
-    /* ── Glitch 404 heading ── */
-    h1 {
-      font-size: clamp(56px, 12vw, 110px); font-weight: 900;
-      letter-spacing: -0.04em; line-height: 1; margin-bottom: 16px;
-      position: relative; display: inline-block;
+    h1.code {
+      font-size: clamp(78px, 17vw, 150px); font-weight: 900;
+      letter-spacing: -0.05em; line-height: 0.9; margin-bottom: 18px;
+      display: inline-flex; gap: 0.02em;
     }
-    h1 .digit {
-      display: inline-block; position: relative;
-      background: linear-gradient(120deg, #00c8ff, #7850ff, #00f0b4, #00c8ff);
+    h1.code .digit {
+      background: linear-gradient(120deg, var(--accent), var(--accent2), #00f0b4, var(--accent));
       background-size: 300% auto; -webkit-background-clip: text; background-clip: text;
       -webkit-text-fill-color: transparent; color: transparent;
       animation: aurora 8s linear infinite;
-      transition: transform 0.1s ease;
+      transition: transform 0.12s ease, filter 0.12s ease;
     }
-    h1 .digit.scrambling {
-      animation: aurora 8s linear infinite, digitGlitch 0.08s steps(2) infinite;
-      filter: blur(0.5px);
-    }
-    h1 .digit.locked {
-      filter: none;
-      animation: aurora 8s linear infinite, digitLock 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
+    h1.code .digit.scrambling { animation: aurora 8s linear infinite, glitch 0.08s steps(2) infinite; filter: blur(0.4px); }
+    h1.code .digit.locked { animation: aurora 8s linear infinite, lock 0.3s cubic-bezier(0.34,1.56,0.64,1); }
     @keyframes aurora { to { background-position: 300% center; } }
-    @keyframes digitGlitch {
-      0%   { transform: translate(2px, -1px) skewX(-2deg); }
-      25%  { transform: translate(-1px, 2px) skewX(1deg); }
-      50%  { transform: translate(1px, -2px) skewX(-1deg); }
-      75%  { transform: translate(-2px, 1px) skewX(2deg); }
-      100% { transform: translate(2px, -1px) skewX(-2deg); }
+    @keyframes glitch {
+      0% { transform: translate(2px,-1px) skewX(-3deg); }
+      50% { transform: translate(-1px,2px) skewX(2deg); }
+      100% { transform: translate(2px,-1px) skewX(-3deg); }
     }
-    @keyframes digitLock {
-      0%   { transform: scale(1); }
-      40%  { transform: scale(1.2); filter: blur(0); }
-      100% { transform: scale(1); }
-    }
+    @keyframes lock { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
 
-    /* ── Description ── */
-    .desc {
-      font-size: 16px; color: var(--gray); margin-bottom: 32px;
-      max-width: 420px; margin-left: auto; margin-right: auto; line-height: 1.6;
+    .lead { font-size: clamp(22px, 4vw, 30px); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 10px; }
+    .lead em { font-style: normal; background: linear-gradient(120deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+    .sub { font-size: 15px; color: var(--gray); max-width: 440px; margin: 0 auto 30px; line-height: 1.6; }
+
+    /* ── Terminal ── */
+    .term {
+      max-width: 460px; margin: 0 auto 30px; text-align: left;
+      background: var(--surface); border: 1px solid rgba(0,200,255,0.18);
+      border-radius: 14px; overflow: hidden;
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.45), 0 0 30px rgba(0,200,255,0.05);
+      cursor: pointer; transition: border-color 0.2s ease;
     }
+    .term:hover { border-color: rgba(0,200,255,0.4); }
+    .term-dots { display: flex; gap: 7px; padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--pill-bg); }
+    .term-dots i { width: 11px; height: 11px; border-radius: 50%; }
+    .term-dots i:nth-child(1) { background: #ff5f57; }
+    .term-dots i:nth-child(2) { background: #febc2e; }
+    .term-dots i:nth-child(3) { background: #28c840; }
+    .term-dots .term-title { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--gray-dim); }
+    .term-body { padding: 18px 20px; font-family: var(--mono); font-size: 13px; line-height: 1.9; min-height: 120px; }
+    .term-line { opacity: 0; transform: translateY(6px); transition: opacity 0.35s ease, transform 0.35s ease; }
+    .term-line.visible { opacity: 1; transform: translateY(0); }
+    .cmd { color: var(--accent); }
+    .err { color: var(--err); }
+    .ok { color: var(--ok); }
+    .dim { color: var(--gray-dim); }
+    .term-hint { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); text-align: center; margin-top: 14px; }
+    .term-caret { display: inline-block; width: 8px; height: 14px; background: var(--accent); vertical-align: text-bottom; animation: blink 1s step-end infinite; }
+    @keyframes blink { 0%,50% { opacity: 1; } 50.01%,100% { opacity: 0; } }
 
     /* ── Buttons ── */
-    .btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 40px; }
+    .btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 32px; }
     .btn {
       display: inline-flex; align-items: center; gap: 8px;
-      padding: 14px 28px; border-radius: 999px;
-      font-size: 14px; font-weight: 700; text-decoration: none;
-      background: var(--white); color: #05050a; border: 1.5px solid var(--white);
-      transition: all 0.22s cubic-bezier(0.22,1,0.36,1);
+      padding: 14px 26px; border-radius: 999px;
+      font-size: 14px; font-weight: 700; text-decoration: none; cursor: pointer;
+      transition: transform 0.18s cubic-bezier(0.22,1,0.36,1), box-shadow 0.25s ease, background 0.2s ease, border-color 0.2s ease;
     }
-    .btn:hover { box-shadow: 0 0 28px rgba(0,200,255,0.3); transform: translateY(-2px); }
-    .btn-ghost {
-      background: transparent; color: var(--white); border-color: var(--border-hover);
-    }
-    .btn-ghost:hover { background: var(--pill-hover); border-color: var(--white); }
-    html.light .btn { background: var(--white); color: #fff; }
-    html.light .btn-ghost { border-color: rgba(80,80,140,0.3); }
+    .btn-primary { background: var(--white); color: #05050a; border: 1.5px solid var(--white); }
+    html.light .btn-primary { color: #fff; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 28px rgba(0,200,255,0.35); }
+    .btn-ghost { background: transparent; color: var(--white); border: 1.5px solid var(--border-hover); }
+    .btn-ghost:hover { transform: translateY(-2px); background: var(--pill-hover); border-color: var(--white); }
+    .btn svg { width: 16px; height: 16px; fill: currentColor; }
 
-    /* ── Quick-link pills ── */
-    .quick-links-label {
-      font-family: 'JetBrains Mono', monospace; font-size: 10px;
-      letter-spacing: 0.2em; color: var(--gray-dim); margin-bottom: 14px;
-      text-transform: uppercase;
-    }
-    .quick-links {
-      display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
-    }
-    .quick-link {
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 18px; border-radius: 999px;
-      background: var(--pill-bg); border: 1px solid var(--pill-border);
+    /* ── Quick pills ── */
+    .pills-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gray-dim); margin-bottom: 14px; }
+    .pills { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 34px; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 16px; border-radius: 999px;
+      background: var(--pill-bg); border: 1px solid var(--border);
       color: var(--gray); text-decoration: none; font-size: 13px; font-weight: 600;
       backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      transition: all 0.22s ease;
+      transition: transform 0.18s ease, color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
     }
-    .quick-link:hover {
-      border-color: var(--border-hover); color: var(--white);
-      transform: translateY(-2px); background: var(--pill-hover);
-      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-    }
-    html.light .quick-link:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.06); }
-    .quick-link-icon { font-size: 16px; }
+    .pill:hover { transform: translateY(-2px); color: var(--white); border-color: var(--border-hover); background: var(--pill-hover); }
+    .pill .ic { font-size: 15px; }
 
-    /* ── Easter egg response (hidden initially) ── */
-    .easter-egg {
-      margin-top: 28px; font-family: 'JetBrains Mono', monospace;
-      font-size: 12px; color: var(--gray-dim); opacity: 0;
-      transition: opacity 0.5s ease;
-    }
-    .easter-egg.visible { opacity: 1; }
-    .easter-egg .sudo-err { color: #ff6b6b; }
-    .easter-egg .sudo-hint { color: #34d399; }
+    .foot { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); }
+    .foot a { color: var(--accent); text-decoration: none; }
 
-    /* ── Responsive ── */
-    @media (max-width: 500px) {
-      .btns { flex-direction: column; align-items: center; }
-      .btn { width: 100%; max-width: 260px; justify-content: center; }
-      .quick-links { gap: 8px; }
-      .quick-link { padding: 8px 14px; font-size: 12px; }
+    @media (max-width: 520px) {
+      .btns { flex-direction: column; align-items: stretch; }
+      .btn { justify-content: center; }
     }
   </style>
 </head>
 <body>
-  <!-- Background layers -->
   <div class="grid-bg"></div>
   <canvas class="particles" id="particles"></canvas>
   <div class="cursor-glow" id="cursor-glow"></div>
 
-  <div class="container">
-    <!-- Terminal -->
-    <div class="terminal" id="terminal">
-      <div class="term-dots"><i></i><i></i><i></i></div>
-      <div class="term-body" id="term-body">
-        <div class="term-line" id="tl1"><span class="cmd">$</span> navigate <span class="dim" id="bad-path">/undefined-route</span></div>
-        <div class="term-line" id="tl2"><span class="err">Error: Route not found (404)</span></div>
-        <div class="term-line" id="tl3"><span class="cmd">$</span> <span class="ok">suggest</span> --fix</div>
-        <div class="term-line" id="tl4"><span class="ok">→ Try going home. Or pick a section below.</span><span class="term-caret"></span></div>
-      </div>
-    </div>
+  <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" title="Toggle theme">
+    <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.4M12 19.6V22M2 12h2.4M19.6 12H22M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M19.4 4.6l-1.7 1.7M6.3 17.7l-1.7 1.7"/></svg>
+  </button>
 
-    <!-- Glitch 404 -->
-    <h1>
+  <main class="wrap">
+    <div class="status-pill"><span class="dot"></span> Error 404 · page not found</div>
+
+    <h1 class="code">
       <span class="digit" data-i="0">4</span><span class="digit" data-i="1">0</span><span class="digit" data-i="2">4</span>
     </h1>
 
-    <!-- Copy -->
-    <p class="desc">The route you hit doesn't exist. Maybe a typo, maybe a dead link, maybe this page is still shipping.</p>
+    <p class="lead">Lost in the <em>stack.</em></p>
+    <p class="sub">The route you hit doesn't exist — maybe a typo, a stale link, or a page that never shipped. Pick a real destination below, or head back home.</p>
 
-    <!-- Buttons -->
+    <div class="term" id="terminal">
+      <div class="term-dots"><i></i><i></i><i></i><span class="term-title">yatin@portfolio — zsh</span></div>
+      <div class="term-body" id="term-body">
+        <div class="term-line" id="tl1"><span class="cmd">$</span> navigate <span class="dim" id="bad-path">/undefined-route</span></div>
+        <div class="term-line" id="tl2"><span class="err">✗ route not found (404)</span></div>
+        <div class="term-line" id="tl3"><span class="cmd">$</span> <span class="ok">suggest --fix</span></div>
+        <div class="term-line" id="tl4"><span class="ok">→ use a link below, or go home.</span><span class="term-caret"></span></div>
+      </div>
+    </div>
+    <p class="term-hint">tip: click the terminal</p>
+
     <div class="btns">
-      <a href="/" class="btn">← Back to Home</a>
-      <a href="https://github.com/YatinSharma1303" target="_blank" rel="noopener" class="btn btn-ghost">GitHub ↗</a>
+      <a href="/" class="btn btn-primary">
+        <svg viewBox="0 0 24 24"><path d="M12 5l-7 7 1.4 1.4L11 8.8V19h2V8.8l4.6 4.6L19 12z"/></svg>
+        Back to Home
+      </a>
+      <a href="https://github.com/YatinSharma1303" target="_blank" rel="noopener" class="btn btn-ghost">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.09.68-.22.68-.48 0-.24-.01-.87-.01-1.7-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02A9.56 9.56 0 0 1 12 6.8c.85 0 1.71.11 2.51.34 1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85 0 1.34-.01 2.42-.01 2.75 0 .27.18.58.69.48A10 10 0 0 0 22 12c0-5.52-4.48-10-10-10z"/></svg>
+        GitHub
+      </a>
     </div>
 
-    <!-- Quick-link pills -->
-    <div class="quick-links-label">Quick navigation</div>
-    <div class="quick-links">
-      <a href="/#about" class="quick-link"><span class="quick-link-icon">👤</span> About</a>
-      <a href="/#projects" class="quick-link"><span class="quick-link-icon">📁</span> Projects</a>
-      <a href="/#ama" class="quick-link"><span class="quick-link-icon">💬</span> Ask</a>
-      <a href="/#playground" class="quick-link"><span class="quick-link-icon">🎮</span> Playground</a>
-    </div>
+    <div class="pills-label">Quick navigation</div>
+    <nav class="pills">
+      <a href="/#about" class="pill"><span class="ic">👤</span> About</a>
+      <a href="/#projects" class="pill"><span class="ic">📁</span> Projects</a>
+      <a href="/#music" class="pill"><span class="ic">🎵</span> Music</a>
+      <a href="/#ama" class="pill"><span class="ic">💬</span> Ask</a>
+      <a href="/#playground" class="pill"><span class="ic">🎮</span> Playground</a>
+    </nav>
 
-    <!-- Easter egg -->
-    <div class="easter-egg" id="easter-egg">
-      <span class="sudo-err">sudo: permission denied</span> — <span class="sudo-hint">Try going home instead ↗</span>
-    </div>
-  </div>
+    <p class="foot">© <span id="year"></span> Yatin Sharma · <a href="/">portfolio.yatinsharma.me</a></p>
+  </main>
 
   <script>
-  (function() {
+  (function () {
     'use strict';
 
-    /* ── 1. Light mode: read from localStorage ── */
-    try {
-      if (localStorage.getItem('theme') === 'light') {
-        document.documentElement.classList.add('light');
-      }
-    } catch(e) {}
-
-    /* ── 2. Animated terminal typing ── */
-    var lines = ['tl1','tl2','tl3','tl4'].map(id => document.getElementById(id));
-    var badPath = document.getElementById('bad-path');
-
-    // Show the actual bad URL
-    try {
-      var path = window.location.pathname;
-      if (badPath && path && path !== '/') badPath.textContent = path;
-    } catch(e) {}
-
-    lines.forEach(function(l, i) {
-      setTimeout(function() {
-        if (l) l.classList.add('visible');
-      }, 400 + i * 500);
+    /* ── Theme (persisted, matches main site key) ── */
+    var root = document.documentElement;
+    try { if (localStorage.getItem('theme') === 'light') root.classList.add('light'); } catch (e) {}
+    var tt = document.getElementById('theme-toggle');
+    if (tt) tt.addEventListener('click', function () {
+      var light = root.classList.toggle('light');
+      try { localStorage.setItem('theme', light ? 'light' : 'dark'); } catch (e) {}
     });
 
-    /* ── 3. Glitch 404 scramble ── */
-    var digits = document.querySelectorAll('.digit');
-    var TARGETS = ['4','0','4'];
-    var SCRAMBLE_CHARS = '0123456789#@&%!?'.split('');
-    var scrambleInterval = null;
+    /* ── Bad path into terminal ── */
+    try {
+      var path = window.location.pathname;
+      var bp = document.getElementById('bad-path');
+      if (bp && path && path !== '/') bp.textContent = decodeURIComponent(path);
+    } catch (e) {}
 
-    // Start scrambling all digits
-    scrambleInterval = setInterval(function() {
-      digits.forEach(function(d, i) {
+    /* ── Year ── */
+    var y = document.getElementById('year'); if (y) y.textContent = new Date().getFullYear();
+
+    /* ── Glitch 404 scramble → lock ── */
+    var digits = document.querySelectorAll('.code .digit');
+    var TARGETS = ['4', '0', '4'];
+    var CHARS = '0123456789#@&%!?/\\*'.split('');
+    var scramble = setInterval(function () {
+      digits.forEach(function (d, i) {
         if (d.classList.contains('locked')) return;
-        d.textContent = SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+        d.textContent = CHARS[Math.floor(Math.random() * CHARS.length)];
         d.classList.add('scrambling');
       });
     }, 70);
-
-    // Lock digits one by one with a stagger
-    digits.forEach(function(d, i) {
-      setTimeout(function() {
+    digits.forEach(function (d, i) {
+      setTimeout(function () {
         d.textContent = TARGETS[i];
         d.classList.remove('scrambling');
         d.classList.add('locked');
-        // Clear interval after last digit
-        if (i === digits.length - 1 && scrambleInterval) {
-          clearInterval(scrambleInterval);
-        }
-      }, 800 + i * 350);
+        if (i === digits.length - 1) clearInterval(scramble);
+      }, 700 + i * 320);
     });
 
-    /* ── 4. Easter egg: click terminal → sudo fix ── */
-    var terminal = document.getElementById('terminal');
-    var easterEgg = document.getElementById('easter-egg');
-    var easterEggTriggered = false;
+    /* ── Terminal typed reveal ── */
+    var lines = ['tl1', 'tl2', 'tl3', 'tl4'].map(function (id) { return document.getElementById(id); });
+    lines.forEach(function (l, i) {
+      setTimeout(function () { if (l) l.classList.add('visible'); }, 500 + i * 520);
+    });
 
-    if (terminal) {
-      terminal.style.cursor = 'pointer';
-      terminal.addEventListener('click', function() {
-        if (easterEggTriggered) return;
-        easterEggTriggered = true;
+    /* ── Easter egg: click terminal → sudo ── */
+    var term = document.getElementById('terminal');
+    var eggDone = false;
+    if (term) term.addEventListener('click', function () {
+      if (eggDone) return; eggDone = true;
+      var body = document.getElementById('term-body'); if (!body) return;
+      var oldCaret = body.querySelector('.term-caret'); if (oldCaret) oldCaret.remove();
+      var a = document.createElement('div'); a.className = 'term-line';
+      a.innerHTML = '<span class="cmd">$</span> sudo fix ' + (window.location.pathname || '/broken');
+      body.appendChild(a);
+      var b = document.createElement('div'); b.className = 'term-line';
+      b.innerHTML = '<span class="err">sudo: permission denied</span> <span class="dim">— are you root? 😏</span><span class="term-caret"></span>';
+      body.appendChild(b);
+      setTimeout(function () { a.classList.add('visible'); }, 60);
+      setTimeout(function () { b.classList.add('visible'); }, 560);
+    });
 
-        // Append sudo command to terminal
-        var body = document.getElementById('term-body');
-        if (!body) return;
-
-        var sudoLine = document.createElement('div');
-        sudoLine.className = 'term-line';
-        sudoLine.innerHTML = '<span class="cmd">$</span> sudo fix ' + (window.location.pathname || '/broken');
-        body.appendChild(sudoLine);
-
-        var responseLine = document.createElement('div');
-        responseLine.className = 'term-line';
-        responseLine.innerHTML = '<span class="err">sudo: permission denied</span> <span class="dim">— are you root? 😏</span>';
-        body.appendChild(responseLine);
-
-        // Remove caret from last original line
-        var oldCaret = body.querySelector('.term-caret');
-        if (oldCaret) oldCaret.remove();
-
-        // Add new caret to response
-        var newCaret = document.createElement('span');
-        newCaret.className = 'term-caret';
-        responseLine.appendChild(newCaret);
-
-        // Animate in
-        setTimeout(function() { sudoLine.classList.add('visible'); }, 100);
-        setTimeout(function() { responseLine.classList.add('visible'); }, 600);
-
-        // Show the hint below
-        if (easterEgg) {
-          setTimeout(function() { easterEgg.classList.add('visible'); }, 900);
-        }
-      });
-    }
-
-    /* ── 5. Lightweight particles ── */
-    (function particles() {
-      var canvas = document.getElementById('particles');
-      if (!canvas) return;
-      var ctx = canvas.getContext('2d');
-      var dots = [], w, h;
-
+    /* ── Particles ── */
+    (function () {
+      var canvas = document.getElementById('particles'); if (!canvas) return;
+      var ctx = canvas.getContext('2d'); var dots = [], w, h;
       function init() {
-        w = canvas.width = window.innerWidth;
-        h = canvas.height = window.innerHeight;
-        var count = Math.min(40, Math.floor(w * h / 30000));
-        dots = [];
-        for (var i = 0; i < count; i++) {
-          dots.push({
-            x: Math.random() * w,
-            y: Math.random() * h,
-            vx: (Math.random() - 0.5) * 0.25,
-            vy: (Math.random() - 0.5) * 0.25
-          });
-        }
+        w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight;
+        var count = Math.min(46, Math.floor(w * h / 28000)); dots = [];
+        for (var i = 0; i < count; i++) dots.push({ x: Math.random()*w, y: Math.random()*h, vx: (Math.random()-0.5)*0.28, vy: (Math.random()-0.5)*0.28 });
       }
-
       function draw() {
         ctx.clearRect(0, 0, w, h);
-        var isLight = document.documentElement.classList.contains('light');
-        var lineColor = isLight ? '80, 80, 180' : '0, 200, 255';
-        var dotColor = isLight ? 'rgba(80,80,180,0.5)' : 'rgba(120,200,255,0.5)';
-        var lineOpacity = isLight ? 0.2 : 0.1;
-
+        var light = root.classList.contains('light');
+        var lineC = light ? '80,80,180' : '0,200,255';
+        var dotC = light ? 'rgba(80,80,180,0.55)' : 'rgba(120,200,255,0.55)';
+        var lineO = light ? 0.18 : 0.1;
         for (var i = 0; i < dots.length; i++) {
-          var d = dots[i];
-          d.x += d.vx; d.y += d.vy;
-          if (d.x < 0 || d.x > w) d.vx *= -1;
-          if (d.y < 0 || d.y > h) d.vy *= -1;
-
+          var d = dots[i]; d.x += d.vx; d.y += d.vy;
+          if (d.x < 0 || d.x > w) d.vx *= -1; if (d.y < 0 || d.y > h) d.vy *= -1;
           for (var j = i + 1; j < dots.length; j++) {
-            var d2 = dots[j];
-            var dx = d.x - d2.x, dy = d.y - d2.y;
-            var dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 120) {
-              ctx.strokeStyle = 'rgba(' + lineColor + ',' + (lineOpacity * (1 - dist / 120)) + ')';
-              ctx.lineWidth = 1;
-              ctx.beginPath();
-              ctx.moveTo(d.x, d.y);
-              ctx.lineTo(d2.x, d2.y);
-              ctx.stroke();
-            }
+            var d2 = dots[j], dx = d.x - d2.x, dy = d.y - d2.y, dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < 124) { ctx.strokeStyle = 'rgba(' + lineC + ',' + (lineO * (1 - dist/124)) + ')'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d2.x, d2.y); ctx.stroke(); }
           }
         }
-
-        ctx.fillStyle = dotColor;
-        for (var i = 0; i < dots.length; i++) {
-          ctx.beginPath();
-          ctx.arc(dots[i].x, dots[i].y, 1.5, 0, 7);
-          ctx.fill();
-        }
-
+        ctx.fillStyle = dotC;
+        for (var k = 0; k < dots.length; k++) { ctx.beginPath(); ctx.arc(dots[k].x, dots[k].y, 1.5, 0, 7); ctx.fill(); }
         requestAnimationFrame(draw);
       }
-
       init(); draw();
-      var resizeTimer;
-      window.addEventListener('resize', function() {
-        clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(init, 200);
-      });
+      var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(init, 200); });
     })();
 
-    /* ── 6. Cursor glow trail ── */
-    (function cursorGlow() {
+    /* ── Cursor glow ── */
+    (function () {
       if (window.matchMedia('(hover: none)').matches) return;
-      var glow = document.getElementById('cursor-glow');
-      if (!glow) return;
-      document.addEventListener('mousemove', function(e) {
-        glow.style.left = e.clientX + 'px';
-        glow.style.top = e.clientY + 'px';
-      });
+      var g = document.getElementById('cursor-glow'); if (!g) return;
+      window.addEventListener('mousemove', function (e) { g.style.left = e.clientX + 'px'; g.style.top = e.clientY + 'px'; });
     })();
-
   })();
   </script>
 </body>
