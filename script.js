@@ -762,16 +762,41 @@
      ============================================================ */
   (function anilist() {
     const list = $('al-list'), tabs = $('al-tabs'); if (!list) return;
+    // 36. MANGA TAB — two datasets keyed by media type; manga lazy-loaded on first switch.
+    const datasets = { ANIME: [], MANGA: [] };
+    const loaded = { ANIME: false, MANGA: false };
+    const loading = { ANIME: false, MANGA: false };
+    let activeMedia = 'ANIME';
     let allEntries = [], activeStatus = 'ALL', page = 1;
     let activeSort = 'updated', activeGenre = '', activeSearch = '';
-    let favSet = new Set(), statsData = null;
+    const favSets = { ANIME: new Set(), MANGA: new Set() };
+    const statsByMedia = { ANIME: null, MANGA: null };
+    let favSet = favSets.ANIME, statsData = null;
     const PER_PAGE = 6;
     const card = list.parentElement;
-    let statsPanel = null, controlsBar = null, genreBar = null, pagerEl = null;
+    let statsPanel = null, controlsBar = null, genreBar = null, pagerEl = null, mediaBar = null;
+    let bannerTimer = null, bannerIdx = 0;
+
+    // Per-media label maps (anime uses episodes/watching, manga uses chapters/reading).
+    const STATUS_TABS = [
+      { status: 'ALL',       ANIME: 'ALL',           MANGA: 'ALL' },
+      { status: 'CURRENT',   ANIME: 'WATCHING',      MANGA: 'READING' },
+      { status: 'COMPLETED', ANIME: 'COMPLETED',     MANGA: 'COMPLETED' },
+      { status: 'REPEATING', ANIME: 'REWATCHING',    MANGA: 'REREADING' },
+      { status: 'PLANNING',  ANIME: 'PLAN TO WATCH', MANGA: 'PLAN TO READ' },
+      { status: 'PAUSED',    ANIME: 'ON HOLD',       MANGA: 'ON HOLD' },
+      { status: 'DROPPED',   ANIME: 'DROPPED',       MANGA: 'DROPPED' }
+    ];
+    const isManga = () => activeMedia === 'MANGA';
+    const unitLong = () => isManga() ? 'chapters' : 'episodes';
+    const unitShort = () => isManga() ? 'ch' : 'eps';
+    const verbPast = () => isManga() ? 'read' : 'watched';
 
     function entryTitle(e) {
       return (e.media && e.media.title && (e.media.title.romaji || e.media.title.english)) || '';
     }
+    // Total units for an entry's media (episodes for anime, chapters for manga).
+    function totalUnits(m) { return (m && (isManga() ? m.chapters : m.episodes)) || 0; }
     function scoreClass(mean) {
       if (!mean) return '';
       if (mean >= 75) return 'al-score-high';
@@ -779,7 +804,33 @@
       return 'al-score-low';
     }
 
+    // 36. Wire the Anime/Manga switcher and keep status-tab labels in sync.
+    function updateTabLabels() {
+      if (!tabs) return;
+      tabs.querySelectorAll('.al-tab').forEach(btn => {
+        const row = STATUS_TABS.find(s => s.status === btn.dataset.status);
+        if (!row) return;
+        let c = btn.querySelector('.al-tab-count');
+        btn.textContent = row[activeMedia] + ' ';
+        if (c) btn.appendChild(c);
+      });
+    }
+    function ensureMediaBar() {
+      if (mediaBar) return;
+      mediaBar = $('al-media');
+      if (!mediaBar) return;
+      mediaBar.addEventListener('click', (e) => {
+        const b = e.target.closest('.al-media-btn'); if (!b) return;
+        const m = b.dataset.media; if (m === activeMedia) return;
+        mediaBar.querySelectorAll('.al-media-btn').forEach(x => {
+          const on = x === b; x.classList.toggle('active', on); x.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        switchMedia(m);
+      });
+    }
+
     function ensureChrome() {
+      ensureMediaBar();
       if (!statsPanel) {
         statsPanel = document.createElement('div');
         statsPanel.className = 'al-stats';
@@ -790,7 +841,7 @@
         controlsBar.className = 'al-controls';
         controlsBar.innerHTML =
           '<div class="al-search-wrap"><span class="material-symbols-outlined al-search-icon">search</span>' +
-          '<input type="text" class="al-search-input" id="al-search" maxlength="60" placeholder="Search anime…" autocomplete="off" aria-label="Search anime">' +
+          '<input type="text" class="al-search-input" id="al-search" maxlength="60" placeholder="Search anime…" autocomplete="off" aria-label="Search titles">' +
           '<button class="al-search-clear" id="al-search-clear" hidden title="Clear" aria-label="Clear search"><span class="material-symbols-outlined">close</span></button></div>' +
           '<div class="al-sort" id="al-sort">' +
             '<button class="al-sort-btn active" data-sort="updated">Updated</button>' +
@@ -817,58 +868,128 @@
       if (!pagerEl) { pagerEl = document.createElement('div'); pagerEl.className = 'al-pagination'; card.appendChild(pagerEl); }
     }
     function loadFallbackAnime() {
-      allEntries = [
+      datasets.ANIME = [
         { _status: 'CURRENT', progress: 52, score: 0, updatedAt: Date.now()/1000, media: { title: { romaji: 'NARUTO', english: 'Naruto' }, coverImage: { large: '' }, episodes: 220, duration: 23, genres: ['Action', 'Adventure'], format: 'TV' } },
         { _status: 'COMPLETED', progress: 64, score: 0, updatedAt: Date.now()/1000 - 10, media: { title: { romaji: 'Hagane no Renkinjutsushi: FULLMETAL ALCHEMIST', english: 'Fullmetal Alchemist: Brotherhood' }, coverImage: { large: '' }, episodes: 64, duration: 25, genres: ['Action', 'Adventure', 'Drama'], format: 'TV' } },
         { _status: 'COMPLETED', progress: 37, score: 0, updatedAt: Date.now()/1000 - 20, media: { title: { romaji: 'DEATH NOTE', english: 'Death Note' }, coverImage: { large: '' }, episodes: 37, duration: 23, genres: ['Mystery', 'Psychological', 'Thriller'], format: 'TV' } }
       ];
-      renderStats(); renderGenres(); updateTabCounts(); render(); renderBanner(allEntries);
+      loaded.ANIME = true;
+      if (activeMedia === 'ANIME') { allEntries = datasets.ANIME; refreshAll(); }
     }
-    const query = `query{user:MediaListCollection(userName:"${CONFIG.anilistUser}",type:ANIME){lists{name status entries{media{id title{romaji english}coverImage{extraLarge large medium}episodes duration meanScore genres format description(asHtml:false)}score progress updatedAt}}}}`;
-    fetch('https://graphql.anilist.co?_=' + Date.now(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query }) })
-      .then(r => { if (!r.ok) throw new Error('AniList HTTP ' + r.status); return r.json(); }).then(d => {
-        if (d.errors) throw new Error(d.errors[0]?.message || 'AniList GraphQL error');
-        const lists = (d.data && d.data.user && d.data.user.lists) || [];
-        allEntries = [];
-        lists.forEach(l => (l.entries || []).forEach(e => { if (e && e.media) { e._status = l.status; allEntries.push(e); } }));
-        if (!allEntries.length) throw new Error('AniList list empty');
-        renderStats(); renderGenres(); updateTabCounts(); render(); renderBanner(allEntries);
-      }).catch((err) => { console.warn('AniList load failed, using fallback:', err); loadFallbackAnime(); });
 
-    // Fetch user avatar, favourites and statistics (separate request)
-    const userQuery = `query{User(name:"${CONFIG.anilistUser}"){avatar{large}favourites{anime{nodes{id}}}statistics{anime{count episodesWatched minutesWatched meanScore genres{genre count}}}}}`;
+    function buildListQuery(type) {
+      const progressFields = type === 'MANGA' ? 'chapters volumes' : 'episodes duration';
+      return `query{user:MediaListCollection(userName:"${CONFIG.anilistUser}",type:${type}){lists{name status entries{media{id title{romaji english}coverImage{extraLarge large medium}${progressFields} meanScore genres format description(asHtml:false)}score progress updatedAt}}}}`;
+    }
+    // Fetch a media list (anime or manga) on demand. Anime falls back to a local list on failure.
+    function loadMedia(type) {
+      if (loaded[type] || loading[type]) return;
+      loading[type] = true;
+      fetch('https://graphql.anilist.co?_=' + Date.now(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: buildListQuery(type) }) })
+        .then(r => { if (!r.ok) throw new Error('AniList HTTP ' + r.status); return r.json(); }).then(d => {
+          if (d.errors) throw new Error(d.errors[0]?.message || 'AniList GraphQL error');
+          const lists = (d.data && d.data.user && d.data.user.lists) || [];
+          const entries = [];
+          lists.forEach(l => (l.entries || []).forEach(e => { if (e && e.media) { e._status = l.status; entries.push(e); } }));
+          if (!entries.length) throw new Error('AniList list empty');
+          datasets[type] = entries; loaded[type] = true; loading[type] = false;
+          if (activeMedia === type) { allEntries = datasets[type]; refreshAll(); }
+        }).catch((err) => {
+          loading[type] = false;
+          console.warn('AniList ' + type + ' load failed:', err);
+          if (type === 'ANIME') loadFallbackAnime();
+          else if (activeMedia === 'MANGA') { list.innerHTML = '<div class="al-empty">Couldn’t load manga list right now.</div>'; }
+        });
+    }
+
+    function refreshAll() { renderStats(); renderGenres(); updateTabCounts(); render(); renderBanner(); }
+
+    // Switch between Anime and Manga: reset filters, lazy-load if needed.
+    function switchMedia(type) {
+      activeMedia = type;
+      allEntries = datasets[type];
+      favSet = favSets[type];
+      statsData = statsByMedia[type];
+      activeStatus = 'ALL'; activeGenre = ''; activeSearch = ''; page = 1;
+      if (tabs) { tabs.querySelectorAll('.al-tab').forEach(b => b.classList.toggle('active', b.dataset.status === 'ALL')); }
+      updateTabLabels();
+      const sub = $('al-sub'); if (sub) sub.textContent = 'AniList · ' + (isManga() ? 'manga list' : 'anime list');
+      const si = $('al-search'); if (si) { si.value = ''; si.placeholder = isManga() ? 'Search manga…' : 'Search anime…'; }
+      const sc = $('al-search-clear'); if (sc) sc.hidden = true;
+      stopBannerRotation();
+      if (!loaded[type]) {
+        list.innerHTML = '<div class="al-empty">Loading ' + (isManga() ? 'manga' : 'anime') + '…</div>';
+        if (statsPanel) statsPanel.innerHTML = ''; if (genreBar) genreBar.innerHTML = '';
+        const banner = $('al-banner'); if (banner) banner.style.display = 'none';
+        updateTabCounts();
+        loadMedia(type);
+      } else {
+        refreshAll();
+      }
+    }
+
+    loadMedia('ANIME');
+
+    // Fetch user avatar, favourites and statistics for both media types (separate request)
+    const userQuery = `query{User(name:"${CONFIG.anilistUser}"){avatar{large}favourites{anime{nodes{id}}manga{nodes{id}}}statistics{anime{count episodesWatched minutesWatched meanScore genres{genre count}}manga{count chaptersRead volumesRead meanScore genres{genre count}}}}}`;
     fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: userQuery }) })
       .then(r => r.json()).then(d => {
         const u = d && d.data && d.data.User; if (!u) return;
         const av = $('al-avatar'); if (av && u.avatar && u.avatar.large) av.src = u.avatar.large;
-        const favNodes = (u.favourites && u.favourites.anime && u.favourites.anime.nodes) || [];
-        favSet = new Set(favNodes.map(n => n && n.id).filter(Boolean));
-        statsData = (u.statistics && u.statistics.anime) || null;
-        renderStats(); render();
+        const fav = u.favourites || {};
+        favSets.ANIME = new Set(((fav.anime && fav.anime.nodes) || []).map(n => n && n.id).filter(Boolean));
+        favSets.MANGA = new Set(((fav.manga && fav.manga.nodes) || []).map(n => n && n.id).filter(Boolean));
+        statsByMedia.ANIME = (u.statistics && u.statistics.anime) || null;
+        statsByMedia.MANGA = (u.statistics && u.statistics.manga) || null;
+        favSet = favSets[activeMedia]; statsData = statsByMedia[activeMedia];
+        renderStats(); if (loaded[activeMedia]) render();
       }).catch(() => {});
     function renderStats() {
       ensureChrome();
-      let count, eps, mins, mean, genres;
-      if (statsData) {
-        count = statsData.count || 0; eps = statsData.episodesWatched || 0;
-        mins = statsData.minutesWatched || 0; mean = statsData.meanScore || 0;
-        genres = (statsData.genres || []).slice();
+      let count, mean, genres, numbers;
+      if (isManga()) {
+        let chapters, volumes;
+        if (statsData) {
+          count = statsData.count || 0; chapters = statsData.chaptersRead || 0;
+          volumes = statsData.volumesRead || 0; mean = statsData.meanScore || 0;
+          genres = (statsData.genres || []).slice();
+        } else {
+          count = allEntries.length;
+          chapters = allEntries.reduce((s, e) => s + (Number(e.progress) || 0), 0);
+          volumes = 0; mean = 0;
+          const gc = {}; allEntries.forEach(e => ((e.media && e.media.genres) || []).forEach(g => gc[g] = (gc[g] || 0) + 1));
+          genres = Object.keys(gc).map(g => ({ genre: g, count: gc[g] }));
+        }
+        if (!count) { statsPanel.innerHTML = ''; return; }
+        numbers = '<div class="al-stat-nums">' +
+          '<span><b>' + count.toLocaleString() + '</b> manga</span>' +
+          '<span><b>' + chapters.toLocaleString() + '</b> chapters</span>' +
+          (volumes ? '<span><b>' + volumes.toLocaleString() + '</b> volumes</span>' : '') +
+          (mean ? '<span><b>' + (mean / 10).toFixed(1) + '</b> mean score</span>' : '') +
+        '</div>';
       } else {
-        count = allEntries.length;
-        eps = allEntries.reduce((s, e) => s + (Number(e.progress) || 0), 0);
-        mins = allEntries.reduce((s, e) => s + (Number(e.progress) || 0) * ((e.media && e.media.duration) || 24), 0);
-        mean = 0;
-        const gc = {}; allEntries.forEach(e => ((e.media && e.media.genres) || []).forEach(g => gc[g] = (gc[g] || 0) + 1));
-        genres = Object.keys(gc).map(g => ({ genre: g, count: gc[g] }));
+        let eps, mins;
+        if (statsData) {
+          count = statsData.count || 0; eps = statsData.episodesWatched || 0;
+          mins = statsData.minutesWatched || 0; mean = statsData.meanScore || 0;
+          genres = (statsData.genres || []).slice();
+        } else {
+          count = allEntries.length;
+          eps = allEntries.reduce((s, e) => s + (Number(e.progress) || 0), 0);
+          mins = allEntries.reduce((s, e) => s + (Number(e.progress) || 0) * ((e.media && e.media.duration) || 24), 0);
+          mean = 0;
+          const gc = {}; allEntries.forEach(e => ((e.media && e.media.genres) || []).forEach(g => gc[g] = (gc[g] || 0) + 1));
+          genres = Object.keys(gc).map(g => ({ genre: g, count: gc[g] }));
+        }
+        if (!count) { statsPanel.innerHTML = ''; return; }
+        const days = (mins / 1440).toFixed(1);
+        numbers = '<div class="al-stat-nums">' +
+          '<span><b>' + count.toLocaleString() + '</b> anime</span>' +
+          '<span><b>' + eps.toLocaleString() + '</b> episodes</span>' +
+          '<span><b>' + days + '</b> days watched</span>' +
+          (mean ? '<span><b>' + (mean / 10).toFixed(1) + '</b> mean score</span>' : '') +
+        '</div>';
       }
-      if (!count) { statsPanel.innerHTML = ''; return; }
-      const days = (mins / 1440).toFixed(1);
-      const numbers = '<div class="al-stat-nums">' +
-        '<span><b>' + count.toLocaleString() + '</b> anime</span>' +
-        '<span><b>' + eps.toLocaleString() + '</b> episodes</span>' +
-        '<span><b>' + days + '</b> days watched</span>' +
-        (mean ? '<span><b>' + (mean / 10).toFixed(1) + '</b> mean score</span>' : '') +
-      '</div>';
       const topG = genres.slice().sort((a, b) => b.count - a.count).slice(0, 5);
       const maxC = topG.length ? topG[0].count : 1;
       const bars = topG.length ? '<div class="al-stat-genres">' + topG.map(g =>
@@ -900,32 +1021,63 @@
         c.textContent = n;
       });
     }
-    function renderBanner(entries) {
-      const banner = $('al-banner'); if (!banner) return;
-      // Sort all entries by updatedAt (most recent first)
-      const sorted = entries.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-      if (!sorted.length) { banner.style.display = 'none'; return; }
-      const item = sorted[0];
-      if (!item || !item.media) { banner.style.display = 'none'; return; }
+    function stopBannerRotation() { if (bannerTimer) { clearInterval(bannerTimer); bannerTimer = null; } }
+    function bannerHTML(item) {
       const t = (item.media.title && (item.media.title.romaji || item.media.title.english)) || '\u2014';
       const img = (item.media.coverImage && (item.media.coverImage.extraLarge || item.media.coverImage.large || item.media.coverImage.medium)) || '';
       const statusRaw = (item._status || '').toUpperCase();
-      const STATUS_LABELS = {
-        CURRENT: 'CURRENTLY WATCHING',
-        WATCHING: 'CURRENTLY WATCHING',
-        COMPLETED: 'COMPLETED',
-        REPEATING: 'REWATCHING',
-        REWATCHING: 'REWATCHING',
-        PLANNING: 'PLAN TO WATCH',
-        PAUSED: 'ON HOLD',
-        DROPPED: 'DROPPED'
+      const manga = isManga();
+      const STATUS_LABELS = manga ? {
+        CURRENT: 'CURRENTLY READING', WATCHING: 'CURRENTLY READING',
+        COMPLETED: 'COMPLETED', REPEATING: 'REREADING', REWATCHING: 'REREADING',
+        PLANNING: 'PLAN TO READ', PAUSED: 'ON HOLD', DROPPED: 'DROPPED'
+      } : {
+        CURRENT: 'CURRENTLY WATCHING', WATCHING: 'CURRENTLY WATCHING',
+        COMPLETED: 'COMPLETED', REPEATING: 'REWATCHING', REWATCHING: 'REWATCHING',
+        PLANNING: 'PLAN TO WATCH', PAUSED: 'ON HOLD', DROPPED: 'DROPPED'
       };
       const label = STATUS_LABELS[statusRaw] || 'LATEST UPDATE';
       const isOngoing = statusRaw === 'CURRENT' || statusRaw === 'WATCHING' || statusRaw === 'REPEATING' || statusRaw === 'REWATCHING';
-      const progress = item.progress ? item.progress + (item.media.episodes ? '/' + item.media.episodes : '') + ' eps' + (isOngoing ? ' watched' : '') : (statusRaw === 'COMPLETED' ? 'completed' : '');
+      const total = totalUnits(item.media);
+      const progress = item.progress ? item.progress + (total ? '/' + total : '') + ' ' + unitShort() + (isOngoing ? ' ' + verbPast() : '') : (statusRaw === 'COMPLETED' ? 'completed' : '');
       const score = item.score ? ' · ★ ' + item.score : '';
-      banner.innerHTML = (img ? '<img class="al-banner-img" alt="' + esc(t) + '" src="' + img + '">' : '') + '<div class="al-banner-info"><div class="al-banner-label" data-status="' + statusRaw.toLowerCase() + '">' + label + '</div><div class="al-banner-title">' + esc(t) + '</div><div class="al-banner-progress">' + esc(progress + score) + '</div></div>';
+      return (img ? '<img class="al-banner-img" alt="' + esc(t) + '" src="' + img + '">' : '') + '<div class="al-banner-info"><div class="al-banner-label" data-status="' + statusRaw.toLowerCase() + '">' + label + '</div><div class="al-banner-title">' + esc(t) + '</div><div class="al-banner-progress">' + esc(progress + score) + '</div></div>';
+    }
+    function bannerDots(rotation, activeI) {
+      if (rotation.length <= 1) return '';
+      return '<div class="al-banner-dots">' + rotation.map((_, di) => '<span class="' + (di === activeI ? 'on' : '') + '"></span>').join('') + '</div>';
+    }
+    // 39. Banner rotation — cycle through everything currently being watched/read;
+    // fall back to the single most-recently-updated entry if nothing is ongoing.
+    function renderBanner() {
+      const banner = $('al-banner'); if (!banner) return;
+      stopBannerRotation();
+      const entries = allEntries;
+      if (!entries.length) { banner.style.display = 'none'; return; }
+      const ongoing = entries
+        .filter(e => { const s = (e._status || '').toUpperCase(); return (s === 'CURRENT' || s === 'REPEATING') && e.media; })
+        .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      let rotation = ongoing;
+      if (!rotation.length) {
+        const latest = entries.slice().filter(e => e.media).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
+        rotation = latest ? [latest] : [];
+      }
+      if (!rotation.length) { banner.style.display = 'none'; return; }
+      bannerIdx = 0;
+      const paint = (i) => {
+        const item = rotation[i % rotation.length];
+        if (!item || !item.media) return;
+        banner.innerHTML = bannerHTML(item) + bannerDots(rotation, i % rotation.length);
+      };
+      paint(0);
       banner.style.display = 'flex';
+      if (rotation.length > 1) {
+        bannerTimer = setInterval(() => {
+          bannerIdx = (bannerIdx + 1) % rotation.length;
+          banner.classList.add('al-banner-fading');
+          setTimeout(() => { paint(bannerIdx); banner.classList.remove('al-banner-fading'); }, 200);
+        }, 5000);
+      }
     }
     function sortEntries(arr) {
       const a = arr.slice();
@@ -953,7 +1105,7 @@
       if (page > pages) page = pages;
       const slice = arr.slice((page - 1) * PER_PAGE, page * PER_PAGE);
       if (!slice.length) {
-        list.innerHTML = '<div class="al-empty">No anime found' + (activeSearch ? ' for “' + esc(activeSearch) + '”' : '') + '.</div>';
+        list.innerHTML = '<div class="al-empty">No ' + (isManga() ? 'manga' : 'anime') + ' found' + (activeSearch ? ' for “' + esc(activeSearch) + '”' : '') + '.</div>';
         renderPager(pages);
         return;
       }
@@ -962,9 +1114,9 @@
         const t = (m.title && (m.title.romaji || m.title.english)) || '—';
         const img = (m.coverImage && (m.coverImage.extraLarge || m.coverImage.large || m.coverImage.medium)) || '';
         const st = String(e._status || '').toUpperCase();
-        const eps = m.episodes || 0;
+        const eps = totalUnits(m);
         const prog = e.progress || 0;
-        const progText = prog ? prog + (eps ? '/' + eps : '') + ' eps' : (st === 'COMPLETED' ? 'completed' : '');
+        const progText = prog ? prog + (eps ? '/' + eps : '') + ' ' + unitShort() : (st === 'COMPLETED' ? 'completed' : '');
         const userScore = e.score ? '★ ' + e.score : '';
         const mean = m.meanScore || 0;
         const meanText = mean ? 'avg ' + (mean / 10).toFixed(1) : '';

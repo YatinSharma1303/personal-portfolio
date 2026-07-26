@@ -654,6 +654,17 @@ html.light .site-particles { opacity: 0.8; }
 .al-banner-label[data-status="dropped"] { color: #f87171; }
 .al-banner-title { font-size: 16px; font-weight: 700; }
 .al-banner-progress { font-family: var(--mono); font-size: 11px; color: var(--gray); margin-top: 4px; }
+/* 39. Banner rotation fade + position dots */
+.al-banner { position: relative; transition: opacity 0.2s ease; }
+.al-banner.al-banner-fading { opacity: 0; }
+.al-banner-dots { position: absolute; right: 12px; bottom: 10px; display: flex; gap: 5px; }
+.al-banner-dots span { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.25); transition: background 0.2s ease, transform 0.2s ease; }
+.al-banner-dots span.on { background: var(--accent, #00c8ff); transform: scale(1.25); }
+/* 36. Anime / Manga media switcher */
+.al-media { display: inline-flex; gap: 4px; padding: 4px; margin-bottom: 16px; border-radius: 12px; border: 1px solid var(--border); background: rgba(255,255,255,0.03); }
+.al-media-btn { padding: 7px 18px; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--gray); background: transparent; border: none; cursor: pointer; transition: color 0.18s ease, background 0.18s ease; }
+.al-media-btn:hover { color: var(--white); }
+.al-media-btn.active { color: #000; background: var(--white); }
 /* ============ 3D CARD TILT ============ */
 .project-card, .interest-card { transform-style: preserve-3d; transition: transform 0.15s ease; }
 .project-card .project-body, .interest-card h3, .interest-card p, .interest-card .interest-icon { transform: translateZ(30px); }
