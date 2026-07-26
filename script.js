@@ -1475,20 +1475,30 @@
       if (resizeTimer) clearTimeout(resizeTimer);
       resizeTimer = setTimeout(resize, 200);
     });
+    // Particle colour follows the palette accent (--accent-solid), parsed + cached.
+    let pAccent = { hex: '', rgb: '0,200,255' };
+    function accentRGB() {
+      const hex = (getComputedStyle(document.documentElement).getPropertyValue('--accent-solid') || '').trim();
+      if (hex && hex !== pAccent.hex) {
+        const m = hex.replace('#', '');
+        if (m.length === 6) pAccent = { hex: hex, rgb: parseInt(m.slice(0,2),16) + ',' + parseInt(m.slice(2,4),16) + ',' + parseInt(m.slice(4,6),16) };
+        else if (m.length === 3) pAccent = { hex: hex, rgb: parseInt(m[0]+m[0],16) + ',' + parseInt(m[1]+m[1],16) + ',' + parseInt(m[2]+m[2],16) };
+      }
+      return pAccent.rgb;
+    }
     function draw() {
       ctx.clearRect(0, 0, w, h);
       dots.forEach(d => { d.x += d.vx; d.y += d.vy; if (d.x<0||d.x>w) d.vx*=-1; if (d.y<0||d.y>h) d.vy*=-1; });
+      // Light mode keeps a higher opacity so the accent particles stay visible on the light bg.
+      const isLight = document.documentElement.classList.contains('light');
+      const rgb = accentRGB();
+      const lineOpacity = isLight ? 0.3 : 0.15;
+      const dotColor = 'rgba(' + rgb + ',' + (isLight ? 0.75 : 0.6) + ')';
       for (let i = 0; i < dots.length; i++) {
         for (let j = i+1; j < dots.length; j++) {
           const dx = dots[i].x - dots[j].x, dy = dots[i].y - dots[j].y;
           const dist = Math.sqrt(dx*dx + dy*dy);
-          // Detect light mode to adjust particle colors for visibility
-      var isLight = document.documentElement.classList.contains('light');
-      var lineColor = isLight ? '20, 80, 180' : '0, 200, 255'; // Darker blue for light mode
-      var dotColor = isLight ? 'rgba(30, 80, 180, 0.6)' : 'rgba(120,200,255,0.6)';
-      var lineOpacity = isLight ? 0.3 : 0.15;
-      
-      if (dist < 120) { ctx.strokeStyle = 'rgba(' + lineColor + ',' + (lineOpacity * (1 - dist/120)) + ')'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(dots[i].x, dots[i].y); ctx.lineTo(dots[j].x, dots[j].y); ctx.stroke(); }
+          if (dist < 120) { ctx.strokeStyle = 'rgba(' + rgb + ',' + (lineOpacity * (1 - dist/120)) + ')'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(dots[i].x, dots[i].y); ctx.lineTo(dots[j].x, dots[j].y); ctx.stroke(); }
         }
       }
       ctx.fillStyle = dotColor;
@@ -2200,7 +2210,7 @@
         const rect = card.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        card.style.setProperty('--card-glow', 'rgba(0, 200, 255, 0.1)');
+        card.style.setProperty('--card-glow', 'color-mix(in srgb, var(--accent-solid) 10%, transparent)');
         card.style.setProperty('--mouse-x', x + 'px');
         card.style.setProperty('--mouse-y', y + 'px');
         // Update the radial gradient position dynamically
