@@ -36,6 +36,33 @@
   const $ = (id) => document.getElementById(id);
   const esc = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+  /* ── 62. Shared search-input + filter-pill widgets (dedupes AMA / AniList / future) ── */
+  const Widgets = {
+    // Wire a search input (+ optional clear button). onChange(trimmedValue) fires on input, Escape and clear.
+    bindSearch(opts) {
+      const input = opts.input, clear = opts.clear, onChange = opts.onChange || function () {};
+      if (!input) return { reset() {} };
+      const sync = (v) => { if (clear) clear.hidden = !v; };
+      input.addEventListener('input', () => { const v = input.value.trim(); sync(v); onChange(v); });
+      input.addEventListener('keydown', (e) => { if (e.key === 'Escape' && input.value) { input.value = ''; sync(''); onChange(''); } });
+      if (clear) clear.addEventListener('click', () => { input.value = ''; sync(''); onChange(''); input.focus(); });
+      return { reset() { input.value = ''; sync(''); } };
+    },
+    // Delegated single-select pill group. onSelect(dataValue, btn) fires on click; manages the .active class.
+    bindPills(opts) {
+      const container = opts.container; if (!container) return;
+      const sel = opts.selector || 'button';
+      const attr = opts.attr || 'value';
+      const onSelect = opts.onSelect || function () {};
+      container.addEventListener('click', (e) => {
+        const t = e.target.closest(sel); if (!t || !container.contains(t)) return;
+        container.querySelectorAll(sel).forEach(b => b.classList.remove('active'));
+        t.classList.add('active');
+        onSelect(t.dataset[attr], t);
+      });
+    }
+  };
+
   // === Last.fm helpers (defined early so the intro can safely call fetchLastfm) ===
   /* All Last.fm calls now go through /api/lastfm proxy — the API key is
      injected server-side and never exposed to the browser. */
@@ -290,6 +317,72 @@
       apply(next);
       if (window.unlockAchievement) window.unlockAchievement('theme', 'Stylish!', 'Theme: ' + next + '.');
     });
+  })();
+
+  /* ============================================================
+     3b. ACCENT COLOR PICKER (persisted to localStorage)
+     ============================================================ */
+  (function accentPicker() {
+    const btn = $('accent-btn'), pop = $('accent-popover');
+    const root = document.documentElement;
+    // name, --accent, --accent2, solid swatch
+    const ACCENTS = [
+      { id: 'cyan',   name: 'Cyan',   accent: 'rgba(0,200,255,0.6)',  accent2: 'rgba(120,90,255,0.5)', swatch: '#00c8ff' },
+      { id: 'violet', name: 'Violet', accent: 'rgba(139,92,246,0.6)', accent2: 'rgba(217,70,239,0.5)', swatch: '#8b5cf6' },
+      { id: 'emerald',name: 'Emerald',accent: 'rgba(16,185,129,0.6)', accent2: 'rgba(5,150,105,0.5)',  swatch: '#10b981' },
+      { id: 'rose',   name: 'Rose',   accent: 'rgba(244,63,94,0.6)',  accent2: 'rgba(251,113,133,0.5)',swatch: '#f43f5e' },
+      { id: 'amber',  name: 'Amber',  accent: 'rgba(245,158,11,0.6)', accent2: 'rgba(234,88,12,0.5)',  swatch: '#f59e0b' },
+      { id: 'blue',   name: 'Blue',   accent: 'rgba(59,130,246,0.6)', accent2: 'rgba(37,99,235,0.5)',  swatch: '#3b82f6' }
+    ];
+    let activeId = localStorage.getItem('accent') || 'cyan';
+    if (!ACCENTS.some(a => a.id === activeId)) activeId = 'cyan';
+
+    function apply(id) {
+      const a = ACCENTS.find(x => x.id === id) || ACCENTS[0];
+      // Default (cyan) uses the stylesheet values — clear overrides so themes stay intact.
+      if (a.id === 'cyan') { root.style.removeProperty('--accent'); root.style.removeProperty('--accent2'); }
+      else { root.style.setProperty('--accent', a.accent); root.style.setProperty('--accent2', a.accent2); }
+      activeId = a.id;
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', a.swatch);
+    }
+    apply(activeId);
+
+    if (!btn || !pop) return;
+    pop.innerHTML = ACCENTS.map(a =>
+      '<button class="accent-swatch' + (a.id === activeId ? ' active' : '') + '" role="menuitemradio" data-id="' + a.id + '" title="' + a.name + '" aria-label="' + a.name + '" aria-checked="' + (a.id === activeId) + '" style="--sw:' + a.swatch + '"><span></span></button>'
+    ).join('');
+
+    function setOpen(open) {
+      pop.hidden = !open;
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      pop.classList.toggle('open', open);
+    }
+    function positionPop() {
+      const r = btn.getBoundingClientRect();
+      pop.style.top = (r.bottom + 10) + 'px';
+      pop.style.right = Math.max(12, window.innerWidth - r.right) + 'px';
+    }
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const willOpen = pop.hidden;
+      if (willOpen) positionPop();
+      setOpen(willOpen);
+    });
+    pop.addEventListener('click', (e) => {
+      const s = e.target.closest('.accent-swatch'); if (!s) return;
+      apply(s.dataset.id);
+      localStorage.setItem('accent', activeId);
+      pop.querySelectorAll('.accent-swatch').forEach(x => {
+        const on = x.dataset.id === activeId;
+        x.classList.toggle('active', on); x.setAttribute('aria-checked', on ? 'true' : 'false');
+      });
+      setOpen(false);
+      if (window.unlockAchievement) window.unlockAchievement('accent', 'True Colors', 'Changed the accent color.');
+    });
+    document.addEventListener('click', (e) => { if (!pop.hidden && !pop.contains(e.target) && e.target !== btn) setOpen(false); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pop.hidden) setOpen(false); });
+    window.addEventListener('resize', () => { if (!pop.hidden) positionPop(); });
   })();
 
   /* ============================================================
@@ -762,16 +855,41 @@
      ============================================================ */
   (function anilist() {
     const list = $('al-list'), tabs = $('al-tabs'); if (!list) return;
+    // 36. MANGA TAB — two datasets keyed by media type; manga lazy-loaded on first switch.
+    const datasets = { ANIME: [], MANGA: [] };
+    const loaded = { ANIME: false, MANGA: false };
+    const loading = { ANIME: false, MANGA: false };
+    let activeMedia = 'ANIME';
     let allEntries = [], activeStatus = 'ALL', page = 1;
     let activeSort = 'updated', activeGenre = '', activeSearch = '';
-    let favSet = new Set(), statsData = null;
+    const favSets = { ANIME: new Set(), MANGA: new Set() };
+    const statsByMedia = { ANIME: null, MANGA: null };
+    let favSet = favSets.ANIME, statsData = null;
     const PER_PAGE = 6;
     const card = list.parentElement;
-    let statsPanel = null, controlsBar = null, genreBar = null, pagerEl = null;
+    let statsPanel = null, controlsBar = null, genreBar = null, pagerEl = null, mediaBar = null;
+    let bannerTimer = null, bannerIdx = 0;
+
+    // Per-media label maps (anime uses episodes/watching, manga uses chapters/reading).
+    const STATUS_TABS = [
+      { status: 'ALL',       ANIME: 'ALL',           MANGA: 'ALL' },
+      { status: 'CURRENT',   ANIME: 'WATCHING',      MANGA: 'READING' },
+      { status: 'COMPLETED', ANIME: 'COMPLETED',     MANGA: 'COMPLETED' },
+      { status: 'REPEATING', ANIME: 'REWATCHING',    MANGA: 'REREADING' },
+      { status: 'PLANNING',  ANIME: 'PLAN TO WATCH', MANGA: 'PLAN TO READ' },
+      { status: 'PAUSED',    ANIME: 'ON HOLD',       MANGA: 'ON HOLD' },
+      { status: 'DROPPED',   ANIME: 'DROPPED',       MANGA: 'DROPPED' }
+    ];
+    const isManga = () => activeMedia === 'MANGA';
+    const unitLong = () => isManga() ? 'chapters' : 'episodes';
+    const unitShort = () => isManga() ? 'ch' : 'eps';
+    const verbPast = () => isManga() ? 'read' : 'watched';
 
     function entryTitle(e) {
       return (e.media && e.media.title && (e.media.title.romaji || e.media.title.english)) || '';
     }
+    // Total units for an entry's media (episodes for anime, chapters for manga).
+    function totalUnits(m) { return (m && (isManga() ? m.chapters : m.episodes)) || 0; }
     function scoreClass(mean) {
       if (!mean) return '';
       if (mean >= 75) return 'al-score-high';
@@ -779,7 +897,33 @@
       return 'al-score-low';
     }
 
+    // 36. Wire the Anime/Manga switcher and keep status-tab labels in sync.
+    function updateTabLabels() {
+      if (!tabs) return;
+      tabs.querySelectorAll('.al-tab').forEach(btn => {
+        const row = STATUS_TABS.find(s => s.status === btn.dataset.status);
+        if (!row) return;
+        let c = btn.querySelector('.al-tab-count');
+        btn.textContent = row[activeMedia] + ' ';
+        if (c) btn.appendChild(c);
+      });
+    }
+    function ensureMediaBar() {
+      if (mediaBar) return;
+      mediaBar = $('al-media');
+      if (!mediaBar) return;
+      mediaBar.addEventListener('click', (e) => {
+        const b = e.target.closest('.al-media-btn'); if (!b) return;
+        const m = b.dataset.media; if (m === activeMedia) return;
+        mediaBar.querySelectorAll('.al-media-btn').forEach(x => {
+          const on = x === b; x.classList.toggle('active', on); x.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        switchMedia(m);
+      });
+    }
+
     function ensureChrome() {
+      ensureMediaBar();
       if (!statsPanel) {
         statsPanel = document.createElement('div');
         statsPanel.className = 'al-stats';
@@ -790,7 +934,7 @@
         controlsBar.className = 'al-controls';
         controlsBar.innerHTML =
           '<div class="al-search-wrap"><span class="material-symbols-outlined al-search-icon">search</span>' +
-          '<input type="text" class="al-search-input" id="al-search" maxlength="60" placeholder="Search anime…" autocomplete="off" aria-label="Search anime">' +
+          '<input type="text" class="al-search-input" id="al-search" maxlength="60" placeholder="Search anime…" autocomplete="off" aria-label="Search titles">' +
           '<button class="al-search-clear" id="al-search-clear" hidden title="Clear" aria-label="Clear search"><span class="material-symbols-outlined">close</span></button></div>' +
           '<div class="al-sort" id="al-sort">' +
             '<button class="al-sort-btn active" data-sort="updated">Updated</button>' +
@@ -800,75 +944,141 @@
           '</div>';
         list.parentNode.insertBefore(controlsBar, list);
         const si = controlsBar.querySelector('#al-search'), sc = controlsBar.querySelector('#al-search-clear');
-        si.addEventListener('input', () => { activeSearch = si.value.trim(); sc.hidden = !activeSearch; page = 1; render(); });
-        si.addEventListener('keydown', (e) => { if (e.key === 'Escape' && activeSearch) { si.value = ''; activeSearch = ''; sc.hidden = true; page = 1; render(); } });
-        sc.addEventListener('click', () => { si.value = ''; activeSearch = ''; sc.hidden = true; page = 1; render(); si.focus(); });
-        controlsBar.querySelector('#al-sort').addEventListener('click', (e) => {
-          const b = e.target.closest('.al-sort-btn'); if (!b) return;
-          controlsBar.querySelectorAll('.al-sort-btn').forEach(x => x.classList.remove('active'));
-          b.classList.add('active'); activeSort = b.dataset.sort; page = 1; render();
-        });
+        Widgets.bindSearch({ input: si, clear: sc, onChange: (v) => { activeSearch = v; page = 1; render(); } });
+        Widgets.bindPills({ container: controlsBar.querySelector('#al-sort'), selector: '.al-sort-btn', attr: 'sort', onSelect: (v) => { activeSort = v; page = 1; render(); } });
       }
       if (!genreBar) {
         genreBar = document.createElement('div');
         genreBar.className = 'al-genres';
         list.parentNode.insertBefore(genreBar, list);
+        // Delegated so it keeps working as renderGenres() rebuilds the pills.
+        Widgets.bindPills({ container: genreBar, selector: '.al-genre-pill', attr: 'genre', onSelect: (v) => { activeGenre = v || ''; page = 1; renderGenres(); render(); } });
       }
       if (!pagerEl) { pagerEl = document.createElement('div'); pagerEl.className = 'al-pagination'; card.appendChild(pagerEl); }
     }
     function loadFallbackAnime() {
-      allEntries = [
+      datasets.ANIME = [
         { _status: 'CURRENT', progress: 52, score: 0, updatedAt: Date.now()/1000, media: { title: { romaji: 'NARUTO', english: 'Naruto' }, coverImage: { large: '' }, episodes: 220, duration: 23, genres: ['Action', 'Adventure'], format: 'TV' } },
         { _status: 'COMPLETED', progress: 64, score: 0, updatedAt: Date.now()/1000 - 10, media: { title: { romaji: 'Hagane no Renkinjutsushi: FULLMETAL ALCHEMIST', english: 'Fullmetal Alchemist: Brotherhood' }, coverImage: { large: '' }, episodes: 64, duration: 25, genres: ['Action', 'Adventure', 'Drama'], format: 'TV' } },
         { _status: 'COMPLETED', progress: 37, score: 0, updatedAt: Date.now()/1000 - 20, media: { title: { romaji: 'DEATH NOTE', english: 'Death Note' }, coverImage: { large: '' }, episodes: 37, duration: 23, genres: ['Mystery', 'Psychological', 'Thriller'], format: 'TV' } }
       ];
-      renderStats(); renderGenres(); updateTabCounts(); render(); renderBanner(allEntries);
+      loaded.ANIME = true;
+      if (activeMedia === 'ANIME') { allEntries = datasets.ANIME; refreshAll(); }
     }
-    const query = `query{user:MediaListCollection(userName:"${CONFIG.anilistUser}",type:ANIME){lists{name status entries{media{id title{romaji english}coverImage{extraLarge large medium}episodes duration meanScore genres format description(asHtml:false)}score progress updatedAt}}}}`;
-    fetch('https://graphql.anilist.co?_=' + Date.now(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query }) })
-      .then(r => { if (!r.ok) throw new Error('AniList HTTP ' + r.status); return r.json(); }).then(d => {
-        if (d.errors) throw new Error(d.errors[0]?.message || 'AniList GraphQL error');
-        const lists = (d.data && d.data.user && d.data.user.lists) || [];
-        allEntries = [];
-        lists.forEach(l => (l.entries || []).forEach(e => { if (e && e.media) { e._status = l.status; allEntries.push(e); } }));
-        if (!allEntries.length) throw new Error('AniList list empty');
-        renderStats(); renderGenres(); updateTabCounts(); render(); renderBanner(allEntries);
-      }).catch((err) => { console.warn('AniList load failed, using fallback:', err); loadFallbackAnime(); });
 
-    // Fetch user avatar, favourites and statistics (separate request)
-    const userQuery = `query{User(name:"${CONFIG.anilistUser}"){avatar{large}favourites{anime{nodes{id}}}statistics{anime{count episodesWatched minutesWatched meanScore genres{genre count}}}}}`;
+    function buildListQuery(type) {
+      const progressFields = type === 'MANGA' ? 'chapters volumes' : 'episodes duration';
+      return `query{user:MediaListCollection(userName:"${CONFIG.anilistUser}",type:${type}){lists{name status entries{media{id title{romaji english}coverImage{extraLarge large medium}${progressFields} meanScore genres format description(asHtml:false)}score progress updatedAt}}}}`;
+    }
+    // Fetch a media list (anime or manga) on demand. Anime falls back to a local list on failure.
+    function loadMedia(type) {
+      if (loaded[type] || loading[type]) return;
+      loading[type] = true;
+      fetch('https://graphql.anilist.co?_=' + Date.now(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: buildListQuery(type) }) })
+        .then(r => { if (!r.ok) throw new Error('AniList HTTP ' + r.status); return r.json(); }).then(d => {
+          if (d.errors) throw new Error(d.errors[0]?.message || 'AniList GraphQL error');
+          const lists = (d.data && d.data.user && d.data.user.lists) || [];
+          const entries = [];
+          lists.forEach(l => (l.entries || []).forEach(e => { if (e && e.media) { e._status = l.status; entries.push(e); } }));
+          if (!entries.length) throw new Error('AniList list empty');
+          datasets[type] = entries; loaded[type] = true; loading[type] = false;
+          if (activeMedia === type) { allEntries = datasets[type]; refreshAll(); }
+        }).catch((err) => {
+          loading[type] = false;
+          console.warn('AniList ' + type + ' load failed:', err);
+          if (type === 'ANIME') loadFallbackAnime();
+          else if (activeMedia === 'MANGA') { list.innerHTML = '<div class="al-empty">Couldn’t load manga list right now.</div>'; }
+        });
+    }
+
+    function refreshAll() { renderStats(); renderGenres(); updateTabCounts(); render(); renderBanner(); }
+
+    // Switch between Anime and Manga: reset filters, lazy-load if needed.
+    function switchMedia(type) {
+      activeMedia = type;
+      allEntries = datasets[type];
+      favSet = favSets[type];
+      statsData = statsByMedia[type];
+      activeStatus = 'ALL'; activeGenre = ''; activeSearch = ''; page = 1;
+      if (tabs) { tabs.querySelectorAll('.al-tab').forEach(b => b.classList.toggle('active', b.dataset.status === 'ALL')); }
+      updateTabLabels();
+      const sub = $('al-sub'); if (sub) sub.textContent = 'AniList · ' + (isManga() ? 'manga list' : 'anime list');
+      const si = $('al-search'); if (si) { si.value = ''; si.placeholder = isManga() ? 'Search manga…' : 'Search anime…'; }
+      const sc = $('al-search-clear'); if (sc) sc.hidden = true;
+      stopBannerRotation();
+      if (!loaded[type]) {
+        list.innerHTML = '<div class="al-empty">Loading ' + (isManga() ? 'manga' : 'anime') + '…</div>';
+        if (statsPanel) statsPanel.innerHTML = ''; if (genreBar) genreBar.innerHTML = '';
+        const banner = $('al-banner'); if (banner) banner.style.display = 'none';
+        updateTabCounts();
+        loadMedia(type);
+      } else {
+        refreshAll();
+      }
+    }
+
+    loadMedia('ANIME');
+
+    // Fetch user avatar, favourites and statistics for both media types (separate request)
+    const userQuery = `query{User(name:"${CONFIG.anilistUser}"){avatar{large}favourites{anime{nodes{id}}manga{nodes{id}}}statistics{anime{count episodesWatched minutesWatched meanScore genres{genre count}}manga{count chaptersRead volumesRead meanScore genres{genre count}}}}}`;
     fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: userQuery }) })
       .then(r => r.json()).then(d => {
         const u = d && d.data && d.data.User; if (!u) return;
         const av = $('al-avatar'); if (av && u.avatar && u.avatar.large) av.src = u.avatar.large;
-        const favNodes = (u.favourites && u.favourites.anime && u.favourites.anime.nodes) || [];
-        favSet = new Set(favNodes.map(n => n && n.id).filter(Boolean));
-        statsData = (u.statistics && u.statistics.anime) || null;
-        renderStats(); render();
+        const fav = u.favourites || {};
+        favSets.ANIME = new Set(((fav.anime && fav.anime.nodes) || []).map(n => n && n.id).filter(Boolean));
+        favSets.MANGA = new Set(((fav.manga && fav.manga.nodes) || []).map(n => n && n.id).filter(Boolean));
+        statsByMedia.ANIME = (u.statistics && u.statistics.anime) || null;
+        statsByMedia.MANGA = (u.statistics && u.statistics.manga) || null;
+        favSet = favSets[activeMedia]; statsData = statsByMedia[activeMedia];
+        renderStats(); if (loaded[activeMedia]) render();
       }).catch(() => {});
     function renderStats() {
       ensureChrome();
-      let count, eps, mins, mean, genres;
-      if (statsData) {
-        count = statsData.count || 0; eps = statsData.episodesWatched || 0;
-        mins = statsData.minutesWatched || 0; mean = statsData.meanScore || 0;
-        genres = (statsData.genres || []).slice();
+      let count, mean, genres, numbers;
+      if (isManga()) {
+        let chapters, volumes;
+        if (statsData) {
+          count = statsData.count || 0; chapters = statsData.chaptersRead || 0;
+          volumes = statsData.volumesRead || 0; mean = statsData.meanScore || 0;
+          genres = (statsData.genres || []).slice();
+        } else {
+          count = allEntries.length;
+          chapters = allEntries.reduce((s, e) => s + (Number(e.progress) || 0), 0);
+          volumes = 0; mean = 0;
+          const gc = {}; allEntries.forEach(e => ((e.media && e.media.genres) || []).forEach(g => gc[g] = (gc[g] || 0) + 1));
+          genres = Object.keys(gc).map(g => ({ genre: g, count: gc[g] }));
+        }
+        if (!count) { statsPanel.innerHTML = ''; return; }
+        numbers = '<div class="al-stat-nums">' +
+          '<span><b>' + count.toLocaleString() + '</b> manga</span>' +
+          '<span><b>' + chapters.toLocaleString() + '</b> chapters</span>' +
+          (volumes ? '<span><b>' + volumes.toLocaleString() + '</b> volumes</span>' : '') +
+          (mean ? '<span><b>' + (mean / 10).toFixed(1) + '</b> mean score</span>' : '') +
+        '</div>';
       } else {
-        count = allEntries.length;
-        eps = allEntries.reduce((s, e) => s + (Number(e.progress) || 0), 0);
-        mins = allEntries.reduce((s, e) => s + (Number(e.progress) || 0) * ((e.media && e.media.duration) || 24), 0);
-        mean = 0;
-        const gc = {}; allEntries.forEach(e => ((e.media && e.media.genres) || []).forEach(g => gc[g] = (gc[g] || 0) + 1));
-        genres = Object.keys(gc).map(g => ({ genre: g, count: gc[g] }));
+        let eps, mins;
+        if (statsData) {
+          count = statsData.count || 0; eps = statsData.episodesWatched || 0;
+          mins = statsData.minutesWatched || 0; mean = statsData.meanScore || 0;
+          genres = (statsData.genres || []).slice();
+        } else {
+          count = allEntries.length;
+          eps = allEntries.reduce((s, e) => s + (Number(e.progress) || 0), 0);
+          mins = allEntries.reduce((s, e) => s + (Number(e.progress) || 0) * ((e.media && e.media.duration) || 24), 0);
+          mean = 0;
+          const gc = {}; allEntries.forEach(e => ((e.media && e.media.genres) || []).forEach(g => gc[g] = (gc[g] || 0) + 1));
+          genres = Object.keys(gc).map(g => ({ genre: g, count: gc[g] }));
+        }
+        if (!count) { statsPanel.innerHTML = ''; return; }
+        const days = (mins / 1440).toFixed(1);
+        numbers = '<div class="al-stat-nums">' +
+          '<span><b>' + count.toLocaleString() + '</b> anime</span>' +
+          '<span><b>' + eps.toLocaleString() + '</b> episodes</span>' +
+          '<span><b>' + days + '</b> days watched</span>' +
+          (mean ? '<span><b>' + (mean / 10).toFixed(1) + '</b> mean score</span>' : '') +
+        '</div>';
       }
-      if (!count) { statsPanel.innerHTML = ''; return; }
-      const days = (mins / 1440).toFixed(1);
-      const numbers = '<div class="al-stat-nums">' +
-        '<span><b>' + count.toLocaleString() + '</b> anime</span>' +
-        '<span><b>' + eps.toLocaleString() + '</b> episodes</span>' +
-        '<span><b>' + days + '</b> days watched</span>' +
-        (mean ? '<span><b>' + (mean / 10).toFixed(1) + '</b> mean score</span>' : '') +
-      '</div>';
       const topG = genres.slice().sort((a, b) => b.count - a.count).slice(0, 5);
       const maxC = topG.length ? topG[0].count : 1;
       const bars = topG.length ? '<div class="al-stat-genres">' + topG.map(g =>
@@ -883,12 +1093,10 @@
       allEntries.forEach(e => ((e.media && e.media.genres) || []).forEach(g => counts[g] = (counts[g] || 0) + 1));
       const top = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 12);
       if (!top.length) { genreBar.innerHTML = ''; return; }
+      // Click handling is delegated once in ensureChrome() via Widgets.bindPills.
       genreBar.innerHTML =
         '<button class="al-genre-pill ' + (activeGenre === '' ? 'active' : '') + '" data-genre="">All</button>' +
         top.map(g => '<button class="al-genre-pill ' + (activeGenre === g ? 'active' : '') + '" data-genre="' + esc(g) + '">' + esc(g) + '</button>').join('');
-      genreBar.querySelectorAll('.al-genre-pill').forEach(b => b.addEventListener('click', () => {
-        activeGenre = b.dataset.genre; page = 1; renderGenres(); render();
-      }));
     }
     function updateTabCounts() {
       if (!tabs) return;
@@ -900,32 +1108,63 @@
         c.textContent = n;
       });
     }
-    function renderBanner(entries) {
-      const banner = $('al-banner'); if (!banner) return;
-      // Sort all entries by updatedAt (most recent first)
-      const sorted = entries.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-      if (!sorted.length) { banner.style.display = 'none'; return; }
-      const item = sorted[0];
-      if (!item || !item.media) { banner.style.display = 'none'; return; }
+    function stopBannerRotation() { if (bannerTimer) { clearInterval(bannerTimer); bannerTimer = null; } }
+    function bannerHTML(item) {
       const t = (item.media.title && (item.media.title.romaji || item.media.title.english)) || '\u2014';
       const img = (item.media.coverImage && (item.media.coverImage.extraLarge || item.media.coverImage.large || item.media.coverImage.medium)) || '';
       const statusRaw = (item._status || '').toUpperCase();
-      const STATUS_LABELS = {
-        CURRENT: 'CURRENTLY WATCHING',
-        WATCHING: 'CURRENTLY WATCHING',
-        COMPLETED: 'COMPLETED',
-        REPEATING: 'REWATCHING',
-        REWATCHING: 'REWATCHING',
-        PLANNING: 'PLAN TO WATCH',
-        PAUSED: 'ON HOLD',
-        DROPPED: 'DROPPED'
+      const manga = isManga();
+      const STATUS_LABELS = manga ? {
+        CURRENT: 'CURRENTLY READING', WATCHING: 'CURRENTLY READING',
+        COMPLETED: 'COMPLETED', REPEATING: 'REREADING', REWATCHING: 'REREADING',
+        PLANNING: 'PLAN TO READ', PAUSED: 'ON HOLD', DROPPED: 'DROPPED'
+      } : {
+        CURRENT: 'CURRENTLY WATCHING', WATCHING: 'CURRENTLY WATCHING',
+        COMPLETED: 'COMPLETED', REPEATING: 'REWATCHING', REWATCHING: 'REWATCHING',
+        PLANNING: 'PLAN TO WATCH', PAUSED: 'ON HOLD', DROPPED: 'DROPPED'
       };
       const label = STATUS_LABELS[statusRaw] || 'LATEST UPDATE';
       const isOngoing = statusRaw === 'CURRENT' || statusRaw === 'WATCHING' || statusRaw === 'REPEATING' || statusRaw === 'REWATCHING';
-      const progress = item.progress ? item.progress + (item.media.episodes ? '/' + item.media.episodes : '') + ' eps' + (isOngoing ? ' watched' : '') : (statusRaw === 'COMPLETED' ? 'completed' : '');
+      const total = totalUnits(item.media);
+      const progress = item.progress ? item.progress + (total ? '/' + total : '') + ' ' + unitShort() + (isOngoing ? ' ' + verbPast() : '') : (statusRaw === 'COMPLETED' ? 'completed' : '');
       const score = item.score ? ' · ★ ' + item.score : '';
-      banner.innerHTML = (img ? '<img class="al-banner-img" alt="' + esc(t) + '" src="' + img + '">' : '') + '<div class="al-banner-info"><div class="al-banner-label" data-status="' + statusRaw.toLowerCase() + '">' + label + '</div><div class="al-banner-title">' + esc(t) + '</div><div class="al-banner-progress">' + esc(progress + score) + '</div></div>';
+      return (img ? '<img class="al-banner-img" alt="' + esc(t) + '" src="' + img + '">' : '') + '<div class="al-banner-info"><div class="al-banner-label" data-status="' + statusRaw.toLowerCase() + '">' + label + '</div><div class="al-banner-title">' + esc(t) + '</div><div class="al-banner-progress">' + esc(progress + score) + '</div></div>';
+    }
+    function bannerDots(rotation, activeI) {
+      if (rotation.length <= 1) return '';
+      return '<div class="al-banner-dots">' + rotation.map((_, di) => '<span class="' + (di === activeI ? 'on' : '') + '"></span>').join('') + '</div>';
+    }
+    // 39. Banner rotation — cycle through everything currently being watched/read;
+    // fall back to the single most-recently-updated entry if nothing is ongoing.
+    function renderBanner() {
+      const banner = $('al-banner'); if (!banner) return;
+      stopBannerRotation();
+      const entries = allEntries;
+      if (!entries.length) { banner.style.display = 'none'; return; }
+      const ongoing = entries
+        .filter(e => { const s = (e._status || '').toUpperCase(); return (s === 'CURRENT' || s === 'REPEATING') && e.media; })
+        .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      let rotation = ongoing;
+      if (!rotation.length) {
+        const latest = entries.slice().filter(e => e.media).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
+        rotation = latest ? [latest] : [];
+      }
+      if (!rotation.length) { banner.style.display = 'none'; return; }
+      bannerIdx = 0;
+      const paint = (i) => {
+        const item = rotation[i % rotation.length];
+        if (!item || !item.media) return;
+        banner.innerHTML = bannerHTML(item) + bannerDots(rotation, i % rotation.length);
+      };
+      paint(0);
       banner.style.display = 'flex';
+      if (rotation.length > 1) {
+        bannerTimer = setInterval(() => {
+          bannerIdx = (bannerIdx + 1) % rotation.length;
+          banner.classList.add('al-banner-fading');
+          setTimeout(() => { paint(bannerIdx); banner.classList.remove('al-banner-fading'); }, 200);
+        }, 5000);
+      }
     }
     function sortEntries(arr) {
       const a = arr.slice();
@@ -953,7 +1192,7 @@
       if (page > pages) page = pages;
       const slice = arr.slice((page - 1) * PER_PAGE, page * PER_PAGE);
       if (!slice.length) {
-        list.innerHTML = '<div class="al-empty">No anime found' + (activeSearch ? ' for “' + esc(activeSearch) + '”' : '') + '.</div>';
+        list.innerHTML = '<div class="al-empty">No ' + (isManga() ? 'manga' : 'anime') + ' found' + (activeSearch ? ' for “' + esc(activeSearch) + '”' : '') + '.</div>';
         renderPager(pages);
         return;
       }
@@ -962,9 +1201,9 @@
         const t = (m.title && (m.title.romaji || m.title.english)) || '—';
         const img = (m.coverImage && (m.coverImage.extraLarge || m.coverImage.large || m.coverImage.medium)) || '';
         const st = String(e._status || '').toUpperCase();
-        const eps = m.episodes || 0;
+        const eps = totalUnits(m);
         const prog = e.progress || 0;
-        const progText = prog ? prog + (eps ? '/' + eps : '') + ' eps' : (st === 'COMPLETED' ? 'completed' : '');
+        const progText = prog ? prog + (eps ? '/' + eps : '') + ' ' + unitShort() : (st === 'COMPLETED' ? 'completed' : '');
         const userScore = e.score ? '★ ' + e.score : '';
         const mean = m.meanScore || 0;
         const meanText = mean ? 'avg ' + (mean / 10).toFixed(1) : '';
@@ -1490,15 +1729,173 @@
         '<span class="ama-vote-count" data-count="' + q.id + '">' + q.votes + '</span>' +
         '<button class="ama-vote-btn ' + (up ? 'voted' : '') + '" data-id="' + q.id + '" data-dir="-1" title="Undo">\u25BC</button>' +
         '</div>' +
-        '<div class="ama-q-reactions">' + reactionHTML + '</div>' +
+        '<div class="ama-q-reactions">' + reactionHTML +
+          '<button class="ama-share-btn" data-share="' + q.id + '" title="Share this answer" aria-label="Share this answer"><span class="material-symbols-outlined">ios_share</span></button>' +
+        '</div>' +
         reactionSummary +
         '</div>';
+    }
+
+    function findAmaDoc(id) {
+      return answeredDocs.find(d => d.id === id) || null;
     }
 
     function wireAmaActions(root) {
       if (!root) return;
       root.querySelectorAll('.ama-vote-btn').forEach(b => b.addEventListener('click', () => vote(b.dataset.id, +b.dataset.dir)));
       root.querySelectorAll('.ama-react-btn').forEach(b => b.addEventListener('click', () => toggleReaction(b.dataset.id, b.dataset.emoji)));
+      root.querySelectorAll('.ama-share-btn').forEach(b => b.addEventListener('click', () => { const d = findAmaDoc(b.dataset.share); if (d) openShareCard(d); }));
+    }
+
+    /* ── 33. SHAREABLE AMA ANSWER CARDS (canvas-generated OG image) ── */
+    // Accent hex mirrors the accent picker so shared cards match the site theme.
+    const SHARE_ACCENTS = { cyan: '#00c8ff', violet: '#8b5cf6', emerald: '#10b981', rose: '#f43f5e', amber: '#f59e0b', blue: '#3b82f6' };
+    let shareModal = null;
+
+    function wrapCanvasText(ctx, text, maxWidth, maxLines) {
+      const words = String(text || '').split(/\s+/);
+      const lines = [];
+      let line = '';
+      for (let i = 0; i < words.length; i++) {
+        const test = line ? line + ' ' + words[i] : words[i];
+        if (ctx.measureText(test).width > maxWidth && line) {
+          lines.push(line); line = words[i];
+          if (lines.length === maxLines - 1) break;
+        } else { line = test; }
+      }
+      if (lines.length < maxLines) lines.push(line);
+      // Ellipsis if truncated.
+      const used = lines.join(' ').split(/\s+/).length;
+      if (used < words.length) lines[lines.length - 1] = (lines[lines.length - 1] || '').replace(/\s*\S*$/, '') + '…';
+      return lines.filter(Boolean);
+    }
+
+    function drawShareCanvas(q) {
+      const W = 1200, H = 630, dpr = 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = W * dpr; canvas.height = H * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      const accentId = localStorage.getItem('accent') || 'cyan';
+      const accent = SHARE_ACCENTS[accentId] || SHARE_ACCENTS.cyan;
+
+      // Background
+      ctx.fillStyle = '#05050a'; ctx.fillRect(0, 0, W, H);
+      const grad = ctx.createLinearGradient(0, 0, W, H);
+      grad.addColorStop(0, 'rgba(0,200,255,0.10)'); grad.addColorStop(1, 'rgba(120,90,255,0.06)');
+      ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+      // Accent bar
+      ctx.fillStyle = accent; ctx.fillRect(0, 0, 12, H);
+      // Border
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, W - 2, H - 2);
+
+      const PAD = 70;
+      // Label
+      ctx.fillStyle = accent;
+      ctx.font = '600 22px "JetBrains Mono", monospace';
+      ctx.fillText('ASK  ME  ANYTHING', PAD, 84);
+
+      // Question
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '800 46px Inter, sans-serif';
+      const qLines = wrapCanvasText(ctx, q.question, W - PAD * 2, 3);
+      let y = 150;
+      qLines.forEach(l => { ctx.fillText(l, PAD, y); y += 58; });
+
+      // Divider
+      y += 6;
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - PAD, y); ctx.stroke();
+      y += 46;
+
+      // Answer
+      ctx.fillStyle = 'rgba(255,255,255,0.86)';
+      ctx.font = '400 30px Inter, sans-serif';
+      const aLines = wrapCanvasText(ctx, q.answer, W - PAD * 2, 6);
+      aLines.forEach(l => { ctx.fillText(l, PAD, y); y += 42; });
+
+      // Footer
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.font = '500 24px Inter, sans-serif';
+      ctx.fillText('— Yatin Sharma', PAD, H - 54);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = accent;
+      ctx.font = '600 22px "JetBrains Mono", monospace';
+      ctx.fillText('portfolio.yatinsharma.me', W - PAD, H - 54);
+      ctx.textAlign = 'left';
+      return canvas;
+    }
+
+    function ensureShareModal() {
+      if (shareModal) return shareModal;
+      shareModal = document.createElement('div');
+      shareModal.className = 'ama-share-modal';
+      shareModal.hidden = true;
+      shareModal.innerHTML =
+        '<div class="ama-share-backdrop"></div>' +
+        '<div class="ama-share-dialog" role="dialog" aria-modal="true" aria-label="Share answer">' +
+          '<button class="ama-share-x" aria-label="Close">✕</button>' +
+          '<div class="ama-share-preview" id="ama-share-preview"></div>' +
+          '<div class="ama-share-actions">' +
+            '<button class="ama-share-action" data-act="download"><span class="material-symbols-outlined">download</span>Download</button>' +
+            '<button class="ama-share-action" data-act="share" hidden><span class="material-symbols-outlined">share</span>Share</button>' +
+            '<button class="ama-share-action" data-act="copylink"><span class="material-symbols-outlined">link</span>Copy link</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(shareModal);
+      const close = () => { shareModal.hidden = true; document.body.style.overflow = ''; };
+      shareModal.querySelector('.ama-share-x').addEventListener('click', close);
+      shareModal.querySelector('.ama-share-backdrop').addEventListener('click', close);
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !shareModal.hidden) close(); });
+      return shareModal;
+    }
+
+    function openShareCard(q) {
+      const modal = ensureShareModal();
+      const canvas = drawShareCanvas(q);
+      const preview = modal.querySelector('#ama-share-preview');
+      preview.innerHTML = '';
+      canvas.className = 'ama-share-canvas';
+      canvas.style.width = '100%'; canvas.style.height = 'auto';
+      preview.appendChild(canvas);
+
+      const link = 'https://portfolio.yatinsharma.me/#ama';
+      const fileName = 'ama-' + (q.id || 'answer') + '.png';
+      const shareBtn = modal.querySelector('[data-act="share"]');
+      const dlBtn = modal.querySelector('[data-act="download"]');
+      const copyBtn = modal.querySelector('[data-act="copylink"]');
+
+      const toBlob = () => new Promise(res => canvas.toBlob(res, 'image/png'));
+
+      dlBtn.onclick = async () => {
+        const blob = await toBlob(); if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = fileName; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      };
+
+      // Web Share API (with image file) where supported.
+      const canShareFiles = !!(navigator.canShare && navigator.share);
+      shareBtn.hidden = !canShareFiles;
+      if (canShareFiles) shareBtn.onclick = async () => {
+        const blob = await toBlob(); if (!blob) return;
+        const file = new File([blob], fileName, { type: 'image/png' });
+        try {
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: 'AMA — Yatin Sharma', text: q.question, url: link });
+          } else {
+            await navigator.share({ title: 'AMA — Yatin Sharma', text: q.question, url: link });
+          }
+        } catch (e) {}
+      };
+
+      copyBtn.onclick = async () => {
+        try { await navigator.clipboard.writeText(link); copyBtn.classList.add('copied'); const span = copyBtn.querySelector('span:last-child') || copyBtn; setTimeout(() => copyBtn.classList.remove('copied'), 1500); }
+        catch (e) {}
+      };
+
+      modal.hidden = false;
+      document.body.style.overflow = 'hidden';
     }
 
     function render() {
@@ -1606,6 +2003,8 @@
            This .filter is an extra safety net for any edge case. */
         answeredDocs = (data || []).filter(d => d.document).map(d => fromDoc(d.document)).filter(q => !q.dismissed);
         answeredDocs.sort((a, b) => new Date(b.answeredAt || 0) - new Date(a.answeredAt || 0));
+        // Publish trimmed answered Q&A so the "Ask my portfolio" chatbot (57) can ground its replies.
+        window.__amaContext = answeredDocs.filter(q => q.answer).map(q => ({ question: q.question, answer: q.answer }));
         render();
       }).catch((err) => { console.warn('AMA load failed:', err); });
     }
@@ -1650,32 +2049,10 @@
     }
     if (send) send.addEventListener('click', submit);
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submit(); });
-    if (sortWrap) sortWrap.addEventListener('click', (e) => {
-      const t = e.target.closest('.ama-sort-btn'); if (!t) return;
-      sortWrap.querySelectorAll('.ama-sort-btn').forEach(b => b.classList.remove('active'));
-      t.classList.add('active'); activeSort = t.dataset.sort; page = 1; render();
-    });
-
+    // Sort pills + search box share the same widgets as the AniList section (see Widgets, item 62).
+    Widgets.bindPills({ container: sortWrap, selector: '.ama-sort-btn', attr: 'sort', onSelect: (v) => { activeSort = v; page = 1; render(); } });
     /* Search box — filter answered questions by question, answer, topic or name */
-    if (searchInput) {
-      searchInput.addEventListener('input', () => {
-        activeSearch = searchInput.value.trim();
-        if (searchClear) searchClear.hidden = !activeSearch;
-        page = 1; render();
-      });
-      searchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && activeSearch) {
-          searchInput.value = ''; activeSearch = '';
-          if (searchClear) searchClear.hidden = true;
-          page = 1; render();
-        }
-      });
-    }
-    if (searchClear) searchClear.addEventListener('click', () => {
-      searchInput.value = ''; activeSearch = '';
-      searchClear.hidden = true; page = 1; render();
-      searchInput.focus();
-    });
+    Widgets.bindSearch({ input: searchInput, clear: searchClear, onChange: (v) => { activeSearch = v; page = 1; render(); } });
 
     /* Refresh button — manual reload of answered questions */
     const refreshBtn = $('ama-refresh');
@@ -1872,6 +2249,130 @@
   window.unlockAchievement = achievementSystem.unlock.bind(achievementSystem);
   // Unlock intro achievement
   setTimeout(() => { window.unlockAchievement('visitor', 'Welcome!', 'You explored the portfolio.'); }, 5000);
+
+  /* ============================================================
+     57. "ASK MY PORTFOLIO" AI CHATBOT (RAG over profile + AMA)
+     ============================================================ */
+  (function portfolioChat() {
+    const fab = $('pchat-fab'), panel = $('pchat-panel'), closeBtn = $('pchat-close');
+    const log = $('pchat-log'), form = $('pchat-form'), inputEl = $('pchat-input'), sendBtn = $('pchat-send');
+    if (!fab || !panel || !form) return;
+    const history = [];
+    let busy = false, greeted = false;
+
+    function bubble(role, text) {
+      const el = document.createElement('div');
+      el.className = 'pchat-msg pchat-' + role;
+      el.textContent = text;
+      log.appendChild(el);
+      log.scrollTop = log.scrollHeight;
+      return el;
+    }
+    function typingBubble() {
+      const el = document.createElement('div');
+      el.className = 'pchat-msg pchat-bot pchat-typing';
+      el.innerHTML = '<span></span><span></span><span></span>';
+      log.appendChild(el); log.scrollTop = log.scrollHeight;
+      return el;
+    }
+    function open() {
+      panel.hidden = false;
+      requestAnimationFrame(() => panel.classList.add('open'));
+      fab.classList.add('hidden');
+      if (!greeted) {
+        greeted = true;
+        bubble('bot', 'Hi! I can answer questions about Yatin — his projects, skills, and background. What would you like to know?');
+      }
+      setTimeout(() => inputEl.focus(), 120);
+    }
+    function close() {
+      panel.classList.remove('open');
+      fab.classList.remove('hidden');
+      setTimeout(() => { panel.hidden = true; }, 220);
+    }
+    fab.addEventListener('click', open);
+    closeBtn.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !panel.hidden) close(); });
+
+    async function ask(message) {
+      if (busy) return;
+      busy = true; sendBtn.disabled = true;
+      bubble('user', message);
+      history.push({ role: 'user', content: message });
+      const typing = typingBubble();
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, history: history.slice(0, -1), ama: window.__amaContext || [] })
+        });
+        const data = await res.json().catch(() => ({}));
+        typing.remove();
+        const reply = (data && data.reply) || 'Sorry, I couldn’t answer that right now.';
+        bubble('bot', reply);
+        history.push({ role: 'assistant', content: reply });
+      } catch (e) {
+        typing.remove();
+        bubble('bot', 'Couldn’t reach the assistant. Please try again in a moment.');
+      } finally {
+        busy = false; sendBtn.disabled = false; inputEl.focus();
+      }
+    }
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const msg = inputEl.value.trim();
+      if (!msg || busy) return;
+      inputEl.value = '';
+      ask(msg);
+    });
+    if (window.unlockAchievement) fab.addEventListener('click', () => window.unlockAchievement('askbot', 'Curious', 'Opened the portfolio assistant.'), { once: true });
+  })();
+
+  /* ============================================================
+     61. KONAMI CODE EASTER EGG (↑↑↓↓←→←→ B A → confetti + party mode)
+     ============================================================ */
+  (function konami() {
+    const SEQ = ['arrowup','arrowup','arrowdown','arrowdown','arrowleft','arrowright','arrowleft','arrowright','b','a'];
+    let pos = 0;
+    document.addEventListener('keydown', (e) => {
+      // Ignore while typing in inputs/textareas.
+      const tag = (e.target && e.target.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
+      const k = e.key.length === 1 ? e.key.toLowerCase() : e.key.toLowerCase();
+      if (k === SEQ[pos]) {
+        pos++;
+        if (pos === SEQ.length) { pos = 0; trigger(); }
+      } else {
+        pos = (k === SEQ[0]) ? 1 : 0;
+      }
+    });
+    function trigger() {
+      window.unlockAchievement('konami', 'Konami Code!', 'You found the secret. Party mode engaged.');
+      try { if (window.sfx && !window.sfx.isMuted() && window.sfx.win) window.sfx.win(); } catch (e) {}
+      confetti();
+      const root = document.documentElement;
+      root.classList.add('konami-party');
+      setTimeout(() => root.classList.remove('konami-party'), 6000);
+    }
+    function confetti() {
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const colors = ['#00c8ff', '#8b5cf6', '#f43f5e', '#f59e0b', '#10b981', '#3b82f6', '#ec4899'];
+      const layer = document.createElement('div'); layer.className = 'konami-confetti';
+      document.body.appendChild(layer);
+      for (let i = 0; i < 120; i++) {
+        const p = document.createElement('i');
+        p.style.left = (Math.random() * 100) + 'vw';
+        p.style.background = colors[i % colors.length];
+        p.style.animationDelay = (Math.random() * 0.6) + 's';
+        p.style.animationDuration = (2.4 + Math.random() * 1.8) + 's';
+        p.style.setProperty('--rot', (Math.random() * 720 - 360) + 'deg');
+        p.style.setProperty('--drift', (Math.random() * 220 - 110) + 'px');
+        if (Math.random() > 0.5) p.style.borderRadius = '50%';
+        layer.appendChild(p);
+      }
+      setTimeout(() => layer.remove(), 5400);
+    }
+  })();
 
   /* ============================================================
      24. CURSOR GLOW + TRAIL

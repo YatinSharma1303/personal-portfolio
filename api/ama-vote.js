@@ -8,6 +8,8 @@
 const crypto = require('crypto');
 
 const COLLECTION = 'amaQuestions';
+const TELEGRAM_API = 'https://api.telegram.org/bot';
+const VOTE_MILESTONES = [10, 25, 50, 100, 250, 500];
 
 function jsonBody(req) {
   if (!req.body) return {};
@@ -80,6 +82,35 @@ function currentVotes(doc) {
   return Number(f.votes?.integerValue || f.votes?.doubleValue || 0);
 }
 
+function announcedMilestone(doc) {
+  const f = doc?.fields || {};
+  return Number(f.voteMilestone?.integerValue || f.voteMilestone?.doubleValue || 0);
+}
+
+// 49. Ping the admin when an answer's upvotes cross a milestone.
+async function maybeVoteMilestone(id, doc, votes) {
+  const already = announcedMilestone(doc);
+  const due = VOTE_MILESTONES.filter((m) => votes >= m);
+  const highest = due.length ? due[due.length - 1] : 0;
+  if (!highest || highest <= already) return;
+  try {
+    await firestore('PATCH', `${docPath(COLLECTION, id)}?updateMask.fieldPaths=voteMilestone`, {
+      fields: { voteMilestone: { integerValue: String(highest) } }
+    });
+  } catch (e) { return; }
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!botToken || !chatId) return;
+  const q = String(doc?.fields?.question?.stringValue || '').replace(/[<>&]/g, '').slice(0, 80);
+  const text = `🔥 <b>UPVOTE MILESTONE</b>\nAn answer just hit <b>${highest}</b> upvotes!\n\n🆔 <code>${id}</code>\n“${q}”`;
+  try {
+    await fetch(`${TELEGRAM_API}${botToken}/sendMessage`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true })
+    });
+  } catch (e) {}
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -108,6 +139,9 @@ module.exports = async function handler(req, res) {
       `${docPath(COLLECTION, id)}?updateMask.fieldPaths=votes`,
       { fields: { votes: { integerValue: String(nextVotes) } } }
     );
+
+    // 49. Best-effort upvote-milestone ping (never blocks the vote response).
+    if (delta === 1) { try { await maybeVoteMilestone(id, doc, nextVotes); } catch (e) {} }
 
     return res.status(200).json({ ok: true, id, votes: nextVotes });
   } catch (error) {
