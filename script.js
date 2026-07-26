@@ -406,7 +406,7 @@
     const art = 'https://img.youtube.com/vi/' + t.id + '/maxresdefault.jpg';
     ['mp-thumb', 'mp-big-art', 'mp-backdrop', 'tb-art'].forEach(function (id) { const el = $(id); if (el) el.style.backgroundImage = "url('" + art + "')"; });
     const set = function (id, txt) { const el = $(id); if (el) el.textContent = txt; };
-    set('mp-title', t.title); set('mp-big-title', t.title); set('mp-big-artist', t.artist);
+    set('mp-title', t.title); set('mp-artist', t.artist); set('mp-big-title', t.title); set('mp-big-artist', t.artist);
     const yt = $('mp-yt'); if (yt) yt.href = 'https://youtu.be/' + t.id;
   }
   applyTrackMeta(0);
