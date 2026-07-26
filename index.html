@@ -4,6 +4,7 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="color-scheme" content="dark light"/>
+  <meta name="theme-color" content="#00c8ff"/>
   <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
   <title>Yatin Sharma — Full-Stack Developer</title>
   <meta name="description" content="Yatin Sharma — full-stack web developer. AI apps, web platforms, React, Python, and everything end to end."/>
@@ -142,8 +143,16 @@
         <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2 M12 20v2 M2 12h2 M20 12h2 M5 5l1.5 1.5 M17.5 17.5L19 19 M19 5l-1.5 1.5 M6.5 17.5L5 19"/></svg>
         <svg class="icon-auto" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2v16a8 8 0 0 1 0-16z"/></svg>
       </button>
+
+      <!-- Accent color picker -->
+      <button class="tb-icon-btn accent-toggle" id="accent-btn" title="Accent color" aria-label="Change accent color" aria-haspopup="true" aria-expanded="false">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18 3 3 0 0 0 0-6 1.5 1.5 0 0 1 0-3 3 3 0 0 0 0-6z"/><circle cx="8" cy="9" r="1"/><circle cx="16" cy="9" r="1"/><circle cx="8.5" cy="14" r="1"/></svg>
+      </button>
     </nav>
   </div>
+
+  <!-- Accent color popover -->
+  <div class="accent-popover" id="accent-popover" role="menu" aria-label="Accent colors" hidden></div>
 
   <!-- ============ MINI MUSIC PLAYER (Spotify-style, theme-aware) ============ -->
   <div class="mini-player" id="mini-player" aria-hidden="true">

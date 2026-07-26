@@ -293,6 +293,72 @@
   })();
 
   /* ============================================================
+     3b. ACCENT COLOR PICKER (persisted to localStorage)
+     ============================================================ */
+  (function accentPicker() {
+    const btn = $('accent-btn'), pop = $('accent-popover');
+    const root = document.documentElement;
+    // name, --accent, --accent2, solid swatch
+    const ACCENTS = [
+      { id: 'cyan',   name: 'Cyan',   accent: 'rgba(0,200,255,0.6)',  accent2: 'rgba(120,90,255,0.5)', swatch: '#00c8ff' },
+      { id: 'violet', name: 'Violet', accent: 'rgba(139,92,246,0.6)', accent2: 'rgba(217,70,239,0.5)', swatch: '#8b5cf6' },
+      { id: 'emerald',name: 'Emerald',accent: 'rgba(16,185,129,0.6)', accent2: 'rgba(5,150,105,0.5)',  swatch: '#10b981' },
+      { id: 'rose',   name: 'Rose',   accent: 'rgba(244,63,94,0.6)',  accent2: 'rgba(251,113,133,0.5)',swatch: '#f43f5e' },
+      { id: 'amber',  name: 'Amber',  accent: 'rgba(245,158,11,0.6)', accent2: 'rgba(234,88,12,0.5)',  swatch: '#f59e0b' },
+      { id: 'blue',   name: 'Blue',   accent: 'rgba(59,130,246,0.6)', accent2: 'rgba(37,99,235,0.5)',  swatch: '#3b82f6' }
+    ];
+    let activeId = localStorage.getItem('accent') || 'cyan';
+    if (!ACCENTS.some(a => a.id === activeId)) activeId = 'cyan';
+
+    function apply(id) {
+      const a = ACCENTS.find(x => x.id === id) || ACCENTS[0];
+      // Default (cyan) uses the stylesheet values — clear overrides so themes stay intact.
+      if (a.id === 'cyan') { root.style.removeProperty('--accent'); root.style.removeProperty('--accent2'); }
+      else { root.style.setProperty('--accent', a.accent); root.style.setProperty('--accent2', a.accent2); }
+      activeId = a.id;
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', a.swatch);
+    }
+    apply(activeId);
+
+    if (!btn || !pop) return;
+    pop.innerHTML = ACCENTS.map(a =>
+      '<button class="accent-swatch' + (a.id === activeId ? ' active' : '') + '" role="menuitemradio" data-id="' + a.id + '" title="' + a.name + '" aria-label="' + a.name + '" aria-checked="' + (a.id === activeId) + '" style="--sw:' + a.swatch + '"><span></span></button>'
+    ).join('');
+
+    function setOpen(open) {
+      pop.hidden = !open;
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      pop.classList.toggle('open', open);
+    }
+    function positionPop() {
+      const r = btn.getBoundingClientRect();
+      pop.style.top = (r.bottom + 10) + 'px';
+      pop.style.right = Math.max(12, window.innerWidth - r.right) + 'px';
+    }
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const willOpen = pop.hidden;
+      if (willOpen) positionPop();
+      setOpen(willOpen);
+    });
+    pop.addEventListener('click', (e) => {
+      const s = e.target.closest('.accent-swatch'); if (!s) return;
+      apply(s.dataset.id);
+      localStorage.setItem('accent', activeId);
+      pop.querySelectorAll('.accent-swatch').forEach(x => {
+        const on = x.dataset.id === activeId;
+        x.classList.toggle('active', on); x.setAttribute('aria-checked', on ? 'true' : 'false');
+      });
+      setOpen(false);
+      if (window.unlockAchievement) window.unlockAchievement('accent', 'True Colors', 'Changed the accent color.');
+    });
+    document.addEventListener('click', (e) => { if (!pop.hidden && !pop.contains(e.target) && e.target !== btn) setOpen(false); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pop.hidden) setOpen(false); });
+    window.addEventListener('resize', () => { if (!pop.hidden) positionPop(); });
+  })();
+
+  /* ============================================================
      4. MUSIC PLAYER (YouTube IFrame API — bulletproof edition)
      ============================================================ */
   let ytPlayer = null, ytReady = false, ytError = false, wantPlay = false, isPlaying = false;
@@ -2024,6 +2090,52 @@
   window.unlockAchievement = achievementSystem.unlock.bind(achievementSystem);
   // Unlock intro achievement
   setTimeout(() => { window.unlockAchievement('visitor', 'Welcome!', 'You explored the portfolio.'); }, 5000);
+
+  /* ============================================================
+     61. KONAMI CODE EASTER EGG (↑↑↓↓←→←→ B A → confetti + party mode)
+     ============================================================ */
+  (function konami() {
+    const SEQ = ['arrowup','arrowup','arrowdown','arrowdown','arrowleft','arrowright','arrowleft','arrowright','b','a'];
+    let pos = 0;
+    document.addEventListener('keydown', (e) => {
+      // Ignore while typing in inputs/textareas.
+      const tag = (e.target && e.target.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
+      const k = e.key.length === 1 ? e.key.toLowerCase() : e.key.toLowerCase();
+      if (k === SEQ[pos]) {
+        pos++;
+        if (pos === SEQ.length) { pos = 0; trigger(); }
+      } else {
+        pos = (k === SEQ[0]) ? 1 : 0;
+      }
+    });
+    function trigger() {
+      window.unlockAchievement('konami', 'Konami Code!', 'You found the secret. Party mode engaged.');
+      try { if (window.sfx && !window.sfx.isMuted() && window.sfx.win) window.sfx.win(); } catch (e) {}
+      confetti();
+      const root = document.documentElement;
+      root.classList.add('konami-party');
+      setTimeout(() => root.classList.remove('konami-party'), 6000);
+    }
+    function confetti() {
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const colors = ['#00c8ff', '#8b5cf6', '#f43f5e', '#f59e0b', '#10b981', '#3b82f6', '#ec4899'];
+      const layer = document.createElement('div'); layer.className = 'konami-confetti';
+      document.body.appendChild(layer);
+      for (let i = 0; i < 120; i++) {
+        const p = document.createElement('i');
+        p.style.left = (Math.random() * 100) + 'vw';
+        p.style.background = colors[i % colors.length];
+        p.style.animationDelay = (Math.random() * 0.6) + 's';
+        p.style.animationDuration = (2.4 + Math.random() * 1.8) + 's';
+        p.style.setProperty('--rot', (Math.random() * 720 - 360) + 'deg');
+        p.style.setProperty('--drift', (Math.random() * 220 - 110) + 'px');
+        if (Math.random() > 0.5) p.style.borderRadius = '50%';
+        layer.appendChild(p);
+      }
+      setTimeout(() => layer.remove(), 5400);
+    }
+  })();
 
   /* ============================================================
      24. CURSOR GLOW + TRAIL
