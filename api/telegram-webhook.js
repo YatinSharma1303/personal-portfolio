@@ -54,7 +54,7 @@ function jsonBody(req) {
 }
 
 function esc(value) {
-  value = value || '';
+  value = (value == null) ? '' : value;   // keep 0 / false — only null/undefined become ''
   return String(value)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -750,7 +750,7 @@ function reactionLine(reactions) {
   if (!reactions || typeof reactions !== 'object') return '';
   var entries = Object.entries(reactions).filter(function(e) { return e[1] > 0; });
   if (!entries.length) return '';
-  return entries.map(function(e) { return e[0] + ' ' + e[1]; }).join('  ');
+  return entries.map(function(e) { return esc(e[0]) + ' ' + e[1]; }).join('  ');
 }
 
 /* ============================================================
@@ -1524,7 +1524,8 @@ async function sendHealth(chatId, replyToId, editMessageId) {
   try { var all = await listAllQuestions(); okFirestore = true; count = all.length; } catch (e) {}
   var saOk = !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
   var secretOk = !!process.env.TELEGRAM_WEBHOOK_SECRET;
-  var overall = (tokenOk && saOk && okFirestore && secretOk);
+  var chatIdOk = !!process.env.TELEGRAM_CHAT_ID;
+  var overall = (tokenOk && saOk && okFirestore && secretOk && chatIdOk);
   var lines = [
     cardTop('\uD83E\uDE7A <b>BOT HEALTH</b>'),
     BOX_V,
@@ -1535,6 +1536,7 @@ async function sendHealth(chatId, replyToId, editMessageId) {
     checkRow(saOk, 'Firebase service account'),
     checkRow(okFirestore, 'Firestore connection'),
     checkRow(secretOk, 'Webhook secret'),
+    checkRow(chatIdOk, 'Admin chat ID (access lock)'),
     divider(),
     kvRow('Questions', count),
     kvRow('Checked', formatTime(new Date().toISOString()) + ' IST'),
@@ -2080,43 +2082,6 @@ function extractQuestionId(replyText) {
   return match ? match[1] : '';
 }
 
-/* -- Send a list of questions (for /pending, /refresh) -- */
-async function sendQuestionsList(chatId, title, items, replyToId, editMessageId) {
-  var chunk = title + '\n\n';
-  var sent = 0;
-  for (var i = 0; i < items.length; i++) {
-    var q = items[i];
-    var tag = questionState(q);
-    var tagEmoji = tag === 'UNANSWERED' ? '\u23F3' : '\uD83D\uDE48';
-    var qAge = timeAgo(q.createdAt);
-    var line = [
-      cardTop(tagEmoji + ' <b>' + tag + '</b>'),
-      BOX_V,
-      BOX_V + ' Visitor \u2500 <b>' + esc(visitorName(q.name)) + '</b>' + (qAge ? ' · ' + esc(qAge) : '') + (q.pinned ? ' · \uD83D\uDCCD' : ''),
-      BOX_V + ' ID \u2500 <code>' + esc(q.id) + '</code>',
-      BOX_V,
-      BOX_V + ' “' + esc(clipText(q.question, 150)) + '”',
-      BOX_V,
-      cardBottom,
-      ''
-    ].join('\n');
-    if ((chunk + line + '\n').length > 3500) {
-      if (sent === 0 && editMessageId) await editMessage(chatId, editMessageId, chunk.trim());
-      else await sendTelegram(chatId, chunk.trim(), sent === 0 ? replyToId : undefined);
-      sent++;
-      chunk = '';
-    }
-    chunk += line + '\n';
-  }
-  if (chunk.trim()) {
-    if (sent === 0 && editMessageId) await editMessage(chatId, editMessageId, chunk.trim());
-    else await sendTelegram(chatId, chunk.trim(), sent === 0 ? replyToId : undefined);
-    sent++;
-  }
-  await sendTelegram(chatId,
-    cardTop('\u2705 <b>LIST READY</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Listed <b>' + items.length + '</b> question' + (items.length === 1 ? '' : 's') + '.\n' + BOX_V + ' Tap Answer or reply to answer.\n' + BOX_V + '\n' + cardBottom,
-    undefined, REPLY_KEYBOARD);
-}
 
 /* ============================================================
  J-FEATURE HELPERS (items 41–56)
@@ -2131,14 +2096,20 @@ function infoCard(title, lines) {
 /* -- Undo (45): snapshot last destructive action per chat -- */
 async function saveUndo(chatId, payload) {
   try {
+    var serialized = JSON.stringify(payload);
+    // Don't store a TRUNCATED payload — a cut-off JSON string fails to parse on
+    // /undo and silently restores nothing. If it's too big to snapshot safely,
+    // clear any stale undo and report that undo isn't available for this batch.
+    if (serialized.length > 90000) { await clearUndo(chatId); return false; }
     await firestore('PATCH', docPath(UNDO_COLLECTION, String(chatId)), {
       fields: {
         chatId: { stringValue: String(chatId) },
-        payload: { stringValue: JSON.stringify(payload).slice(0, 90000) },
+        payload: { stringValue: serialized },
         createdAt: { stringValue: new Date().toISOString() }
       }
     });
-  } catch (e) {}
+    return true;
+  } catch (e) { return false; }
 }
 async function getUndo(chatId) {
   try {
@@ -2248,12 +2219,12 @@ async function aiTransform(kind, currentText, questionText) {
  HANDLER
  ============================================================ */
 module.exports = async function handler(req, res) {
-  /* Clear per-invocation caches for fresh data on each webhook request.
-     The JWT token cache is also cleared so a stale token from a
-     previous invocation never leaks into a new cold-start. */
+  /* Clear the per-request questions cache so each webhook sees fresh data.
+     The JWT token cache is intentionally NOT cleared here: it self-refreshes
+     via its own expiry check, so keeping it avoids re-minting a token on every
+     request and prevents concurrent invocations from clobbering each other's
+     token mid-flight. */
   _questionsCache = null;
-  _cachedToken = null;
-  _cachedTokenExpiry = 0;
 
   if (req.method !== 'POST') {
     return res.status(200).json({ ok: true, message: 'Telegram webhook endpoint is live.' });
@@ -2280,7 +2251,9 @@ module.exports = async function handler(req, res) {
       var cbChatId = callback.message && callback.message.chat && callback.message.chat.id;
       var cbMessageId = callback.message && callback.message.message_id;
       var allowedChatId = String(process.env.TELEGRAM_CHAT_ID || '');
-      if (allowedChatId && String(cbChatId) !== allowedChatId) {
+      // Fail CLOSED: with no TELEGRAM_CHAT_ID configured, deny everyone rather
+      // than exposing every command to any user who reaches the bot.
+      if (!allowedChatId || String(cbChatId) !== allowedChatId) {
         await answerCallback(callback.id, 'Private bot. Access denied.');
         await sendLog('UNAUTHORIZED CALLBACK', { Chat: cbChatId, Action: callback.data || 'unknown' }, '\uD83D\uDEAB', actorFromUser(callback.from));
         return res.status(200).json({ ok: true, denied: 'wrong chat' });
@@ -2520,10 +2493,10 @@ module.exports = async function handler(req, res) {
             } catch (e) {}
           }
           _suppressItemLogs = false;
-          if (undoItems.length) await saveUndo(cbChatId, { type: 'delete', items: undoItems });
-          await sendLog('BULK DELETE ALL', { Requested: count, Deleted: deleted }, '\uD83D\uDDD1');
+          var undoSavedCb = undoItems.length ? await saveUndo(cbChatId, { type: 'delete', items: undoItems }) : false;
+          await sendLog('BULK DELETE ALL', { Requested: count, Deleted: deleted, Undo: undoSavedCb ? 'yes' : 'no' }, '\uD83D\uDDD1');
           await editMessage(cbChatId, cbMessageId,
-            cardTop('\u2705 <b>ALL DELETED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Successfully deleted <b>' + deleted + '</b> question' + (deleted === 1 ? '' : 's') + '.\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n' + BOX_V + '\n' + cardBottom
+            cardTop('\u2705 <b>ALL DELETED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Successfully deleted <b>' + deleted + '</b> question' + (deleted === 1 ? '' : 's') + '.\n' + BOX_V + '\n' + BOX_V + ' ' + (undoSavedCb ? '\u21A9\uFE0F /undo restores the whole batch.' : '\u26A0\uFE0F Batch too large to snapshot \u2014 /undo can\u2019t restore this one.') + '\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n' + BOX_V + '\n' + cardBottom
           );
         } catch (e) { _suppressItemLogs = false; await answerCallback(callback.id, '\u26A0\uFE0F Delete all failed'); }
       }
@@ -2789,7 +2762,8 @@ module.exports = async function handler(req, res) {
     var command = text.split(/\s+/)[0].toLowerCase().replace(/@\w+$/, '');
 
     var allowedChatId = String(process.env.TELEGRAM_CHAT_ID || '');
-    if (allowedChatId && String(chatId) !== allowedChatId) {
+    // Fail CLOSED: no TELEGRAM_CHAT_ID configured => deny all (never open the bot up).
+    if (!allowedChatId || String(chatId) !== allowedChatId) {
       var denialKind = command === '/start' ? 'start' : (text.startsWith('/') ? 'command' : 'message');
       await sendUnauthorizedNotice(chatId, message.from, message.message_id, denialKind, command);
       await sendLog('UNAUTHORIZED ' + denialKind.toUpperCase(), { Chat: chatId, Attempt: clipText(text, 120) }, '\uD83D\uDEAB', actorFromUser(message.from));
@@ -2835,7 +2809,7 @@ module.exports = async function handler(req, res) {
     }
 
     /* /help */
-    if (command === '/help') {
+    if (command === '/help' || text === '📖 Help') {
       await sendTelegram(chatId, HELP_TEXT, message.message_id, REPLY_KEYBOARD);
       return res.status(200).json({ ok: true });
     }
@@ -3345,12 +3319,14 @@ module.exports = async function handler(req, res) {
           message.message_id, REPLY_KEYBOARD, loadingId);
         return res.status(200).json({ ok: true });
       }
+      var PIN_CAP = 8;                       // keep the card under Telegram's 4096-char limit
+      var pinnedShown = pinned.slice(0, PIN_CAP);
       var lines = [
         cardTop('\uD83D\uDCCD <b>PINNED QUESTIONS</b> (' + pinned.length + ')'),
         BOX_V
       ];
-      for (var idx = 0; idx < pinned.length; idx++) {
-        var q = pinned[idx];
+      for (var idx = 0; idx < pinnedShown.length; idx++) {
+        var q = pinnedShown[idx];
         var st = questionState(q);
         var stateEmoji = st === 'ANSWERED' ? '\u2705' : st === 'DISMISSED' ? '\uD83D\uDE48' : '\u23F3';
         var qAge = timeAgo(q.createdAt);
@@ -3361,6 +3337,10 @@ module.exports = async function handler(req, res) {
         }
         if (q.votes > 0) lines.push(BOX_V + ' \uD83D\uDC4D ' + q.votes + ' votes');
         lines.push(BOX_V + ' \uD83C\uDD94 <code>' + esc(q.id) + '</code>');
+        lines.push(BOX_V);
+      }
+      if (pinned.length > PIN_CAP) {
+        lines.push(BOX_V + ' … and ' + (pinned.length - PIN_CAP) + ' more (showing ' + PIN_CAP + ')');
         lines.push(BOX_V);
       }
       lines.push(BOX_V + ' /unpin &lt;id&gt; to remove a pin');
@@ -3700,9 +3680,9 @@ module.exports = async function handler(req, res) {
             try { var snap = await getRawFields(all[di].id); await deleteQuestion(all[di].id); if (snap) undoItems.push({ id: all[di].id, fields: snap }); deleted++; } catch (e) {}
           }
           _suppressItemLogs = false;
-          if (undoItems.length) await saveUndo(chatId, { type: 'delete', items: undoItems });
-          await sendLog('BULK DELETE ALL', { Deleted: deleted, Via: 'typed-token' }, '🗑');
-          await respondTelegram(chatId, infoCard('✅ <b>ALL DELETED</b>', ['Deleted <b>' + deleted + '</b> question' + (deleted === 1 ? '' : 's') + '.', '', '↩️ /undo restores the whole batch.']), message.message_id, REPLY_KEYBOARD, loadingId);
+          var undoSaved = undoItems.length ? await saveUndo(chatId, { type: 'delete', items: undoItems }) : false;
+          await sendLog('BULK DELETE ALL', { Deleted: deleted, Via: 'typed-token', Undo: undoSaved ? 'yes' : 'no' }, '🗑');
+          await respondTelegram(chatId, infoCard('✅ <b>ALL DELETED</b>', ['Deleted <b>' + deleted + '</b> question' + (deleted === 1 ? '' : 's') + '.', '', undoSaved ? '↩️ /undo restores the whole batch.' : '⚠️ Batch too large to snapshot — /undo can’t restore this one.']), message.message_id, REPLY_KEYBOARD, loadingId);
         } else {
           await sendTelegram(chatId, infoCard('✅ <b>CANCELLED</b>', ['Token did not match — nothing deleted.']), message.message_id, REPLY_KEYBOARD);
         }
@@ -3808,6 +3788,7 @@ module.exports = async function handler(req, res) {
         var d = new Date(swhen); if (!isNaN(d.getTime())) when = d.toISOString();
       }
       if (!when) { await sendTelegram(chatId, infoCard('⚠️ <b>BAD TIME</b>', ['Could not parse “' + esc(swhen) + '”.', 'Use +2h, +30m, +1d, or an ISO time.']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }
+      if (new Date(when).getTime() <= Date.now()) { await sendTelegram(chatId, infoCard('⚠️ <b>TIME IN THE PAST</b>', ['“' + esc(swhen) + '” is not in the future.', 'Pick a later time, or use /publish to go live now.']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }
       try {
         var q = await getQuestion(sid);
         if (!q) { await sendTelegram(chatId, infoCard('⚠️ <b>NOT FOUND</b>', ['No question <code>' + esc(sid) + '</code>.']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }

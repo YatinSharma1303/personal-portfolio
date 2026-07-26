@@ -70,4 +70,22 @@ async function firestore(method, url, body) {
   return data;
 }
 
-module.exports = { firestore: firestore, docPath: docPath, collectionUrl: collectionUrl, mask: mask, projectId: projectId };
+/* Atomically increment a numeric field on an EXISTING document via a commit
+   transform (race-safe — no read-modify-write). `fieldPath` may address a map
+   subfield, e.g. reactions.`👍` (emoji segments must be backtick-quoted).
+   Returns the new numeric value. Throws NOT_FOUND if the document is missing. */
+async function increment(collection, id, fieldPath, delta) {
+  var commitUrl = 'https://firestore.googleapis.com/v1/projects/' + projectId() + '/databases/(default)/documents:commit';
+  var docName = 'projects/' + projectId() + '/databases/(default)/documents/' + collection + '/' + id;
+  var body = { writes: [{ transform: { document: docName, fieldTransforms: [{ fieldPath: fieldPath, increment: { integerValue: String(delta) } }] } }] };
+  var data = await firestore('POST', commitUrl, body);
+  var tr = data && data.writeResults && data.writeResults[0] && data.writeResults[0].transformResults && data.writeResults[0].transformResults[0];
+  return tr ? Number(tr.integerValue || tr.doubleValue || 0) : null;
+}
+
+/* Backtick-quote a Firestore field-path segment (for map keys like emoji). */
+function fieldPathSegment(seg) {
+  return '`' + String(seg).replace(/\\/g, '\\\\').replace(/`/g, '\\`') + '`';
+}
+
+module.exports = { firestore: firestore, docPath: docPath, collectionUrl: collectionUrl, mask: mask, projectId: projectId, increment: increment, fieldPathSegment: fieldPathSegment };

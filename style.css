@@ -1521,7 +1521,7 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
   display: inline-flex; align-items: center; gap: 7px;
   padding: 11px 22px; border-radius: var(--radius-btn);
   font-size: 13px; font-weight: 600; text-decoration: none;
-  background: color-mix(in srgb, var(--accent-solid) 10%, transparent); color: #00c8ff; border: 1.5px solid color-mix(in srgb, var(--accent-solid) 30%, transparent);
+  background: color-mix(in srgb, var(--accent-solid) 10%, transparent); color: var(--accent-solid); border: 1.5px solid color-mix(in srgb, var(--accent-solid) 30%, transparent);
   transition: all 0.22s ease;
 }
 .project-live-btn:hover { background: color-mix(in srgb, var(--accent-solid) 18%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 55%, transparent); transform: translateY(-1px); }
@@ -2003,7 +2003,7 @@ html.light .intro-dot { background: #059669; box-shadow: 0 0 8px rgba(5,150,105,
 html.light .btn-primary { background: var(--white); color: #fff; }
 html.light .project-dl-btn { background: var(--white); color: #fff; border-color: var(--white); }
 html.light .project-dl-btn:hover { box-shadow: 0 0 24px rgba(0,0,0,0.15); }
-html.light .project-live-btn { background: color-mix(in srgb, var(--accent-solid) 10%, transparent); color: #0066aa; border-color: color-mix(in srgb, var(--accent-solid) 30%, transparent); }
+html.light .project-live-btn { background: color-mix(in srgb, var(--accent-solid) 10%, transparent); color: color-mix(in srgb, var(--accent-solid) 65%, #000); border-color: color-mix(in srgb, var(--accent-solid) 30%, transparent); }
 html.light .btn-primary:hover { box-shadow: 0 0 28px rgba(0,0,0,0.15); }
 html.light .btn-ghost { border-color: rgba(80,80,140,0.3); }
 

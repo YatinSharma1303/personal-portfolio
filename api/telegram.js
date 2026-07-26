@@ -80,7 +80,7 @@ async function checkMilestone(botToken, chatId, total) {
 }
 
 function escapeHtml(value) {
-  value = value || '';
+  value = (value == null) ? '' : value;   // keep 0 / false — only null/undefined become ''
   return String(value)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
