@@ -5,7 +5,7 @@
  Cache version matches bot version: v6.1
  ============================================================ */
 
-var CACHE_NAME = 'portfolio-v9.0';
+var CACHE_NAME = 'portfolio-v9.1';
 
 /* Static assets to pre-cache on install */
 var PRECACHE_ASSETS = [
