@@ -1,6 +1,6 @@
 /* ============================================================
    YATIN SHARMA — PORTFOLIO · games.js
-   Playground: 7 playable mini-games in a full-screen overlay.
+   Playground: 6 playable mini-games in a full-screen overlay.
    Loaded after script.js. Exposes window.YatinPlayground.
    ============================================================ */
 (function () {
@@ -9,12 +9,10 @@
   const GAMES = [
     { id: 'snake',        icon: '♞', name: 'Snake',        desc: 'Classic game. High chance of self-sabotage.' },
     { id: 'pong',         icon: '◉', name: 'Ping Pong',    desc: 'You vs an AI paddle. First to 5 wins.' },
-    { id: 'roast',        icon: '▱', name: 'Roast Quiz',   desc: 'A personality test where every answer is a personal attack.' },
     { id: 'flappy',       icon: '⌁', name: 'Flappy',       desc: 'Infuriating physics. Avoid the pipes.' },
     { id: 'mines',        icon: '⚑', name: 'Minesweeper',  desc: 'Classic logic. Avoid the mines.' },
     { id: 'reaction',     icon: '◌', name: 'Reaction Test',desc: 'Click when it turns green.' },
-    { id: 'dodge',        icon: '⌖', name: 'Dodge',        desc: 'Survive against angry geometry.' },
-    { id: 'codebreaker',  icon: '⬡', name: 'Code Breaker', desc: 'Crack the secret color code. Logic + deduction.' }
+    { id: 'dodge',        icon: '⌖', name: 'Dodge',        desc: 'Survive against angry geometry.' }
   ];
 
   /* ── DOM shell ── */
@@ -394,31 +392,6 @@
   }
 
   /* ============================================================
-     3. ROAST QUIZ
-     ============================================================ */
-  function roast(host) {
-    const QS = [
-      { q:'Pick a vibe', a:['3am chaos','sunshine robot','feral gremlin','overthinker supreme'], r:['Bold of you to admit you function on zero sleep AND zero direction.','You confuse optimism with never having read the docs.','Iconic. Truly. Truly unhinged.','You overthink push buttons. Sit down.'] },
-      { q:'Your debugging style?', a:['console.log everything','actually read errors','pray','Stack Overflow devotee'], r:['Ah yes, archaeology via log spam.','A functioning developer? In MY roast quiz? Unlikely.','Prayer: the leading version control system, statistically.','You and 4 million others copy the same accepted answer.'] },
-      { q:'Code won\'t compile. You...', a:['blame the linter','add a semicolon','restart everything','cry, productively'], r:['The linter is the only thing protecting your coworkers.','A semicolon. Revolutionary. You fixed nothing, but proudly.','Have you tried turning your whole career off and on again?','Productive tears. The best kind. The only kind.'] },
-      { q:'Last commit message?', a:['"fix"','detailed novel','"pls work"','forgotten'], r:['"fix" - illuminating. The historians will study this.','Nobody reads 12-paragraph commits. Nobody.','Manifesting via commit message. Respect the hustle.','You don\'t remember. The code doesn\'t either.'] }
-    ];
-    let idx=0, score=0; const wrap=document.createElement('div'); wrap.className='pg-quiz'; host.appendChild(wrap);
-    function render(){
-      if(idx>=QS.length){ wrap.innerHTML='<div class="pg-quiz-result"><div class="pg-emoji">🔥</div><div class="pg-roast">You finished the quiz. Your reward? Knowing yourself a little too well. Score: '+score+'/'+QS.length+'. The AI is judging you, quietly.</div></div>'; wrap.appendChild(button('Again',()=>{idx=0;score=0;render();})); return; }
-      const item=QS[idx];
-      wrap.innerHTML='<div class="pg-q">'+item.q+'</div><div class="pg-opts">'+item.a.map((o,i)=>'<button class="pg-opt" data-i="'+i+'">'+o+'</button>').join('')+'</div>';
-      wrap.querySelectorAll('.pg-opt').forEach(b=>b.addEventListener('click',()=>{
-        const i=+b.dataset.i; const roast=item.r[i];
-        wrap.innerHTML='<div class="pg-roast-pop">"'+roast+'"</div>';
-        score++; idx++;
-        setTimeout(render, 1400);
-      }));
-    }
-    render();
-  }
-
-  /* ============================================================
      4. FLAPPY
      ============================================================ */
   function flappy(host){
@@ -604,108 +577,7 @@
     obs.observe(host, { childList: true });
   }
 
-  const RUNNERS = { snake, pong, roast, flappy, mines, reaction, dodge, codebreaker };
-
-  /* ============================================================
-     8. CODE BREAKER (Mastermind-style logic game)
-     ============================================================ */
-  function codebreaker(host) {
-    const COLORS = 6; const SLOTS = 4; const MAX_ROWS = 8;
-    let secret = [], currentRow = 0, active = [], over = false, won = false;
-
-    const wrap = document.createElement('div');
-    wrap.className = 'pg-codebreaker';
-    host.appendChild(wrap);
-
-    const rowsEl = document.createElement('div');
-    rowsEl.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
-    wrap.appendChild(rowsEl);
-
-    const statusEl = document.createElement('div');
-    statusEl.className = 'cb-status';
-    wrap.appendChild(statusEl);
-
-    const pegsEl = document.createElement('div');
-    pegsEl.className = 'cb-pegs';
-    wrap.appendChild(pegsEl);
-
-    const btnRow = document.createElement('div');
-    btnRow.style.cssText = 'display:flex;gap:10px;';
-    wrap.appendChild(btnRow);
-
-    function reset() {
-      secret = [];
-      for (let i = 0; i < SLOTS; i++) secret.push(Math.floor(rand(0, COLORS)));
-      currentRow = 0; active = [0, 0, 0, 0]; over = false; won = false;
-      render();
-      statusEl.textContent = 'Guess the ' + SLOTS + '-color code. Dots: green = right spot, blue = wrong spot.';
-      try { window.sfx.blip(); } catch (e) {}
-    }
-
-    function check(guess) {
-      let hits = 0, misses = 0;
-      const sCopy = secret.slice(), gCopy = guess.slice();
-      for (let i = 0; i < SLOTS; i++) { if (gCopy[i] === sCopy[i]) { hits++; gCopy[i] = -1; sCopy[i] = -2; } }
-      for (let i = 0; i < SLOTS; i++) { if (gCopy[i] >= 0 && sCopy.indexOf(gCopy[i]) >= 0) { misses++; sCopy[sCopy.indexOf(gCopy[i])] = -2; } }
-      return { hits, misses };
-    }
-
-    function render() {
-      rowsEl.innerHTML = '';
-      for (let r = 0; r < MAX_ROWS; r++) {
-        const row = document.createElement('div'); row.className = 'cb-row';
-        const guess = (r === currentRow && !over) ? active : (r < currentRow ? window._cbHistory[r] : null);
-        for (let s = 0; s < SLOTS; s++) {
-          const slot = document.createElement('div'); slot.className = 'cb-slot';
-          if (guess) slot.dataset.color = guess[s];
-          if (r === currentRow && !over) {
-            slot.style.cursor = 'pointer'; slot.style.borderColor = 'var(--accent)';
-            slot.addEventListener('click', () => { active[s] = (active[s] + 1) % COLORS; try { window.sfx.blip(); } catch (e) {} render(); });
-          }
-          row.appendChild(slot);
-        }
-        if (r < currentRow) {
-          const fb = window._cbFeedback[r]; const fbEl = document.createElement('div'); fbEl.className = 'cb-feedback';
-          for (let h = 0; h < fb.hits; h++) { const p = document.createElement('div'); p.className = 'cb-peg hit'; fbEl.appendChild(p); }
-          for (let m = 0; m < fb.misses; m++) { const p = document.createElement('div'); p.className = 'cb-peg miss'; fbEl.appendChild(p); }
-          row.appendChild(fbEl);
-        }
-        rowsEl.appendChild(row);
-      }
-      if (over) {
-        statusEl.textContent = won ? 'You cracked it!' : 'Code was: ' + secret.map(s => ['R','O','G','B','P','M'][s]).join(' ');
-        statusEl.style.color = won ? '#34d399' : '#ff6b6b';
-      } else {
-        statusEl.textContent = 'Row ' + (currentRow + 1) + ' / ' + MAX_ROWS + '. Click slots to cycle colors.';
-        statusEl.style.color = '';
-      }
-      // Color pegs legend
-      pegsEl.innerHTML = '';
-      const names = ['Red','Orange','Green','Blue','Purple','Pink'];
-      for (let c = 0; c < COLORS; c++) {
-        const p = document.createElement('div'); p.className = 'cb-peg-btn'; p.dataset.color = c; p.title = names[c];
-        p.style.background = ['#ef4444','#f59e0b','#22c55e','#3b82f6','#a855f7','#ec4899'][c];
-        pegsEl.appendChild(p);
-      }
-    }
-
-    function submit() {
-      if (over) return;
-      if (!window._cbHistory) { window._cbHistory = []; window._cbFeedback = []; }
-      const fb = check(active);
-      window._cbHistory[currentRow] = active.slice();
-      window._cbFeedback[currentRow] = fb;
-      if (fb.hits === SLOTS) { over = true; won = true; try { window.sfx.win(); } catch (e) {} render(); return; }
-      currentRow++; active = [0, 0, 0, 0];
-      if (currentRow >= MAX_ROWS) { over = true; won = false; try { window.sfx.crash(); } catch (e) {} }
-      render();
-    }
-
-    btnRow.appendChild(button('Submit Guess', submit));
-    btnRow.appendChild(button('New Game', reset));
-    window._cbHistory = []; window._cbFeedback = [];
-    reset();
-  }
+  const RUNNERS = { snake, pong, flappy, mines, reaction, dodge };
 
   /* ── public API ── */
   window.YatinPlayground = { GAMES, open, close };
