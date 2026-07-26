@@ -60,7 +60,7 @@
   <link rel="dns-prefetch" href="https://api.github.com"/>
   <link rel="dns-prefetch" href="https://www.youtube.com"/>
   <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml"/>
-  <link rel="stylesheet" href="style.css?v=8.5"/>
+  <link rel="stylesheet" href="style.css?v=8.6"/>
 </head>
 <body>
 
@@ -171,15 +171,15 @@
 
       <div class="mp-expand-panel">
         <div class="mp-big-art" id="mp-big-art"></div>
-        <div class="mp-big-title" id="mp-big-title">FMA Brotherhood OST</div>
-        <div class="mp-big-artist" id="mp-big-artist">Anime OST</div>
+        <div class="mp-big-title" id="mp-big-title">YouTube Music</div>
+        <div class="mp-big-artist" id="mp-big-artist">Playlist</div>
       </div>
 
       <div class="mp-track">
         <div class="mp-thumb" id="mp-thumb"></div>
         <div class="mp-bar-main">
-          <div class="mp-title" id="mp-title">FMA Brotherhood OST</div>
-          <div class="mp-artist" id="mp-artist">Anime OST</div>
+          <div class="mp-title" id="mp-title">YouTube Music</div>
+          <div class="mp-artist" id="mp-artist">Playlist</div>
         </div>
       </div>
 
@@ -190,18 +190,20 @@
       </div>
 
       <div class="mp-controls">
+        <button class="mp-btn mp-sec mp-shuffle" id="mp-shuffle" aria-label="Shuffle" title="Shuffle"><span class="material-symbols-outlined">shuffle</span></button>
         <button class="mp-btn mp-prev" id="mp-prev" aria-label="Previous" title="Previous"><svg viewBox="0 0 24 24"><path d="M6 19V5h2v14H6zm3.5-7L18 5v14L9.5 12z"/></svg></button>
         <button class="mp-btn mp-play" id="mp-play" aria-label="Play / Pause">
           <svg class="mp-icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
           <svg class="mp-icon-pause" viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
         </button>
         <button class="mp-btn mp-next" id="mp-next" aria-label="Next" title="Next"><svg viewBox="0 0 24 24"><path d="M6 19V5l8.5 7L6 19zm10.5-14h2v14h-2z"/></svg></button>
+        <button class="mp-btn mp-sec mp-repeat" id="mp-repeat" aria-label="Repeat" title="Repeat"><span class="material-symbols-outlined">repeat</span></button>
       </div>
 
       <div class="mp-bottom">
         <span class="material-symbols-outlined mp-vol-ic" id="mp-vol-icon">volume_up</span>
         <input type="range" id="mp-vol" class="mp-vol-range" min="0" max="100" value="70" aria-label="Volume"/>
-        <a class="mp-btn mp-yt" id="mp-yt" href="https://youtu.be/XtwqzajH_8A" target="_blank" rel="noopener" aria-label="Open on YouTube"><span class="material-symbols-outlined">open_in_new</span></a>
+        <a class="mp-btn mp-yt" id="mp-yt" href="https://music.youtube.com/playlist?list=OLAK5uy_mjNB8hu_s5goDncwoopQoSRXjmRjEPq54" target="_blank" rel="noopener" aria-label="Open on YouTube"><span class="material-symbols-outlined">open_in_new</span></a>
       </div>
     </div>
   </div>
@@ -691,7 +693,7 @@
     <div class="pchat-foot">AI answers may be imperfect — for anything specific, use <a href="#ama">Ask Me Anything</a>.</div>
   </div>
 
-  <script src="script.js?v=8.5"></script>
+  <script src="script.js?v=8.6"></script>
   <script src="games.js"></script>
 <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a202415a8b5ed895',t:'MTc4NDg4OTA4Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
