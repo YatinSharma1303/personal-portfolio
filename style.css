@@ -174,9 +174,10 @@ a { color: inherit; text-decoration: none; }
 /* volume + youtube */
 .mini-player .mp-bottom { display: flex; align-items: center; gap: 11px; }
 .mini-player .mp-vol-ic { font-size: 17px; color: var(--gray); flex-shrink: 0; display: grid; place-items: center; }
-.mini-player .mp-vol-range { flex: 1; height: 5px; -webkit-appearance: none; appearance: none; border-radius: 999px; outline: none; cursor: pointer; background: var(--mp-fill-h); }
-.mini-player .mp-vol-range::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 2px solid var(--accent-solid); cursor: pointer; box-shadow: 0 0 8px color-mix(in srgb, var(--accent-solid) 80%, transparent); }
-.mini-player .mp-vol-range::-moz-range-thumb { width: 14px; height: 14px; border: 2px solid var(--accent-solid); border-radius: 50%; background: #fff; cursor: pointer; }
+/* Native slider tinted with accent-color: the browser renders the filled
+   track + thumb on the compositor, so dragging stays smooth (no per-input
+   JS repaint of a gradient fill inside the blurred glass card). */
+.mini-player .mp-vol-range { flex: 1; height: 6px; cursor: pointer; outline: none; accent-color: var(--accent-solid); }
 .mini-player .mp-yt { width: 32px; height: 32px; border-radius: 9px; color: var(--gray); background: var(--mp-fill); text-decoration: none; }
 .mini-player .mp-yt:hover { color: var(--white); background: var(--mp-fill-h); }
 .mini-player .mp-yt .material-symbols-outlined { font-size: 16px; }
