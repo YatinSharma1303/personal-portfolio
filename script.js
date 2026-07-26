@@ -2413,6 +2413,17 @@
     const canvas = $('cursor-trail'); if (!canvas) return;
     const ctx = canvas.getContext('2d');
     let dots = [], mx = 0, my = 0;
+    // Trail colour follows the palette accent (--accent-solid), parsed + cached.
+    let accentCache = { hex: '', rgb: '0,200,255' };
+    function accentRGB() {
+      const hex = (getComputedStyle(document.documentElement).getPropertyValue('--accent-solid') || '').trim();
+      if (hex && hex !== accentCache.hex) {
+        const m = hex.replace('#', '');
+        if (m.length === 6) accentCache = { hex: hex, rgb: parseInt(m.slice(0, 2), 16) + ',' + parseInt(m.slice(2, 4), 16) + ',' + parseInt(m.slice(4, 6), 16) };
+        else if (m.length === 3) accentCache = { hex: hex, rgb: parseInt(m[0] + m[0], 16) + ',' + parseInt(m[1] + m[1], 16) + ',' + parseInt(m[2] + m[2], 16) };
+      }
+      return accentCache.rgb;
+    }
     function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
     resize(); window.addEventListener('resize', resize);
     window.addEventListener('mousemove', (e) => {
@@ -2423,10 +2434,11 @@
     });
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const rgb = accentRGB();
       for (let i = 0; i < dots.length; i++) {
         const d = dots[i]; d.life -= 0.04;
         if (d.life <= 0) continue;
-        ctx.fillStyle = 'rgba(0,200,255,' + (d.life * 0.5) + ')';
+        ctx.fillStyle = 'rgba(' + rgb + ',' + (d.life * 0.5) + ')';
         ctx.beginPath(); ctx.arc(d.x, d.y, d.life * 4, 0, 7); ctx.fill();
       }
       dots = dots.filter(d => d.life > 0);

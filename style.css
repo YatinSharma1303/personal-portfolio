@@ -252,15 +252,23 @@ body::before {
   border-radius: 50%; pointer-events: none; z-index: 9999;
   transform: translate(-50%,-50%); opacity: 0;
 }
-.click-splash { border: 2px solid rgba(255,255,255,0.4); }
+/* Accent-synced ring */
+.click-splash { border: 2px solid color-mix(in srgb, var(--accent-solid) 60%, transparent); }
 .click-splash.animating { animation: splashRing 0.6s ease-out forwards; }
 @keyframes splashRing {
-  0% { width: 8px; height: 8px; opacity: 0.8; }
+  0% { width: 8px; height: 8px; opacity: 0.85; }
   100% { width: 80px; height: 80px; opacity: 0; }
 }
-.click-splash-inner { background: rgba(255,255,255,0.3); }
-.click-splash-inner.animating { animation: splashDot 0.4s ease-out forwards; }
-@keyframes splashDot { 0% { opacity: 0.6; } 100% { opacity: 0; transform: translate(-50%,-50%) scale(0); } }
+/* Soft accent glow burst — the palette-synced tap/click glow (also fires on mobile taps) */
+.click-splash-inner {
+  width: 130px; height: 130px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent-solid) 34%, transparent), transparent 62%);
+}
+.click-splash-inner.animating { animation: splashGlow 0.55s ease-out forwards; }
+@keyframes splashGlow {
+  0% { opacity: 0.7; transform: translate(-50%,-50%) scale(0.35); }
+  100% { opacity: 0; transform: translate(-50%,-50%) scale(1.1); }
+}
 
 /* ============ INTRO OVERLAY ============ */
 .intro-overlay {
@@ -781,7 +789,7 @@ html.light .site-particles { opacity: 0.8; }
 .al-media { display: inline-flex; gap: 4px; padding: 4px; margin-bottom: 16px; border-radius: 12px; border: 1px solid var(--border); background: rgba(255,255,255,0.03); }
 .al-media-btn { padding: 7px 18px; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--gray); background: transparent; border: none; cursor: pointer; transition: color 0.18s ease, background 0.18s ease; }
 .al-media-btn:hover { color: var(--white); }
-.al-media-btn.active { color: #000; background: var(--white); }
+.al-media-btn.active { color: var(--bg); background: var(--white); }
 /* ============ 3D CARD TILT ============ */
 .project-card, .interest-card { transform-style: preserve-3d; transition: transform 0.15s ease; }
 .project-card .project-body, .interest-card h3, .interest-card p, .interest-card .interest-icon { transform: translateZ(30px); }
@@ -1533,6 +1541,7 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
 .cursor-glow {
   position: fixed; width: 300px; height: 300px; border-radius: 50%;
   background: radial-gradient(circle, rgba(0,200,255,0.08), transparent 60%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent-solid) 12%, transparent), transparent 60%);
   pointer-events: none; z-index: 9998; transform: translate(-50%, -50%);
   transition: opacity 0.3s ease; opacity: 0;
 }
@@ -1919,7 +1928,7 @@ html.light .cmd-footer kbd { background: rgba(0,0,0,0.06); border-color: rgba(0,
 html.light .cmd-hint { color: #777788; }
 html.light .cmd-esc-kbd { background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.1); color: #44445a; }
 
-html.light .cursor-glow { background: radial-gradient(circle, rgba(100,80,220,0.1), transparent 60%); }
+html.light .cursor-glow { background: radial-gradient(circle, rgba(100,80,220,0.1), transparent 60%); background: radial-gradient(circle, color-mix(in srgb, var(--accent-solid) 16%, transparent), transparent 60%); }
 
 /* H. MOBILE MUSIC PLAYER FULL SCREEN */
 @media (max-width: 600px) {
