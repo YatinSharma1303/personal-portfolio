@@ -1719,16 +1719,20 @@ kbd { background: var(--surface2); border: 1px solid var(--border-hover); border
 
 /* ============ L. ACHIEVEMENT TOAST ============ */
 .achievement-toast {
-  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(150px);
+  position: fixed; bottom: calc(30px + env(safe-area-inset-bottom, 0px)); left: 50%;
+  transform: translateX(-50%) translateY(calc(100% + 60px));
   background: rgba(12,12,16,0.9); border: 1px solid var(--accent); border-radius: 12px;
   padding: 16px 24px; display: flex; align-items: center; gap: 16px; z-index: 9999;
+  width: max-content; min-width: 260px; max-width: calc(100vw - 32px);
   box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 20px rgba(0,200,255,0.2);
   backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   transition: transform 0.5s cubic-bezier(0.22,1,0.36,1);
+  pointer-events: none;
 }
-.achievement-toast.show { transform: translateX(-50%) translateY(0); }
-.toast-icon { font-size: 24px; }
-.toast-title { font-weight: 700; font-size: 14px; color: #fff; }
+.achievement-toast.show { transform: translateX(-50%) translateY(0); pointer-events: auto; }
+.toast-icon { font-size: 24px; flex-shrink: 0; }
+.toast-content { min-width: 0; }
+.toast-title { font-weight: 700; font-size: 14px; color: var(--white); }
 .toast-desc { font-size: 12px; color: var(--gray); font-family: var(--mono); }
 
 /* ============ K. GAME DIFFICULTY SELECTOR ============ */
