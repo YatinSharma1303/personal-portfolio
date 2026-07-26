@@ -492,20 +492,19 @@
   // Volume — native range (smooth), with an accent fill that follows the thumb.
   const mpVol = $('mp-vol'), mpVolIcon = $('mp-vol-icon');
   function updateVolIcon(v) { var n = Number(v); if (mpVolIcon) mpVolIcon.textContent = (n === 0) ? 'volume_off' : (n < 50 ? 'volume_down' : 'volume_up'); }
-  function paintVol(v) { if (mpVol) mpVol.style.background = 'linear-gradient(90deg, var(--accent-solid) ' + v + '%, var(--mp-fill-h) ' + v + '%)'; }
-  // Update the fill/icon instantly on every input (cheap), but coalesce the
-  // actual YouTube setVolume() call to once per frame — calling it on every
-  // input event floods the iframe with postMessages and makes the drag stutter.
-  let volRaf = null, pendingVol = null;
+  // The filled track is now rendered natively (accent-color), so input only
+  // updates the icon (cheap) and throttles the YouTube setVolume() call — each
+  // call is a postMessage to the iframe, so we cap them at ~1 per 90ms during a
+  // drag and always apply the final value on release (`change`).
   if (mpVol) {
+    let lastVolTs = 0;
     mpVol.addEventListener('input', function (e) {
       var v = e.target.value;
-      updateVolIcon(v); paintVol(v);
-      pendingVol = v;
-      if (volRaf) return;
-      volRaf = requestAnimationFrame(function () { volRaf = null; if (pendingVol != null) { setVolume(pendingVol); pendingVol = null; } });
+      updateVolIcon(v);
+      var now = (window.performance && performance.now) ? performance.now() : Date.now();
+      if (now - lastVolTs >= 90) { lastVolTs = now; setVolume(v); }
     });
-    paintVol(mpVol.value);
+    mpVol.addEventListener('change', function (e) { setVolume(e.target.value); });
   }
 
   // Prev / Next — navigate the YouTube playlist natively.
