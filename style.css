@@ -142,8 +142,13 @@ a { color: inherit; text-decoration: none; }
 .mini-player .mp-seek-row { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; }
 .mini-player .mp-time { font-family: var(--mono); font-size: 10px; color: var(--gray); flex-shrink: 0; font-variant-numeric: tabular-nums; min-width: 30px; }
 .mini-player .mp-time-r { text-align: right; }
-.mini-player .mp-seek-bar { position: relative; flex: 1; height: 6px; border-radius: 999px; background: var(--mp-fill-h); cursor: pointer; }
+.mini-player .mp-seek-bar { position: relative; flex: 1; height: 9px; border-radius: 999px; background: var(--mp-fill-h); cursor: pointer; touch-action: none; }
+/* Invisible extended hit area so the bar is easy to grab (esp. on touch). */
+.mini-player .mp-seek-bar::before { content: ""; position: absolute; left: 0; right: 0; top: -9px; bottom: -9px; }
 .mini-player .mp-seek-fill { position: absolute; top: 0; bottom: 0; left: 0; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--accent-solid), var(--accent2)); box-shadow: 0 0 10px -2px var(--accent-solid); }
+/* Grab handle at the playhead. */
+.mini-player .mp-seek-fill::after { content: ""; position: absolute; right: -7px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; border-radius: 50%; background: #fff; box-shadow: 0 0 8px var(--accent-solid), 0 2px 6px rgba(0,0,0,0.45); transition: transform .15s ease; }
+.mini-player .mp-seek-bar:hover .mp-seek-fill::after { transform: translateY(-50%) scale(1.2); }
 
 /* controls */
 .mini-player .mp-controls { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 14px; }
