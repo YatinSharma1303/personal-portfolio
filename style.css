@@ -205,18 +205,41 @@ html.light .mini-player.expanded .mp-backdrop { opacity: .28; }
 .mini-player.dragging { user-select: none; -webkit-user-select: none; }
 .mini-player.dragging .mp-thumb, .mini-player.dragging .mp-title, .mini-player.dragging .mp-expand-panel, .mini-player.dragging .mp-big-art { cursor: grabbing; }
 /* Animated equalizer icon in the topbar music button (accent-aware).
-   Gently animates when idle, more energetically while playing. */
-.topbar-music-widget .tb-eq-icon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 2.5px; }
-.topbar-music-widget .tb-eq-icon i { width: 3px; height: 6px; border-radius: 2px; background: var(--accent-solid); animation: tbEqIdle 1.7s ease-in-out infinite; will-change: height; }
-.topbar-music-widget .tb-eq-icon i:nth-child(1) { animation-delay: 0s; }
-.topbar-music-widget .tb-eq-icon i:nth-child(2) { animation-delay: .28s; }
-.topbar-music-widget .tb-eq-icon i:nth-child(3) { animation-delay: .5s; }
-.topbar-music-widget .tb-eq-icon i:nth-child(4) { animation-delay: .16s; }
-.topbar-music-widget .tb-eq-icon.playing i { animation: tbEqPlay .75s ease-in-out infinite; }
-@keyframes tbEqIdle { 0%, 100% { height: 5px; opacity: .7; } 50% { height: 10px; opacity: 1; } }
-@keyframes tbEqPlay { 0%, 100% { height: 4px; } 50% { height: 17px; } }
+   Five bars, each with its own multi-peak, irregular keyframe so the icon
+   reacts like a real spectrum analyzer rather than a synced wave. Uses
+   scaleY off a shared baseline (GPU-composited, so it stays smooth). */
+.topbar-music-widget .tb-eq-icon { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); height: 18px; display: flex; align-items: flex-end; gap: 2px; }
+.topbar-music-widget .tb-eq-icon i { width: 3px; height: 18px; border-radius: 2px; background: linear-gradient(to top, var(--accent2), var(--accent-solid)); transform-origin: center bottom; transform: scaleY(.32); will-change: transform; }
+/* Idle: calm, slow, low-amplitude shimmer with varied resting levels. */
+.topbar-music-widget .tb-eq-icon i:nth-child(1) { animation: tbIdle1 2.3s ease-in-out infinite; }
+.topbar-music-widget .tb-eq-icon i:nth-child(2) { animation: tbIdle2 2.8s ease-in-out infinite; }
+.topbar-music-widget .tb-eq-icon i:nth-child(3) { animation: tbIdle3 1.9s ease-in-out infinite; }
+.topbar-music-widget .tb-eq-icon i:nth-child(4) { animation: tbIdle4 2.5s ease-in-out infinite; }
+.topbar-music-widget .tb-eq-icon i:nth-child(5) { animation: tbIdle5 2.15s ease-in-out infinite; }
+@keyframes tbIdle1 { 0%,100% { transform: scaleY(.28); } 50% { transform: scaleY(.46); } }
+@keyframes tbIdle2 { 0%,100% { transform: scaleY(.40); } 50% { transform: scaleY(.60); } }
+@keyframes tbIdle3 { 0%,100% { transform: scaleY(.24); } 50% { transform: scaleY(.42); } }
+@keyframes tbIdle4 { 0%,100% { transform: scaleY(.44); } 50% { transform: scaleY(.62); } }
+@keyframes tbIdle5 { 0%,100% { transform: scaleY(.30); } 50% { transform: scaleY(.5); } }
+/* Playing: taller, faster, irregular multi-peak motion per bar. */
+.topbar-music-widget .tb-eq-icon.playing i { animation-timing-function: cubic-bezier(.4,0,.5,1); }
+.topbar-music-widget .tb-eq-icon.playing i:nth-child(1) { animation: tbPlay1 .95s infinite; }
+.topbar-music-widget .tb-eq-icon.playing i:nth-child(2) { animation: tbPlay2 .72s infinite; }
+.topbar-music-widget .tb-eq-icon.playing i:nth-child(3) { animation: tbPlay3 1.08s infinite; }
+.topbar-music-widget .tb-eq-icon.playing i:nth-child(4) { animation: tbPlay4 .82s infinite; }
+.topbar-music-widget .tb-eq-icon.playing i:nth-child(5) { animation: tbPlay5 .64s infinite; }
+@keyframes tbPlay1 { 0%,100% { transform: scaleY(.30); } 18% { transform: scaleY(.92); } 40% { transform: scaleY(.42); } 62% { transform: scaleY(1); } 82% { transform: scaleY(.5); } }
+@keyframes tbPlay2 { 0%,100% { transform: scaleY(.5); } 22% { transform: scaleY(1); } 46% { transform: scaleY(.3); } 68% { transform: scaleY(.82); } 88% { transform: scaleY(.4); } }
+@keyframes tbPlay3 { 0%,100% { transform: scaleY(.24); } 16% { transform: scaleY(.6); } 38% { transform: scaleY(.98); } 58% { transform: scaleY(.36); } 80% { transform: scaleY(.88); } }
+@keyframes tbPlay4 { 0%,100% { transform: scaleY(.44); } 20% { transform: scaleY(.2); } 44% { transform: scaleY(.9); } 66% { transform: scaleY(.5); } 86% { transform: scaleY(.95); } }
+@keyframes tbPlay5 { 0%,100% { transform: scaleY(.55); } 24% { transform: scaleY(1); } 50% { transform: scaleY(.34); } 74% { transform: scaleY(.9); } }
 @media (prefers-reduced-motion: reduce) {
-  .topbar-music-widget .tb-eq-icon i { animation: none !important; height: 8px; }
+  .topbar-music-widget .tb-eq-icon i { animation: none !important; }
+  .topbar-music-widget .tb-eq-icon i:nth-child(1) { transform: scaleY(.4); }
+  .topbar-music-widget .tb-eq-icon i:nth-child(2) { transform: scaleY(.7); }
+  .topbar-music-widget .tb-eq-icon i:nth-child(3) { transform: scaleY(1); }
+  .topbar-music-widget .tb-eq-icon i:nth-child(4) { transform: scaleY(.62); }
+  .topbar-music-widget .tb-eq-icon i:nth-child(5) { transform: scaleY(.44); }
 }
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
 
