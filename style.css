@@ -676,6 +676,9 @@ html.light .site-particles { opacity: 0.8; }
 .ama-share-action .material-symbols-outlined { font-size: 18px; }
 .ama-share-action.copied { border-color: #34d399; color: #34d399; }
 /* 57. Ask-my-portfolio AI chatbot */
+/* A class-level `display` overrides the [hidden] attribute, which would leave
+   these overlays invisibly capturing pointer events. Force hidden = gone. */
+.pchat-panel[hidden], .accent-popover[hidden], .ama-share-modal[hidden] { display: none !important; }
 .pchat-fab { position: fixed; right: 20px; bottom: 20px; z-index: 1500; width: 56px; height: 56px; border-radius: 50%; border: none; cursor: pointer; display: grid; place-items: center; color: #000; background: linear-gradient(135deg, var(--accent, #00c8ff), var(--accent2, #7a5aff)); box-shadow: 0 8px 26px rgba(0,0,0,0.4); transition: transform 0.18s ease, opacity 0.18s ease; }
 .pchat-fab:hover { transform: translateY(-2px) scale(1.05); }
 .pchat-fab.hidden { opacity: 0; pointer-events: none; transform: scale(0.8); }
