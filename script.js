@@ -493,7 +493,20 @@
   const mpVol = $('mp-vol'), mpVolIcon = $('mp-vol-icon');
   function updateVolIcon(v) { var n = Number(v); if (mpVolIcon) mpVolIcon.textContent = (n === 0) ? 'volume_off' : (n < 50 ? 'volume_down' : 'volume_up'); }
   function paintVol(v) { if (mpVol) mpVol.style.background = 'linear-gradient(90deg, var(--accent-solid) ' + v + '%, var(--mp-fill-h) ' + v + '%)'; }
-  if (mpVol) { mpVol.addEventListener('input', function (e) { var v = e.target.value; setVolume(v); updateVolIcon(v); paintVol(v); }); paintVol(mpVol.value); }
+  // Update the fill/icon instantly on every input (cheap), but coalesce the
+  // actual YouTube setVolume() call to once per frame — calling it on every
+  // input event floods the iframe with postMessages and makes the drag stutter.
+  let volRaf = null, pendingVol = null;
+  if (mpVol) {
+    mpVol.addEventListener('input', function (e) {
+      var v = e.target.value;
+      updateVolIcon(v); paintVol(v);
+      pendingVol = v;
+      if (volRaf) return;
+      volRaf = requestAnimationFrame(function () { volRaf = null; if (pendingVol != null) { setVolume(pendingVol); pendingVol = null; } });
+    });
+    paintVol(mpVol.value);
+  }
 
   // Prev / Next — navigate the YouTube playlist natively.
   const mpPrev = $('mp-prev'), mpNext = $('mp-next');
