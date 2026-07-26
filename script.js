@@ -485,7 +485,10 @@
 
   function openPlayer() {
     if (miniPlayer) { miniPlayer.classList.add('open'); miniPlayer.setAttribute('aria-hidden', 'false'); }
-    if (!isPlaying && !wantPlay) doPlay();
+    // Do NOT auto-play on open — playback should only start when the user
+    // explicitly presses play. Auto-playing here caused the YouTube video to
+    // start just from opening the widget, which external Last.fm scrobblers
+    // (browser extensions / YouTube links) would then pick up and scrobble.
   }
   function closePlayer() {
     if (miniPlayer) { miniPlayer.classList.remove('open', 'expanded'); miniPlayer.setAttribute('aria-hidden', 'true'); }
