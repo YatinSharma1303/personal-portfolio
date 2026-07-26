@@ -1134,9 +1134,13 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .al-item-bar { position: relative; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.07); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04); margin-top: 8px; }
 .al-item-bar i { position: relative; display: block; height: 100%; min-width: 5px; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent2)); box-shadow: 0 0 8px color-mix(in srgb, var(--accent-solid) 45%, transparent); transition: width 0.5s cubic-bezier(.22,1,.36,1); }
 .al-item-bar i::after { content: ''; position: absolute; right: 0; top: 50%; transform: translate(50%, -50%); width: 7px; height: 7px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px var(--accent), 0 0 2px #fff; }
-/* Shimmer sweep to make the fill feel alive */
-.al-item-bar i::before { content: ''; position: absolute; inset: 0; border-radius: 999px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent); background-size: 200% 100%; animation: al-bar-shimmer 2.6s ease-in-out infinite; }
-@keyframes al-bar-shimmer { 0% { background-position: 200% 0; } 60%, 100% { background-position: -80% 0; } }
+/* Shimmer sweep to make the fill feel alive.
+   Uses transform: translateX (GPU-composited) instead of animating
+   background-position (which repaints every frame and stutters when many
+   bars animate at once). The gradient's transparent edges + rounded shape
+   mean it needs no clipping and never shows a hard rectangle. */
+.al-item-bar i::before { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 55%; border-radius: 999px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent); transform: translateX(-100%); animation: al-bar-shine 2.8s ease-in-out infinite; pointer-events: none; }
+@keyframes al-bar-shine { 0% { transform: translateX(-100%); } 55%, 100% { transform: translateX(240%); } }
 .al-tab-count { margin-left: 6px; opacity: 0.6; font-size: 10px; }
 .al-tab.active .al-tab-count { opacity: 0.85; }
 .al-empty { grid-column: 1/-1; text-align: center; color: var(--gray-dim); font-family: var(--mono); font-size: 13px; padding: 20px; }
@@ -2160,7 +2164,7 @@ html.light .footer-nav a:hover { color: var(--accent); background: color-mix(in 
   --ama-featured-purple: #D0BCFF;
   --ama-featured-purple-line: rgba(208,188,255,0.28);
   --ama-pinned-blue: #00C8FF;
-  --ama-pinned-blue-line: color-mix(in srgb, var(--accent-solid) 20%, transparent);
+  --ama-pinned-blue-line: rgba(0,200,255,0.20);
   --ama-card-bg: rgba(255,255,255,0.035);
 }
 html.light {
@@ -2209,7 +2213,7 @@ html.light {
 }
 .ama-pin-badge {
   color: var(--ama-pinned-blue) !important;
-  background: color-mix(in srgb, var(--accent-solid) 10%, transparent) !important;
+  background: rgba(0,200,255,0.10) !important;
   border: 1px solid var(--ama-pinned-blue-line) !important;
 }
 .ama-topic-badge {
