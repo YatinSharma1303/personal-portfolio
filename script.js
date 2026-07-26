@@ -348,6 +348,8 @@
       // Default (cyan) uses the stylesheet values — clear overrides so themes stay intact.
       if (a.id === 'cyan') { root.style.removeProperty('--accent'); root.style.removeProperty('--accent2'); }
       else { root.style.setProperty('--accent', a.accent); root.style.setProperty('--accent2', a.accent2); }
+      // Solid accent (no alpha) drives the contribution heatmap + legend.
+      root.style.setProperty('--accent-solid', a.swatch);
       activeId = a.id;
       const meta = document.querySelector('meta[name="theme-color"]');
       if (meta) meta.setAttribute('content', a.swatch);
@@ -1027,18 +1029,37 @@
 
     // Fetch user avatar, favourites and statistics for both media types (separate request)
     const userQuery = `query{User(name:"${CONFIG.anilistUser}"){avatar{large}favourites{anime{nodes{id}}manga{nodes{id}}}statistics{anime{count episodesWatched minutesWatched meanScore genres{genre count}}manga{count chaptersRead volumesRead meanScore genres{genre count}}}}}`;
-    fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: userQuery }) })
-      .then(r => r.json()).then(d => {
-        const u = d && d.data && d.data.User; if (!u) return;
-        const av = $('al-avatar'); if (av && u.avatar && u.avatar.large) av.src = u.avatar.large;
-        const fav = u.favourites || {};
-        favSets.ANIME = new Set(((fav.anime && fav.anime.nodes) || []).map(n => n && n.id).filter(Boolean));
-        favSets.MANGA = new Set(((fav.manga && fav.manga.nodes) || []).map(n => n && n.id).filter(Boolean));
-        statsByMedia.ANIME = (u.statistics && u.statistics.anime) || null;
-        statsByMedia.MANGA = (u.statistics && u.statistics.manga) || null;
-        favSet = favSets[activeMedia]; statsData = statsByMedia[activeMedia];
-        renderStats(); if (loaded[activeMedia]) render();
-      }).catch(() => {});
+    function loadUserMeta() {
+      return fetch('https://graphql.anilist.co?_=' + Date.now(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: userQuery }) })
+        .then(r => r.json()).then(d => {
+          const u = d && d.data && d.data.User; if (!u) return;
+          const av = $('al-avatar'); if (av && u.avatar && u.avatar.large) av.src = u.avatar.large;
+          const fav = u.favourites || {};
+          favSets.ANIME = new Set(((fav.anime && fav.anime.nodes) || []).map(n => n && n.id).filter(Boolean));
+          favSets.MANGA = new Set(((fav.manga && fav.manga.nodes) || []).map(n => n && n.id).filter(Boolean));
+          statsByMedia.ANIME = (u.statistics && u.statistics.anime) || null;
+          statsByMedia.MANGA = (u.statistics && u.statistics.manga) || null;
+          favSet = favSets[activeMedia]; statsData = statsByMedia[activeMedia];
+          renderStats(); if (loaded[activeMedia]) render();
+        }).catch(() => {});
+    }
+    loadUserMeta();
+
+    // Manual refresh — re-fetch the active media list + user meta without a full page reload.
+    let refreshing = false;
+    function refresh() {
+      if (refreshing) return;
+      refreshing = true;
+      const btn = $('al-refresh');
+      if (btn) btn.classList.add('ama-refresh-spin');
+      const type = activeMedia;
+      loaded[type] = false; loading[type] = false;
+      loadMedia(type);   // re-fetches the active list; refreshAll() runs on success
+      loadUserMeta();    // refresh avatar / favourites / stats
+      setTimeout(() => { if (btn) btn.classList.remove('ama-refresh-spin'); refreshing = false; }, 700);
+    }
+    const alRefreshBtn = $('al-refresh');
+    if (alRefreshBtn) alRefreshBtn.addEventListener('click', refresh);
     function renderStats() {
       ensureChrome();
       let count, mean, genres, numbers;

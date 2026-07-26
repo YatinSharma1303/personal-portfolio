@@ -36,6 +36,7 @@ button, .btn-primary, .btn-ghost, .copy-btn, .quote-swap,
   --grid: rgba(255,255,255,0.028);
   --accent: rgba(0,200,255,0.6);
   --accent2: rgba(120,90,255,0.5);
+  --accent-solid: #00c8ff;
   --mono: 'JetBrains Mono', monospace;
   --sans: 'Inter', system-ui, sans-serif;
   --radius-card: 28px;
@@ -1006,6 +1007,7 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .al-title { font-weight: 800; font-size: 18px; }
 .al-sub { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); }
 .al-link { font-size: 12px; color: var(--accent); margin-left: auto; }
+.al-refresh-btn { margin-left: 8px; }
 .al-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
 .al-tab { font-family: var(--mono); font-size: 11px; padding: 7px 14px; border-radius: var(--radius-btn); border: 1px solid var(--border); color: var(--gray-dim); }
 .al-tab.active { background: var(--white); color: #000; border-color: var(--white); }
@@ -1512,11 +1514,11 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
 .contrib-grid::-webkit-scrollbar { height: 4px; }
 .contrib-grid::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 2px; }
 .contrib-week { display: flex; flex-direction: column; gap: 3px; }
-.contrib-day { width: 11px; height: 11px; border-radius: 2px; background: rgba(0,200,255,0.1); position: relative; cursor: pointer; }
-.contrib-day[data-level="1"] { background: rgba(0,200,255,0.25); }
-.contrib-day[data-level="2"] { background: rgba(0,200,255,0.45); }
-.contrib-day[data-level="3"] { background: rgba(0,200,255,0.7); }
-.contrib-day[data-level="4"] { background: rgba(0,200,255,1); }
+.contrib-day { width: 11px; height: 11px; border-radius: 2px; background: rgba(0,200,255,0.1); background: color-mix(in srgb, var(--accent-solid) 10%, transparent); position: relative; cursor: pointer; }
+.contrib-day[data-level="1"] { background: rgba(0,200,255,0.25); background: color-mix(in srgb, var(--accent-solid) 25%, transparent); }
+.contrib-day[data-level="2"] { background: rgba(0,200,255,0.45); background: color-mix(in srgb, var(--accent-solid) 45%, transparent); }
+.contrib-day[data-level="3"] { background: rgba(0,200,255,0.7); background: color-mix(in srgb, var(--accent-solid) 70%, transparent); }
+.contrib-day[data-level="4"] { background: rgba(0,200,255,1); background: var(--accent-solid); }
 /* Custom glass tooltip */
 .contrib-tip {
   position: fixed; z-index: 9000; pointer-events: none;
@@ -1533,7 +1535,7 @@ html.light .contrib-tip { background: rgba(255,255,255,0.95); border-color: rgba
 .contrib-loading { color: var(--gray-dim); font-family: var(--mono); font-size: 12px; }
 .contrib-legend { display: flex; align-items: center; gap: 6px; margin-top: 12px; font-family: var(--mono); font-size: 10px; color: var(--gray-dim); }
 .contrib-legend-boxes { display: flex; gap: 3px; }
-.contrib-legend-boxes i { width: 11px; height: 11px; border-radius: 2px; background: var(--accent); display: inline-block; }
+.contrib-legend-boxes i { width: 11px; height: 11px; border-radius: 2px; background: var(--accent-solid); display: inline-block; }
 
 /* ============ TESTIMONIALS ============ */
 .testimonials-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
