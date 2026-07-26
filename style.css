@@ -940,9 +940,24 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .al-item { border-radius: 14px; overflow: hidden; border: 1px solid var(--border); transition: transform 0.2s ease; }
 .al-item:hover { transform: translateY(-3px); }
 .al-item img { width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block; }
+.al-item-cover { position: relative; overflow: hidden; }
+.al-fav { position: absolute; top: 6px; right: 6px; z-index: 2; color: #ff5c8a; font-size: 13px; background: rgba(0,0,0,0.55); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.al-item-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(6,8,14,0.97) 28%, rgba(6,8,14,0.55)); opacity: 0; transition: opacity 0.2s ease; padding: 10px; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; }
+.al-item:hover .al-item-overlay, .al-item:focus-within .al-item-overlay { opacity: 1; }
+.al-ov-fmt { font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em; color: var(--accent); }
+.al-ov-genres { display: flex; flex-wrap: wrap; gap: 4px; }
+.al-ov-genres span { font-family: var(--mono); font-size: 9px; padding: 2px 6px; border-radius: 6px; background: rgba(255,255,255,0.14); color: #fff; }
+.al-ov-desc { font-size: 10px; line-height: 1.4; color: rgba(255,255,255,0.85); }
 .al-item-info { padding: 8px 10px; }
 .al-item-name { font-size: 12px; font-weight: 600; line-height: 1.3; }
 .al-item-score { font-family: var(--mono); font-size: 10px; color: var(--gray-dim); }
+.al-item-score.al-score-high { color: #34d399; }
+.al-item-score.al-score-mid { color: #f59e0b; }
+.al-item-score.al-score-low { color: #f87171; }
+.al-item-bar { height: 4px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; margin-top: 6px; }
+.al-item-bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent), #7850ff); }
+.al-tab-count { margin-left: 6px; opacity: 0.6; font-size: 10px; }
+.al-tab.active .al-tab-count { opacity: 0.85; }
 .al-empty { grid-column: 1/-1; text-align: center; color: var(--gray-dim); font-family: var(--mono); font-size: 13px; padding: 20px; }
 
 /* ============ INTERESTS ============ */
@@ -1341,6 +1356,33 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
 
 /* ============ ANILIST SUMMARY ============ */
 .al-summary { font-family: var(--mono); font-size: 12px; color: var(--gray-dim); margin-bottom: 16px; }
+/* AniList — stats panel */
+.al-stats { margin-bottom: 18px; }
+.al-stat-nums { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 12px; color: var(--gray-dim); margin-bottom: 12px; }
+.al-stat-nums b { color: var(--white); font-size: 14px; }
+.al-stat-genres { display: grid; gap: 6px; max-width: 440px; }
+.al-stat-genre { display: grid; grid-template-columns: 96px 1fr 28px; align-items: center; gap: 10px; font-family: var(--mono); font-size: 11px; color: var(--gray-dim); }
+.al-sg-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.al-sg-bar { height: 6px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; }
+.al-sg-bar i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), #7850ff); }
+.al-sg-count { text-align: right; color: var(--gray); }
+/* AniList — controls (search + sort) */
+.al-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+.al-search-wrap { position: relative; display: flex; align-items: center; flex: 1; min-width: 180px; }
+.al-search-icon { position: absolute; left: 12px; font-size: 18px; color: var(--gray-dim); pointer-events: none; }
+.al-search-input { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 9px 36px 9px 38px; color: var(--white); font-family: inherit; font-size: 13px; }
+.al-search-input::placeholder { color: var(--gray-dim); }
+.al-search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,200,255,0.1); }
+.al-search-clear { position: absolute; right: 8px; background: none; border: none; color: var(--gray-dim); cursor: pointer; padding: 4px; display: inline-flex; border-radius: 8px; transition: color 0.2s, background 0.2s; }
+.al-search-clear:hover { color: var(--accent); background: rgba(0,200,255,0.08); }
+.al-search-clear .material-symbols-outlined { font-size: 16px; }
+.al-sort { display: flex; gap: 6px; flex-wrap: wrap; }
+.al-sort-btn { font-family: var(--mono); font-size: 11px; padding: 6px 12px; border-radius: var(--radius-btn); border: 1px solid var(--border); color: var(--gray-dim); }
+.al-sort-btn.active { background: var(--white); color: #000; border-color: var(--white); }
+/* AniList — genre filter */
+.al-genres { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.al-genre-pill { font-family: var(--mono); font-size: 10px; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--border); color: var(--gray-dim); }
+.al-genre-pill.active { background: var(--accent); color: #000; border-color: var(--accent); }
 .al-pagination { display: flex; gap: 6px; justify-content: center; align-items: center; margin-top: 20px; }
 .al-page-btn { font-family: var(--mono); font-size: 13px; min-width: 34px; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border); color: var(--gray); display: flex; align-items: center; justify-content: center; }
 .al-page-btn.active { background: var(--white); color: #000; border-color: var(--white); }
@@ -1849,6 +1891,10 @@ html.light .ama-page:hover:not(.active) { border-color: var(--border-hover); bac
 html.light .anilist-card { background: rgba(255,255,255,0.6); }
 html.light .al-tab { color: var(--gray-dim); border-color: var(--border); }
 html.light .al-tab.active { background: var(--white); color: #fff; }
+html.light .al-sort-btn { color: var(--gray-dim); border-color: var(--border); }
+html.light .al-sort-btn.active { background: var(--white); color: #fff; }
+html.light .al-genre-pill.active { color: #fff; }
+html.light .al-stat-nums b { color: var(--white); }
 html.light .al-page-btn { border-color: var(--border); color: var(--gray); }
 html.light .al-page-btn.active { background: var(--white); color: #fff; border-color: var(--white); }
 html.light .al-page-btn:hover:not(.active):not(:disabled) { border-color: var(--border-hover); background: rgba(0,0,0,0.03); }

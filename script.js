@@ -763,22 +763,68 @@
   (function anilist() {
     const list = $('al-list'), tabs = $('al-tabs'); if (!list) return;
     let allEntries = [], activeStatus = 'ALL', page = 1;
+    let activeSort = 'updated', activeGenre = '', activeSearch = '';
+    let favSet = new Set(), statsData = null;
     const PER_PAGE = 6;
     const card = list.parentElement;
-    let summaryEl = null, pagerEl = null;
+    let statsPanel = null, controlsBar = null, genreBar = null, pagerEl = null;
+
+    function entryTitle(e) {
+      return (e.media && e.media.title && (e.media.title.romaji || e.media.title.english)) || '';
+    }
+    function scoreClass(mean) {
+      if (!mean) return '';
+      if (mean >= 75) return 'al-score-high';
+      if (mean >= 60) return 'al-score-mid';
+      return 'al-score-low';
+    }
+
     function ensureChrome() {
-      if (!summaryEl) { summaryEl = document.createElement('div'); summaryEl.className = 'al-summary'; list.parentNode.insertBefore(summaryEl, list); }
+      if (!statsPanel) {
+        statsPanel = document.createElement('div');
+        statsPanel.className = 'al-stats';
+        tabs.parentNode.insertBefore(statsPanel, tabs);
+      }
+      if (!controlsBar) {
+        controlsBar = document.createElement('div');
+        controlsBar.className = 'al-controls';
+        controlsBar.innerHTML =
+          '<div class="al-search-wrap"><span class="material-symbols-outlined al-search-icon">search</span>' +
+          '<input type="text" class="al-search-input" id="al-search" maxlength="60" placeholder="Search anime…" autocomplete="off" aria-label="Search anime">' +
+          '<button class="al-search-clear" id="al-search-clear" hidden title="Clear" aria-label="Clear search"><span class="material-symbols-outlined">close</span></button></div>' +
+          '<div class="al-sort" id="al-sort">' +
+            '<button class="al-sort-btn active" data-sort="updated">Updated</button>' +
+            '<button class="al-sort-btn" data-sort="score">Score</button>' +
+            '<button class="al-sort-btn" data-sort="title">Title</button>' +
+            '<button class="al-sort-btn" data-sort="progress">Progress</button>' +
+          '</div>';
+        list.parentNode.insertBefore(controlsBar, list);
+        const si = controlsBar.querySelector('#al-search'), sc = controlsBar.querySelector('#al-search-clear');
+        si.addEventListener('input', () => { activeSearch = si.value.trim(); sc.hidden = !activeSearch; page = 1; render(); });
+        si.addEventListener('keydown', (e) => { if (e.key === 'Escape' && activeSearch) { si.value = ''; activeSearch = ''; sc.hidden = true; page = 1; render(); } });
+        sc.addEventListener('click', () => { si.value = ''; activeSearch = ''; sc.hidden = true; page = 1; render(); si.focus(); });
+        controlsBar.querySelector('#al-sort').addEventListener('click', (e) => {
+          const b = e.target.closest('.al-sort-btn'); if (!b) return;
+          controlsBar.querySelectorAll('.al-sort-btn').forEach(x => x.classList.remove('active'));
+          b.classList.add('active'); activeSort = b.dataset.sort; page = 1; render();
+        });
+      }
+      if (!genreBar) {
+        genreBar = document.createElement('div');
+        genreBar.className = 'al-genres';
+        list.parentNode.insertBefore(genreBar, list);
+      }
       if (!pagerEl) { pagerEl = document.createElement('div'); pagerEl.className = 'al-pagination'; card.appendChild(pagerEl); }
     }
     function loadFallbackAnime() {
       allEntries = [
-        { _status: 'CURRENT', progress: 52, score: 0, updatedAt: Date.now()/1000, media: { title: { romaji: 'NARUTO', english: 'Naruto' }, coverImage: { large: '' }, episodes: 220, duration: 23 } },
-        { _status: 'COMPLETED', progress: 64, score: 0, updatedAt: Date.now()/1000 - 10, media: { title: { romaji: 'Hagane no Renkinjutsushi: FULLMETAL ALCHEMIST', english: 'Fullmetal Alchemist: Brotherhood' }, coverImage: { large: '' }, episodes: 64, duration: 25 } },
-        { _status: 'COMPLETED', progress: 37, score: 0, updatedAt: Date.now()/1000 - 20, media: { title: { romaji: 'DEATH NOTE', english: 'Death Note' }, coverImage: { large: '' }, episodes: 37, duration: 23 } }
+        { _status: 'CURRENT', progress: 52, score: 0, updatedAt: Date.now()/1000, media: { title: { romaji: 'NARUTO', english: 'Naruto' }, coverImage: { large: '' }, episodes: 220, duration: 23, genres: ['Action', 'Adventure'], format: 'TV' } },
+        { _status: 'COMPLETED', progress: 64, score: 0, updatedAt: Date.now()/1000 - 10, media: { title: { romaji: 'Hagane no Renkinjutsushi: FULLMETAL ALCHEMIST', english: 'Fullmetal Alchemist: Brotherhood' }, coverImage: { large: '' }, episodes: 64, duration: 25, genres: ['Action', 'Adventure', 'Drama'], format: 'TV' } },
+        { _status: 'COMPLETED', progress: 37, score: 0, updatedAt: Date.now()/1000 - 20, media: { title: { romaji: 'DEATH NOTE', english: 'Death Note' }, coverImage: { large: '' }, episodes: 37, duration: 23, genres: ['Mystery', 'Psychological', 'Thriller'], format: 'TV' } }
       ];
-      renderSummary(); render(); renderBanner(allEntries);
+      renderStats(); renderGenres(); updateTabCounts(); render(); renderBanner(allEntries);
     }
-    const query = `query{user:MediaListCollection(userName:"${CONFIG.anilistUser}",type:ANIME){lists{name status entries{media{id title{romaji english}coverImage{extraLarge large medium}episodes duration meanScore}score progress updatedAt}}}}`;
+    const query = `query{user:MediaListCollection(userName:"${CONFIG.anilistUser}",type:ANIME){lists{name status entries{media{id title{romaji english}coverImage{extraLarge large medium}episodes duration meanScore genres format description(asHtml:false)}score progress updatedAt}}}}`;
     fetch('https://graphql.anilist.co?_=' + Date.now(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query }) })
       .then(r => { if (!r.ok) throw new Error('AniList HTTP ' + r.status); return r.json(); }).then(d => {
         if (d.errors) throw new Error(d.errors[0]?.message || 'AniList GraphQL error');
@@ -786,19 +832,73 @@
         allEntries = [];
         lists.forEach(l => (l.entries || []).forEach(e => { if (e && e.media) { e._status = l.status; allEntries.push(e); } }));
         if (!allEntries.length) throw new Error('AniList list empty');
-        renderSummary(); render(); renderBanner(allEntries);
+        renderStats(); renderGenres(); updateTabCounts(); render(); renderBanner(allEntries);
       }).catch((err) => { console.warn('AniList load failed, using fallback:', err); loadFallbackAnime(); });
 
-    // Fetch user avatar separately
-    const userQuery = `query{User(name:"${CONFIG.anilistUser}"){avatar{large}}}`;
+    // Fetch user avatar, favourites and statistics (separate request)
+    const userQuery = `query{User(name:"${CONFIG.anilistUser}"){avatar{large}favourites{anime{nodes{id}}}statistics{anime{count episodesWatched minutesWatched meanScore genres{genre count}}}}}`;
     fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: userQuery }) })
-      .then(r => r.json()).then(d => { const av = $('al-avatar'); if (av && d && d.data && d.data.User && d.data.User.avatar && d.data.User.avatar.large) av.src = d.data.User.avatar.large; }).catch(() => {});
-    function renderSummary() {
+      .then(r => r.json()).then(d => {
+        const u = d && d.data && d.data.User; if (!u) return;
+        const av = $('al-avatar'); if (av && u.avatar && u.avatar.large) av.src = u.avatar.large;
+        const favNodes = (u.favourites && u.favourites.anime && u.favourites.anime.nodes) || [];
+        favSet = new Set(favNodes.map(n => n && n.id).filter(Boolean));
+        statsData = (u.statistics && u.statistics.anime) || null;
+        renderStats(); render();
+      }).catch(() => {});
+    function renderStats() {
       ensureChrome();
-      const total = allEntries.length;
-      const eps = allEntries.reduce((s, e) => s + (Number(e.progress) || 0), 0);
-      const hrs = Math.round(allEntries.reduce((s, e) => s + (Number(e.progress) || 0) * (e.media.duration || 24), 0) / 60);
-      summaryEl.textContent = total ? `${total} anime · ${eps.toLocaleString()} episodes · ${hrs.toLocaleString()} hrs watched` : '';
+      let count, eps, mins, mean, genres;
+      if (statsData) {
+        count = statsData.count || 0; eps = statsData.episodesWatched || 0;
+        mins = statsData.minutesWatched || 0; mean = statsData.meanScore || 0;
+        genres = (statsData.genres || []).slice();
+      } else {
+        count = allEntries.length;
+        eps = allEntries.reduce((s, e) => s + (Number(e.progress) || 0), 0);
+        mins = allEntries.reduce((s, e) => s + (Number(e.progress) || 0) * ((e.media && e.media.duration) || 24), 0);
+        mean = 0;
+        const gc = {}; allEntries.forEach(e => ((e.media && e.media.genres) || []).forEach(g => gc[g] = (gc[g] || 0) + 1));
+        genres = Object.keys(gc).map(g => ({ genre: g, count: gc[g] }));
+      }
+      if (!count) { statsPanel.innerHTML = ''; return; }
+      const days = (mins / 1440).toFixed(1);
+      const numbers = '<div class="al-stat-nums">' +
+        '<span><b>' + count.toLocaleString() + '</b> anime</span>' +
+        '<span><b>' + eps.toLocaleString() + '</b> episodes</span>' +
+        '<span><b>' + days + '</b> days watched</span>' +
+        (mean ? '<span><b>' + (mean / 10).toFixed(1) + '</b> mean score</span>' : '') +
+      '</div>';
+      const topG = genres.slice().sort((a, b) => b.count - a.count).slice(0, 5);
+      const maxC = topG.length ? topG[0].count : 1;
+      const bars = topG.length ? '<div class="al-stat-genres">' + topG.map(g =>
+        '<div class="al-stat-genre"><span class="al-sg-name">' + esc(g.genre) + '</span>' +
+        '<div class="al-sg-bar"><i style="width:' + Math.max(6, Math.round(g.count / maxC * 100)) + '%"></i></div>' +
+        '<span class="al-sg-count">' + g.count + '</span></div>').join('') + '</div>' : '';
+      statsPanel.innerHTML = numbers + bars;
+    }
+    function renderGenres() {
+      ensureChrome();
+      const counts = {};
+      allEntries.forEach(e => ((e.media && e.media.genres) || []).forEach(g => counts[g] = (counts[g] || 0) + 1));
+      const top = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 12);
+      if (!top.length) { genreBar.innerHTML = ''; return; }
+      genreBar.innerHTML =
+        '<button class="al-genre-pill ' + (activeGenre === '' ? 'active' : '') + '" data-genre="">All</button>' +
+        top.map(g => '<button class="al-genre-pill ' + (activeGenre === g ? 'active' : '') + '" data-genre="' + esc(g) + '">' + esc(g) + '</button>').join('');
+      genreBar.querySelectorAll('.al-genre-pill').forEach(b => b.addEventListener('click', () => {
+        activeGenre = b.dataset.genre; page = 1; renderGenres(); render();
+      }));
+    }
+    function updateTabCounts() {
+      if (!tabs) return;
+      tabs.querySelectorAll('.al-tab').forEach(btn => {
+        const st = btn.dataset.status;
+        const n = st === 'ALL' ? allEntries.length : allEntries.filter(e => String(e._status || '').toUpperCase() === st).length;
+        let c = btn.querySelector('.al-tab-count');
+        if (!c) { c = document.createElement('span'); c.className = 'al-tab-count'; btn.appendChild(c); }
+        c.textContent = n;
+      });
     }
     function renderBanner(entries) {
       const banner = $('al-banner'); if (!banner) return;
@@ -827,27 +927,72 @@
       banner.innerHTML = (img ? '<img class="al-banner-img" alt="' + esc(t) + '" src="' + img + '">' : '') + '<div class="al-banner-info"><div class="al-banner-label" data-status="' + statusRaw.toLowerCase() + '">' + label + '</div><div class="al-banner-title">' + esc(t) + '</div><div class="al-banner-progress">' + esc(progress + score) + '</div></div>';
       banner.style.display = 'flex';
     }
+    function sortEntries(arr) {
+      const a = arr.slice();
+      if (activeSort === 'score') a.sort((x, y) => (y.score || 0) - (x.score || 0) || ((y.media && y.media.meanScore) || 0) - ((x.media && x.media.meanScore) || 0));
+      else if (activeSort === 'title') a.sort((x, y) => entryTitle(x).localeCompare(entryTitle(y)));
+      else if (activeSort === 'progress') a.sort((x, y) => (y.progress || 0) - (x.progress || 0));
+      else a.sort((x, y) => (y.updatedAt || 0) - (x.updatedAt || 0));
+      return a;
+    }
     function render() {
       ensureChrome();
-      const filtered = activeStatus === 'ALL' ? allEntries : allEntries.filter(e => String(e._status || '').toUpperCase() === activeStatus);
-      const pages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+      let arr = allEntries.slice();
+      if (activeStatus !== 'ALL') arr = arr.filter(e => String(e._status || '').toUpperCase() === activeStatus);
+      if (activeGenre) arr = arr.filter(e => ((e.media && e.media.genres) || []).indexOf(activeGenre) >= 0);
+      if (activeSearch) {
+        const s = activeSearch.toLowerCase();
+        arr = arr.filter(e => {
+          const ti = e.media && e.media.title;
+          return (ti && ti.romaji && ti.romaji.toLowerCase().includes(s)) ||
+                 (ti && ti.english && ti.english.toLowerCase().includes(s));
+        });
+      }
+      arr = sortEntries(arr);
+      const pages = Math.max(1, Math.ceil(arr.length / PER_PAGE));
       if (page > pages) page = pages;
-      const slice = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+      const slice = arr.slice((page - 1) * PER_PAGE, page * PER_PAGE);
       if (!slice.length) {
-        list.innerHTML = '<div class="al-empty">No anime found for this status.</div>';
+        list.innerHTML = '<div class="al-empty">No anime found' + (activeSearch ? ' for “' + esc(activeSearch) + '”' : '') + '.</div>';
         renderPager(pages);
         return;
       }
       list.innerHTML = slice.map(e => {
-        const t = (e.media && e.media.title && (e.media.title.romaji || e.media.title.english)) || '—';
-        const img = (e.media && e.media.coverImage && (e.media.coverImage.extraLarge || e.media.coverImage.large || e.media.coverImage.medium)) || '';
-        const progress = e.progress ? e.progress + (e.media && e.media.episodes ? '/' + e.media.episodes : '') + ' eps' : '';
-        const score = e.score ? '★ ' + e.score : '';
+        const m = e.media || {};
+        const t = (m.title && (m.title.romaji || m.title.english)) || '—';
+        const img = (m.coverImage && (m.coverImage.extraLarge || m.coverImage.large || m.coverImage.medium)) || '';
+        const st = String(e._status || '').toUpperCase();
+        const eps = m.episodes || 0;
+        const prog = e.progress || 0;
+        const progText = prog ? prog + (eps ? '/' + eps : '') + ' eps' : (st === 'COMPLETED' ? 'completed' : '');
+        const userScore = e.score ? '★ ' + e.score : '';
+        const mean = m.meanScore || 0;
+        const meanText = mean ? 'avg ' + (mean / 10).toFixed(1) : '';
+        const scoreLine = [progText, userScore, meanText].filter(Boolean).join(' · ');
+        const pct = eps ? Math.min(100, Math.round(prog / eps * 100)) : (st === 'COMPLETED' ? 100 : 0);
+        const showBar = (eps && prog) || st === 'COMPLETED';
+        const isFav = favSet.has(m.id);
+        const genres = (m.genres || []).slice(0, 3);
+        const desc = m.description ? esc(String(m.description).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()).slice(0, 180) : '';
+        const fmt = m.format ? String(m.format).replace(/_/g, ' ') : '';
+        const overlay = (genres.length || desc || fmt) ?
+          '<div class="al-item-overlay">' +
+            (fmt ? '<div class="al-ov-fmt">' + esc(fmt) + '</div>' : '') +
+            (genres.length ? '<div class="al-ov-genres">' + genres.map(g => '<span>' + esc(g) + '</span>').join('') + '</div>' : '') +
+            (desc ? '<div class="al-ov-desc">' + desc + '…</div>' : '') +
+          '</div>' : '';
         return '<div class="al-item">' +
-          (img ? '<img src="' + img + '" alt="' + esc(t) + '" loading="lazy">' : '') +
-          '<div class="al-item-info"><div class="al-item-name">' + esc(t) + '</div>' +
-          '<div class="al-item-score">' + esc([progress, score].filter(Boolean).join(' · ')) + '</div></div>' +
-          '</div>';
+          '<div class="al-item-cover">' +
+            (img ? '<img src="' + img + '" alt="' + esc(t) + '" loading="lazy">' : '') +
+            (isFav ? '<span class="al-fav" title="Favourite">♥</span>' : '') +
+            overlay +
+          '</div>' +
+          '<div class="al-item-info">' +
+            '<div class="al-item-name">' + esc(t) + '</div>' +
+            '<div class="al-item-score ' + scoreClass(mean) + '">' + esc(scoreLine) + '</div>' +
+            (showBar ? '<div class="al-item-bar"><i style="width:' + pct + '%"></i></div>' : '') +
+          '</div>' +
+        '</div>';
       }).join('');
       renderPager(pages);
     }
