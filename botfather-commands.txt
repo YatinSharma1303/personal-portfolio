@@ -12,7 +12,7 @@ pin - Pin question to top of site AMA. Usage: /pin <id>
 unpin - Remove pin from question. Returns to normal sort. Usage: /unpin <id>
 pinned - List all currently pinned questions with previews.
 delete - Delete a single question. Confirms first. Usage: /delete <id>
-deleteall - Permanently delete ALL questions. Type-token confirm; /undo can restore.
+deleteall - Permanently delete ALL questions. Tap-to-confirm buttons; /undo can restore.
 undo - Reverse the last delete or dismiss (single or bulk).
 queue - Answer pending questions inline: each as a card with Answer/Dismiss/AI-draft.
 draft - AI-generate an answer suggestion, then preview. Usage: /draft <id>

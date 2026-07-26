@@ -28,8 +28,6 @@ var PREVIEW_SESSION_COLLECTION = 'telegramPreviewSessions';
 var ANSWER_SESSION_COLLECTION = 'telegramAnswerSessions';
 var TEMPLATE_COLLECTION = 'telegramTemplates';   // saved reply templates (52)
 var UNDO_COLLECTION = 'telegramUndo';            // last-action snapshot for /undo (45)
-var DELETEALL_CONFIRM_COLLECTION = 'telegramDeleteAllConfirm'; // typed-token confirm (46)
-var DELETEALL_TOKEN = 'DELETE ALL';
 var SESSION_TTL_MS = 10 * 60 * 1000;
 
 /* Per-invocation caches — cleared at the start of each webhook request.
@@ -1326,7 +1324,7 @@ var HELP_TEXT = [
   BOX_V + ' /delete &lt;id&gt;',
   BOX_V + '   Permanently remove one.',
   BOX_V + ' /deleteall',
-  BOX_V + '   Remove all (type-token confirm).',
+  BOX_V + '   Remove all (tap-to-confirm).',
   BOX_V + ' /undo',
   BOX_V + '   Reverse last delete / dismiss.',
   BOX_V,
@@ -3400,23 +3398,17 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ ok: true });
       }
       var count = all.length;
-      // 46. Typed-token confirmation \u2014 safer than a single tap.
-      try {
-        await firestore('PATCH', docPath(DELETEALL_CONFIRM_COLLECTION, String(chatId)), {
-          fields: { chatId: { stringValue: String(chatId) }, count: { integerValue: String(count) }, createdAt: { stringValue: new Date().toISOString() } }
-        });
-      } catch (e) {}
+      var answeredCount = all.filter(function (q) { return questionState(q) === 'ANSWERED'; }).length;
+      var detailLine = BOX_V + ' <b>' + count + '</b> question' + (count === 1 ? '' : 's') + ' will be permanently deleted.';
+      if (answeredCount > 0) detailLine += '\n' + BOX_V + ' \u2705 ' + answeredCount + ' answered \u00B7 \u23F3 ' + (count - answeredCount) + ' other';
       await respondTelegram(chatId,
-        infoCard('\u26A0\uFE0F <b>DELETE ALL?</b>', [
-          'This permanently deletes <b>' + count + '</b> question' + (count === 1 ? '' : 's') + '.',
-          '',
-          'To confirm, reply with exactly:',
-          '<code>' + DELETEALL_TOKEN + '</code>',
-          '',
-          'Anything else cancels. /undo can restore',
-          'the batch right after.'
-        ]),
-        message.message_id, REPLY_KEYBOARD, loadingId);
+        cardTop('\u26A0\uFE0F <b>DELETE ALL?</b>') + '\n' + BOX_V + '\n' + detailLine + '\n' + BOX_V + '\n' + BOX_V + ' This is permanent \u2014 but \u21A9\uFE0F /undo can\n' + BOX_V + ' restore the batch right afterward.\n' + BOX_V + '\n' + cardBottom,
+        message.message_id,
+        { inline_keyboard: [[
+          { text: '\uD83D\uDDD1 Yes, Delete All', callback_data: 'confirmdeleteall' },
+          { text: '\u274C Cancel', callback_data: 'canceldeleteall' }
+        ]] },
+        loadingId);
       return res.status(200).json({ ok: true });
     }
     /* /delete <id> - delete a single question with confirmation */
@@ -3660,35 +3652,6 @@ module.exports = async function handler(req, res) {
       }
     }
 
-
-    /* 46. Delete-all typed-token confirmation (intercept before other sessions) */
-    if (!text.startsWith('/')) {
-      var daConfirm = null;
-      try { daConfirm = await firestore('GET', docPath(DELETEALL_CONFIRM_COLLECTION, String(chatId))); } catch (e) {}
-      if (daConfirm && daConfirm.fields) {
-        try { await firestore('DELETE', docPath(DELETEALL_CONFIRM_COLLECTION, String(chatId))); } catch (e) {}
-        if (isSessionExpired(daConfirm)) {
-          await sendTelegram(chatId, infoCard('⌛ <b>CONFIRMATION EXPIRED</b>', ['Run /deleteall again to retry.']), message.message_id, REPLY_KEYBOARD);
-          return res.status(200).json({ ok: true });
-        }
-        if (text.trim().toUpperCase() === DELETEALL_TOKEN) {
-          var loadingId = await sendLoadingCard(chatId, '🗑 <b>DELETING ALL…</b>', 'Removing every question…', message.message_id);
-          var all = await listAllQuestions();
-          var deleted = 0, undoItems = [];
-          _suppressItemLogs = true;
-          for (var di = 0; di < all.length; di++) {
-            try { var snap = await getRawFields(all[di].id); await deleteQuestion(all[di].id); if (snap) undoItems.push({ id: all[di].id, fields: snap }); deleted++; } catch (e) {}
-          }
-          _suppressItemLogs = false;
-          var undoSaved = undoItems.length ? await saveUndo(chatId, { type: 'delete', items: undoItems }) : false;
-          await sendLog('BULK DELETE ALL', { Deleted: deleted, Via: 'typed-token', Undo: undoSaved ? 'yes' : 'no' }, '🗑');
-          await respondTelegram(chatId, infoCard('✅ <b>ALL DELETED</b>', ['Deleted <b>' + deleted + '</b> question' + (deleted === 1 ? '' : 's') + '.', '', undoSaved ? '↩️ /undo restores the whole batch.' : '⚠️ Batch too large to snapshot — /undo can’t restore this one.']), message.message_id, REPLY_KEYBOARD, loadingId);
-        } else {
-          await sendTelegram(chatId, infoCard('✅ <b>CANCELLED</b>', ['Token did not match — nothing deleted.']), message.message_id, REPLY_KEYBOARD);
-        }
-        return res.status(200).json({ ok: true });
-      }
-    }
 
     /* ===== J-FEATURE COMMANDS (41,42,45,50,51,52,54,56) ===== */
     if (command === '/undo') {
