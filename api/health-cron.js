@@ -63,17 +63,19 @@ module.exports = async function handler(req, res) {
   var tokenOk = !!process.env.TELEGRAM_BOT_TOKEN;
   var saOk = !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
   var secretOk = !!process.env.TELEGRAM_WEBHOOK_SECRET;
+  var chatIdOk = !!process.env.TELEGRAM_CHAT_ID;
   var okFirestore = await firestoreReachable();
-  var overall = tokenOk && saOk && secretOk && okFirestore;
+  var overall = tokenOk && saOk && secretOk && chatIdOk && okFirestore;
 
   await notify(overall, {
     'Telegram token': tokenOk ? 'OK' : 'MISSING',
     'Service account': saOk ? 'OK' : 'MISSING',
     'Webhook secret': secretOk ? 'OK' : 'MISSING',
+    'Admin chat ID': chatIdOk ? 'OK' : 'MISSING',
     'Firestore': okFirestore ? 'OK' : 'ERROR',
     'Status': overall ? 'Operational' : 'Issues detected',
     'Checked': new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST'
   });
 
-  return res.status(200).json({ ok: true, operational: overall, telegram: tokenOk, serviceAccount: saOk, webhookSecret: secretOk, firestore: okFirestore });
+  return res.status(200).json({ ok: true, operational: overall, telegram: tokenOk, serviceAccount: saOk, webhookSecret: secretOk, chatId: chatIdOk, firestore: okFirestore });
 };

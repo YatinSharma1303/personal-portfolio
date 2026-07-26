@@ -31,6 +31,7 @@ async function firestore(method, path, body) {
   const token = await getToken();
   const url = 'https://firestore.googleapis.com/v1/projects/' + projectId() + '/databases/(default)/documents/' + path;
   const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: body ? JSON.stringify(body) : undefined });
+  if (!r.ok) { const t = await r.text().catch(() => ''); throw new Error('Firestore ' + method + ' ' + r.status + ': ' + t.slice(0, 200)); }
   return r.json();
 }
 
@@ -47,6 +48,11 @@ module.exports = async function handler(req, res) {
     const emoji = String(body.emoji || '').trim().slice(0, 10);
     const delta = Number(body.delta) === 1 ? 1 : -1;
     if (!id || !emoji) return res.status(400).json({ error: 'id and emoji required' });
+    // Whitelist the exact reaction emojis the UI offers. This keeps arbitrary
+    // (possibly HTML-breaking) strings out of the reactions map, which is later
+    // rendered into the admin bot's HTML Telegram messages.
+    const ALLOWED_EMOJI = ['👍', '🔥', '👏', '🤩'];
+    if (ALLOWED_EMOJI.indexOf(emoji) === -1) return res.status(400).json({ error: 'unsupported emoji' });
 
     const docPath = COLLECTION + '/' + encodeURIComponent(id);
 
