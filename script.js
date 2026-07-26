@@ -1182,7 +1182,8 @@
   (function ama() {
     const input = $('ama-input'), send = $('ama-send'), status = $('ama-status'),
           countEl = $('ama-count'), listWrap = $('ama-list-wrap'),
-          list = $('ama-list'), sortWrap = $('ama-sort'), pager = $('ama-pager'), featured = $('ama-featured');
+          list = $('ama-list'), sortWrap = $('ama-sort'), pager = $('ama-pager'), featured = $('ama-featured'),
+          searchInput = $('ama-search'), searchClear = $('ama-search-clear');
     if (!input) return;
 
     const nameInput = $('ama-name-input');
@@ -1214,7 +1215,16 @@
     let reactedSet = new Set();
     try { reactedSet = new Set(JSON.parse(localStorage.getItem('yatin_ama_reactions') || '[]')); } catch (e) {}
 
-    let answeredDocs = [], activeSort = 'top', page = 1;
+    let answeredDocs = [], activeSort = 'top', page = 1, activeSearch = '';
+
+    function matchesSearch(q) {
+      if (!activeSearch) return true;
+      const s = activeSearch.toLowerCase();
+      return (q.question || '').toLowerCase().includes(s)
+        || (q.answer || '').toLowerCase().includes(s)
+        || (q.topic || '').toLowerCase().includes(s)
+        || (q.name || '').toLowerCase().includes(s);
+    }
 
     function formatAmaTime(iso) {
       if (!iso) return '';
@@ -1358,8 +1368,11 @@
         .sort((a, b) => new Date(b.spotlightAt || b.answeredAt || 0) - new Date(a.spotlightAt || a.answeredAt || 0));
       const spotlightDoc = spotlightCandidates[0] || null;
       const activeSpotlightId = spotlightDoc ? spotlightDoc.id : '';
+      const searching = !!activeSearch;
       if (featured) {
-        if (spotlightDoc) {
+        // While searching, fold the featured card into the searchable list so
+        // matches aren't hidden above the results.
+        if (spotlightDoc && !searching) {
           featured.hidden = false;
           featured.innerHTML = amaQuestionCard(spotlightDoc, { featured: true, activeSpotlight: true });
           wireAmaActions(featured);
@@ -1368,11 +1381,17 @@
           featured.innerHTML = '';
         }
       }
-      const arr = sorted().filter(q => !(featured && q.id === activeSpotlightId));
+      const arr = sorted().filter(q =>
+        searching ? matchesSearch(q) : !(featured && q.id === activeSpotlightId)
+      );
       const pages = Math.max(1, Math.ceil(arr.length / PER_PAGE));
       if (page > pages) page = pages;
       const slice = arr.slice((page - 1) * PER_PAGE, page * PER_PAGE);
-      list.innerHTML = slice.length ? slice.map(q => amaQuestionCard(q, { activeSpotlight: !featured && q.id === activeSpotlightId })).join('') : (spotlightDoc ? '<div class="ama-empty-note">No more answered questions yet.</div>' : '');
+      list.innerHTML = slice.length
+        ? slice.map(q => amaQuestionCard(q, { activeSpotlight: q.id === activeSpotlightId && (searching || !featured) })).join('')
+        : (searching
+            ? '<div class="ama-empty-note">No answered questions match “' + esc(activeSearch) + '”.</div>'
+            : (spotlightDoc ? '<div class="ama-empty-note">No more answered questions yet.</div>' : ''));
       renderPager(arr.length ? pages : 1);
       wireAmaActions(list);
     }
@@ -1490,6 +1509,27 @@
       const t = e.target.closest('.ama-sort-btn'); if (!t) return;
       sortWrap.querySelectorAll('.ama-sort-btn').forEach(b => b.classList.remove('active'));
       t.classList.add('active'); activeSort = t.dataset.sort; page = 1; render();
+    });
+
+    /* Search box — filter answered questions by question, answer, topic or name */
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        activeSearch = searchInput.value.trim();
+        if (searchClear) searchClear.hidden = !activeSearch;
+        page = 1; render();
+      });
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && activeSearch) {
+          searchInput.value = ''; activeSearch = '';
+          if (searchClear) searchClear.hidden = true;
+          page = 1; render();
+        }
+      });
+    }
+    if (searchClear) searchClear.addEventListener('click', () => {
+      searchInput.value = ''; activeSearch = '';
+      searchClear.hidden = true; page = 1; render();
+      searchInput.focus();
     });
 
     /* Refresh button — manual reload of answered questions */
