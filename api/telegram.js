@@ -6,6 +6,78 @@
  ============================================================ */
 
 var TELEGRAM_API = 'https://api.telegram.org/bot';
+var ai = require('./_ai');
+var fs = require('./_firestore');
+
+var QUESTIONS = 'amaQuestions';
+var STATS = 'siteStats';
+var MILESTONE_DOC = 'amaMilestones';
+var MILESTONES = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000];
+
+// 55. Lightweight profanity/spam heuristic — flags for review, never blocks.
+var PROFANITY = ['fuck', 'shit', 'bitch', 'asshole', 'bastard', 'cunt', 'dick', 'pussy', 'slut', 'whore', 'nigger', 'faggot', 'retard'];
+function classifySpam(name, question) {
+  var q = String(question || '');
+  var low = q.toLowerCase();
+  var reasons = [];
+  if (PROFANITY.some(function (w) { return new RegExp('\\b' + w, 'i').test(low); })) reasons.push('profanity');
+  var links = (q.match(/https?:\/\/|www\.|\b[a-z0-9-]+\.(com|net|ru|xyz|top|shop|info)\b/gi) || []).length;
+  if (links >= 2) reasons.push('links');
+  var letters = q.replace(/[^a-z]/gi, '');
+  if (letters.length > 20) {
+    var caps = (q.match(/[A-Z]/g) || []).length;
+    if (caps / letters.length > 0.7) reasons.push('shouting');
+  }
+  if (/(.)\1{6,}/.test(low)) reasons.push('repetition');
+  if (letters.length > 14) {
+    var vowels = (letters.match(/[aeiou]/gi) || []).length;
+    if (vowels / letters.length < 0.18) reasons.push('gibberish');
+  }
+  return { flagged: reasons.length > 0, reason: reasons.join(', ') };
+}
+
+// 43. AI-assisted topic — a short 1–3 word label. Falls back to the client topic.
+async function aiTopic(question) {
+  var system = 'You label AMA questions with a very short topic tag of 1–3 words in Title Case '
+    + '(e.g. "React Hooks", "Career Advice", "SmartHealthCare"). Output ONLY the tag, no punctuation or quotes.';
+  var t = await ai.claude({ system: system, prompt: 'Question: ' + question, maxTokens: 20 });
+  return String(t || '').replace(/["'.\n]/g, '').trim().split(/\s+/).slice(0, 3).join(' ').slice(0, 40);
+}
+
+// 49. Count answered+pending questions (paginated) for milestone detection.
+async function countQuestions() {
+  var count = 0;
+  var url = fs.collectionUrl(QUESTIONS, 300);
+  while (url) {
+    var data = await fs.firestore('GET', url);
+    if (data.documents) count += data.documents.length;
+    url = data.nextPageToken ? (fs.collectionUrl(QUESTIONS, 300) + '&pageToken=' + data.nextPageToken) : null;
+  }
+  return count;
+}
+async function checkMilestone(botToken, chatId, total) {
+  var due = MILESTONES.filter(function (m) { return total >= m; });
+  if (!due.length) return;
+  var highest = due[due.length - 1];
+  var doc = null;
+  try { doc = await fs.firestore('GET', fs.docPath(STATS, MILESTONE_DOC)); } catch (e) {}
+  var last = doc && doc.fields && doc.fields.lastFired && Number(doc.fields.lastFired.integerValue || doc.fields.lastFired.doubleValue || 0) || 0;
+  if (highest <= last) return; // already announced
+  await fs.firestore('PATCH', fs.docPath(STATS, MILESTONE_DOC) + '?' + fs.mask(['lastFired', 'firedAt']), {
+    fields: { lastFired: { integerValue: String(highest) }, firedAt: { stringValue: new Date().toISOString() } }
+  });
+  var BOX_V = '│';
+  var text = '┌─🎉 <b>MILESTONE</b>─────┐\n' + BOX_V + '\n'
+    + BOX_V + ' Your AMA just reached <b>' + highest + '</b> questions!\n' + BOX_V + '\n'
+    + BOX_V + ' 📈 Total submitted: <b>' + total + '</b>\n' + BOX_V + '\n'
+    + '└───────────────┘';
+  try {
+    await fetch(TELEGRAM_API + botToken + '/sendMessage', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'HTML', disable_web_page_preview: true })
+    });
+  } catch (e) {}
+}
 
 function escapeHtml(value) {
   value = value || '';
@@ -157,6 +229,23 @@ module.exports = async function handler(req, res) {
 
     if (!question) return res.status(400).json({ ok: false, error: 'Question is required' });
 
+    // 55 + 43: classify spam and (optionally) compute an AI topic, then persist
+    // both onto the freshly-created Firestore doc. All best-effort — a failure
+    // here must never stop the Telegram notification below.
+    var flag = classifySpam(name, question);
+    if (ai.aiConfigured()) {
+      try { var t = await aiTopic(question); if (t) topic = t; } catch (e) {}
+    }
+    if (questionId) {
+      try {
+        var fields = {};
+        var names = [];
+        if (topic) { fields.topic = { stringValue: topic }; fields.topicManual = { booleanValue: false }; fields.topicAt = { stringValue: new Date().toISOString() }; names.push('topic', 'topicManual', 'topicAt'); }
+        if (flag.flagged) { fields.flagged = { booleanValue: true }; fields.flagReason = { stringValue: flag.reason }; names.push('flagged', 'flagReason'); }
+        if (names.length) await fs.firestore('PATCH', fs.docPath(QUESTIONS, questionId) + '?' + fs.mask(names), { fields: fields });
+      } catch (e) { /* topic/flag persistence is optional */ }
+    }
+
     // Format timestamp in IST
     var timeStr = createdAt;
     try {
@@ -182,6 +271,7 @@ module.exports = async function handler(req, res) {
       BOX_V + ' \uD83D\uDD50 Time \u2500 ' + escapeHtml(timeStr) + ' IST',
       BOX_V + ' \uD83C\uDD94 ID \u2500 <code>' + escapeHtml(questionId) + '</code>',
       topic ? BOX_V + ' \uD83C\uDFF7 Topic \u2500 <b>' + escapeHtml(topic) + '</b>' : BOX_V,
+      flag.flagged ? BOX_V + ' \u26A0\uFE0F Auto-flagged \u2500 <b>' + escapeHtml(flag.reason) + '</b>' : null,
       BOX_V,
       BOX_V + ' \uD83D\uDCAC <b>Question</b>',
       BOX_V + ' “' + escapeHtml(question) + '”',
@@ -189,7 +279,7 @@ module.exports = async function handler(req, res) {
       BOX_V + ' Tap <b>Answer</b> or reply to this card.',
       BOX_V,
       cardBottom
-    ].join('\n');
+    ].filter(function (l) { return l !== null && l !== undefined; }).join('\n');
 
     // Action buttons - matches buildCardForQuestion() UNANSWERED layout
     var replyMarkup = {
@@ -228,6 +318,9 @@ module.exports = async function handler(req, res) {
       Question: clip(question, 120),
       Time: timeStr + ' IST'
     }, '\uD83C\uDF10');
+
+    // 49. Milestone ping (best-effort, after the main notification).
+    try { var total = await countQuestions(); await checkMilestone(botToken, chatId, total); } catch (e) {}
 
     return res.status(200).json({ ok: true });
   } catch (error) {

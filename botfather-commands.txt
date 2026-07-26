@@ -12,7 +12,22 @@ pin - Pin question to top of site AMA. Usage: /pin <id>
 unpin - Remove pin from question. Returns to normal sort. Usage: /unpin <id>
 pinned - List all currently pinned questions with previews.
 delete - Delete a single question. Confirms first. Usage: /delete <id>
-deleteall - Permanently delete ALL questions. Confirms first. Cannot be undone.
+deleteall - Permanently delete ALL questions. Type-token confirm; /undo can restore.
+undo - Reverse the last delete or dismiss (single or bulk).
+queue - Answer pending questions inline: each as a card with Answer/Dismiss/AI-draft.
+draft - AI-generate an answer suggestion, then preview. Usage: /draft <id>
+improve - AI-improve an existing answer, then preview. Usage: /improve <id>
+shorten - AI-shorten an existing answer, then preview. Usage: /shorten <id>
+expand - AI-expand an existing answer, then preview. Usage: /expand <id>
+publish - Publish a saved draft answer to the site. Usage: /publish <id>
+drafts - List unpublished draft answers (with any scheduled times).
+schedule - Auto-publish a draft later. Usage: /schedule <id> +2h | ISO time
+templates - List saved reply templates and their usage.
+addtemplate - Save a reply template. Usage: /addtemplate name | template text
+usetemplate - Load a template as a preview answer. Usage: /usetemplate name <id>
+deltemplate - Delete a saved template. Usage: /deltemplate name
+trends - Activity trend + response-time analytics.
+top - Most upvoted / reacted answers.
 dismiss - Hide a question from your site. Data preserved. Usage: /dismiss <id>
 dismissall - Hide ALL active questions from your site at once. Confirms first. Retrieve later.
 dismissed - Browse all dismissed (hidden) questions with state info.

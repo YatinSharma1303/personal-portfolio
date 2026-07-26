@@ -531,6 +531,10 @@ Example:
 | `WAKATIME_API_KEY` | optional | WakaTime stats |
 | `TELEGRAM_LOG_CHAT_ID` | optional | Telegram log group/channel |
 | `TELEGRAM_LOG_THREAD_MAP` | optional | Telegram forum-topic log routing |
+| `ANTHROPIC_API_KEY` | optional | Enables AI features (chatbot, /draft, /improve, AI auto-topic) |
+| `ANTHROPIC_MODEL` | optional | Override Claude model (default `claude-opus-5`) |
+| `CRON_SECRET` | optional | Secures `/api/health-cron` and `/api/digest-cron` |
+| `AMA_STALE_HOURS` | optional | Hours before an unanswered question is flagged stale (default 24) |
 
 See [`SETUP_TELEGRAM_FIRESTORE.md`](SETUP_TELEGRAM_FIRESTORE.md) for full setup.
 
@@ -653,6 +657,10 @@ The design uses CSS variables under `:root` and `html.light`.
 | `api/lastfm.js` | Last.fm proxy and bundle endpoint |
 | `api/wakatime.js` | WakaTime proxy |
 | `api/contributions.js` | GitHub contributions proxy |
+| `api/chat.js` | "Ask my portfolio" AI chatbot endpoint |
+| `api/digest-cron.js` | Scheduled digest, stale alerts, scheduled publish |
+| `api/_ai.js` | Shared Anthropic (Claude) helper (not routed) |
+| `api/_firestore.js` | Shared Firestore REST helper (not routed) |
 
 ---
 
