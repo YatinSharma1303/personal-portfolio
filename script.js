@@ -332,7 +332,13 @@
       { id: 'emerald',name: 'Emerald',accent: 'rgba(16,185,129,0.6)', accent2: 'rgba(5,150,105,0.5)',  swatch: '#10b981' },
       { id: 'rose',   name: 'Rose',   accent: 'rgba(244,63,94,0.6)',  accent2: 'rgba(251,113,133,0.5)',swatch: '#f43f5e' },
       { id: 'amber',  name: 'Amber',  accent: 'rgba(245,158,11,0.6)', accent2: 'rgba(234,88,12,0.5)',  swatch: '#f59e0b' },
-      { id: 'blue',   name: 'Blue',   accent: 'rgba(59,130,246,0.6)', accent2: 'rgba(37,99,235,0.5)',  swatch: '#3b82f6' }
+      { id: 'blue',   name: 'Blue',   accent: 'rgba(59,130,246,0.6)', accent2: 'rgba(37,99,235,0.5)',  swatch: '#3b82f6' },
+      { id: 'teal',   name: 'Teal',   accent: 'rgba(20,184,166,0.6)', accent2: 'rgba(13,148,136,0.5)', swatch: '#14b8a6' },
+      { id: 'orange', name: 'Orange', accent: 'rgba(249,115,22,0.6)', accent2: 'rgba(234,88,12,0.5)',  swatch: '#f97316' },
+      { id: 'pink',   name: 'Pink',   accent: 'rgba(236,72,153,0.6)', accent2: 'rgba(219,39,119,0.5)', swatch: '#ec4899' },
+      { id: 'lime',   name: 'Lime',   accent: 'rgba(132,204,22,0.6)', accent2: 'rgba(101,163,13,0.5)', swatch: '#84cc16' },
+      { id: 'indigo', name: 'Indigo', accent: 'rgba(99,102,241,0.6)', accent2: 'rgba(79,70,229,0.5)',  swatch: '#6366f1' },
+      { id: 'red',    name: 'Red',    accent: 'rgba(239,68,68,0.6)',  accent2: 'rgba(220,38,38,0.5)',  swatch: '#ef4444' }
     ];
     let activeId = localStorage.getItem('accent') || 'cyan';
     if (!ACCENTS.some(a => a.id === activeId)) activeId = 'cyan';
