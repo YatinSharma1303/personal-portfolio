@@ -1,79 +1,88 @@
 /* ============================================================
- api/_ai.js — Shared Anthropic (Claude) helper.
+ api/_ai.js — Shared AI helper (Groq, OpenAI-compatible API).
  Underscore prefix => Vercel does NOT route this as an endpoint.
 
  Used by:
    - /api/telegram-webhook  (/draft, /improve, /shorten, /expand)
-   - /api/telegram          (AI-assisted auto-topic, spam scoring)
-   - /api/chat              ("Ask my portfolio" RAG chatbot)
+   - /api/telegram          (AI-assisted auto-topic)
+   - /api/chat              ("Ask my portfolio" chatbot)
 
- Requires env var ANTHROPIC_API_KEY. Optional ANTHROPIC_MODEL
- (defaults to claude-opus-5). Every helper degrades gracefully:
- aiConfigured() lets callers show a friendly "not set up" message
- instead of crashing when the key is absent.
+ Requires env var GROQ_API_KEY (free tier: https://console.groq.com).
+ Optional GROQ_MODEL (defaults to llama-3.3-70b-versatile).
+ Every helper degrades gracefully: aiConfigured() lets callers show a
+ friendly "not set up" message instead of crashing when the key is absent.
  ============================================================ */
 
-var ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
-var DEFAULT_MODEL = 'claude-opus-5';
+var GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+var DEFAULT_MODEL = 'llama-3.3-70b-versatile';
 
 function aiConfigured() {
-  return !!process.env.ANTHROPIC_API_KEY;
+  return !!process.env.GROQ_API_KEY;
 }
 
 function model() {
-  return process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
+  return process.env.GROQ_MODEL || DEFAULT_MODEL;
 }
 
-// Defensively strip any leaked <thinking> tags (a known edge case when
-// thinking is disabled on some models) so users never see internal markup.
+// Some open models emit <think>…</think> reasoning; strip it defensively
+// so users never see internal markup (llama models don't, but this is cheap).
 function stripThinking(text) {
   return String(text || '')
-    .replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
-    .replace(/<\/?thinking>/gi, '')
+    .replace(/<think>[\s\S]*?<\/think>/gi, '')
+    .replace(/<\/?think>/gi, '')
     .trim();
 }
 
-/* Low-level call. Returns the concatenated text of the response.
-   opts: { system, messages, maxTokens } — messages is the Claude
-   messages array; if omitted, `prompt` (a string) is used as a single
-   user turn. */
-async function claude(opts) {
+/* Low-level call. Returns the response text.
+   opts: { system, messages, prompt, maxTokens }
+   - messages: an OpenAI-style [{role,content}] array (role: user|assistant)
+   - or prompt: a single user string (used when messages is omitted)
+   The system prompt is prepended as a system message. */
+async function complete(opts) {
   opts = opts || {};
-  if (!aiConfigured()) throw new Error('ANTHROPIC_API_KEY is not set');
-  var messages = opts.messages || [{ role: 'user', content: String(opts.prompt || '') }];
+  if (!aiConfigured()) throw new Error('GROQ_API_KEY is not set');
+
+  var messages = [];
+  if (opts.system) messages.push({ role: 'system', content: String(opts.system) });
+  if (opts.messages && opts.messages.length) {
+    opts.messages.forEach(function (m) {
+      if (m && (m.role === 'user' || m.role === 'assistant') && m.content != null) {
+        messages.push({ role: m.role, content: String(m.content) });
+      }
+    });
+  } else {
+    messages.push({ role: 'user', content: String(opts.prompt || '') });
+  }
+
   var body = {
     model: model(),
+    messages: messages,
     max_tokens: opts.maxTokens || 1024,
-    // Deterministic text tasks — keep it fast and avoid thinking/answer
-    // sharing the token budget. Disabled is accepted at the default effort.
-    thinking: { type: 'disabled' },
-    messages: messages
+    temperature: typeof opts.temperature === 'number' ? opts.temperature : 0.6
   };
-  if (opts.system) body.system = opts.system;
 
-  var res = await fetch(ANTHROPIC_URL, {
+  var res = await fetch(GROQ_URL, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01'
+      'authorization': 'Bearer ' + process.env.GROQ_API_KEY
     },
     body: JSON.stringify(body)
   });
   var data = await res.json().catch(function () { return null; });
   if (!res.ok) {
-    var msg = (data && data.error && data.error.message) || ('Anthropic HTTP ' + res.status);
-    throw new Error(msg);
+    var msg = (data && data.error && (data.error.message || data.error)) || ('Groq HTTP ' + res.status);
+    throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
   }
-  if (data && data.stop_reason === 'refusal') {
-    throw new Error('The model declined to answer this request.');
-  }
-  var out = '';
-  var blocks = (data && data.content) || [];
-  for (var i = 0; i < blocks.length; i++) {
-    if (blocks[i] && blocks[i].type === 'text') out += blocks[i].text;
-  }
+  var out = (data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
   return stripThinking(out);
 }
 
-module.exports = { aiConfigured: aiConfigured, model: model, claude: claude, stripThinking: stripThinking };
+module.exports = {
+  aiConfigured: aiConfigured,
+  model: model,
+  complete: complete,
+  // Back-compat alias so existing callers using .claude keep working.
+  claude: complete,
+  stripThinking: stripThinking
+};
