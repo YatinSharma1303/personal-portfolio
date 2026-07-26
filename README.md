@@ -49,9 +49,9 @@ Visitors can submit questions on the site. You receive them in Telegram, answer 
 - Custom cursor/click effects
 - Scroll progress and reveal animations
 - Command palette
-- YouTube-based music player
+- YouTube-playlist music player (shuffle, repeat all/one, prev/next)
 - GitHub stats and repos
-- GitHub contribution heatmap
+- GitHub contribution heatmap (accent-aware)
 - Last.fm music dashboard
 - AniList anime list
 - WakaTime coding stats
@@ -204,13 +204,26 @@ If missing, the UI shows a friendly setup message.
 
 ## YouTube music player
 
-The music player uses YouTube IFrame API, controlled by:
+A floating "synthwave glass dock" player backed by the YouTube IFrame API. It
+loads a YouTube Music playlist and plays through it — each track's title,
+artist, and artwork are pulled live from YouTube, so there is no hardcoded
+track list to maintain.
+
+Controls: play/pause, previous/next, shuffle, and a three-state repeat button
+(repeat all → repeat one → off), plus a draggable seek bar and volume. The
+player is accent-aware (follows the palette picker) and adapts to light/dark
+themes. It never auto-plays on open — playback starts only on an explicit
+press — so simply opening the widget doesn't get picked up by any external
+Last.fm scrobbler.
+
+Set the playlist via:
 
 ```js
-CONFIG.ytVideoId
+CONFIG.ytPlaylistId   // e.g. an "OLAK5uy_…" YouTube Music playlist ID
 ```
 
-No audio files are hosted in the repo.
+(`CONFIG.ytVideoId` remains only as a legacy single-track fallback.) No audio
+files are hosted in the repo.
 
 ---
 
@@ -618,10 +631,10 @@ Project cards use `img` paths inside `PROJECTS`.
 
 ### Music
 
-Change:
+Change the playlist:
 
 ```js
-CONFIG.ytVideoId
+CONFIG.ytPlaylistId
 ```
 
 ### Theme and styling
@@ -659,6 +672,7 @@ The design uses CSS variables under `:root` and `html.light`.
 | `api/contributions.js` | GitHub contributions proxy |
 | `api/chat.js` | "Ask my portfolio" AI chatbot endpoint |
 | `api/digest-cron.js` | Scheduled digest, stale alerts, scheduled publish |
+| `api/health-cron.js` | Scheduled Firestore/Telegram health check (secured by `CRON_SECRET`) |
 | `api/_ai.js` | Shared AI helper (Groq, OpenAI-compatible; not routed) |
 | `api/_firestore.js` | Shared Firestore REST helper (not routed) |
 
