@@ -1230,6 +1230,17 @@ html.light .changelog-modal { background: rgba(245,245,250,0.95); }
 .ama-sort { display: flex; gap: 8px; margin-bottom: 18px; }
 .ama-sort-btn { font-family: var(--mono); font-size: 11px; padding: 6px 14px; border-radius: var(--radius-btn); border: 1px solid var(--border); color: var(--gray-dim); }
 .ama-sort-btn.active { background: var(--white); color: #000; border-color: var(--white); }
+.ama-search-wrap { position: relative; display: flex; align-items: center; margin-bottom: 18px; }
+.ama-search-icon { position: absolute; left: 12px; font-size: 18px; color: var(--gray-dim); pointer-events: none; }
+.ama-search-input {
+  width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px;
+  padding: 10px 38px 10px 40px; color: var(--white); font-family: inherit; font-size: 14px;
+}
+.ama-search-input::placeholder { color: var(--gray-dim); }
+.ama-search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,200,255,0.1), 0 0 16px rgba(0,200,255,0.08); }
+.ama-search-clear { position: absolute; right: 8px; background: none; border: none; color: var(--gray-dim); cursor: pointer; padding: 4px; display: inline-flex; align-items: center; border-radius: 8px; transition: color 0.2s, background 0.2s; }
+.ama-search-clear:hover { color: var(--accent); background: rgba(0,200,255,0.08); }
+.ama-search-clear .material-symbols-outlined { font-size: 16px; }
 .ama-q-vote { display: flex; align-items: center; gap: 4px; margin-top: 10px; }
 .ama-vote-btn { font-size: 14px; width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border); color: var(--gray); display: flex; align-items: center; justify-content: center; transition: all 0.15s ease; }
 .ama-vote-btn:hover { border-color: var(--border-hover); color: var(--white); }
