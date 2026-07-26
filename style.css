@@ -810,6 +810,13 @@ html.light .site-particles { opacity: 0.8; }
 .pchat-send .material-symbols-outlined { font-size: 20px; }
 .pchat-foot { padding: 0 14px 12px; font-size: 10.5px; color: var(--gray); }
 .pchat-foot a { color: var(--accent); }
+/* Light-mode chatbot panel — the panel + its white-tint sub-surfaces were
+   dark-only (the --card fallback is dark and there were no light overrides). */
+html.light .pchat-panel { background: rgba(248,248,253,0.98); box-shadow: 0 20px 60px rgba(80,80,140,0.22); }
+html.light .pchat-bot { background: rgba(60,60,110,0.06); }
+html.light .pchat-input { background: rgba(60,60,110,0.05); }
+html.light .pchat-close { background: rgba(60,60,110,0.06); }
+html.light .pchat-close:hover { background: rgba(60,60,110,0.12); }
 @media (prefers-reduced-motion: reduce) { .pchat-typing span { animation: none; } .pchat-panel, .pchat-fab { transition: none; } }
 /* 61. Konami code easter egg */
 .konami-confetti { position: fixed; inset: 0; pointer-events: none; z-index: 3000; overflow: hidden; }
