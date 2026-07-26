@@ -2200,7 +2200,7 @@
         const rect = card.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        card.style.setProperty('--card-glow', 'rgba(0, 200, 255, 0.1)');
+        card.style.setProperty('--card-glow', 'color-mix(in srgb, var(--accent-solid) 10%, transparent)');
         card.style.setProperty('--mouse-x', x + 'px');
         card.style.setProperty('--mouse-y', y + 'px');
         // Update the radial gradient position dynamically
