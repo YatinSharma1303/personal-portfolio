@@ -2003,6 +2003,8 @@
            This .filter is an extra safety net for any edge case. */
         answeredDocs = (data || []).filter(d => d.document).map(d => fromDoc(d.document)).filter(q => !q.dismissed);
         answeredDocs.sort((a, b) => new Date(b.answeredAt || 0) - new Date(a.answeredAt || 0));
+        // Publish trimmed answered Q&A so the "Ask my portfolio" chatbot (57) can ground its replies.
+        window.__amaContext = answeredDocs.filter(q => q.answer).map(q => ({ question: q.question, answer: q.answer }));
         render();
       }).catch((err) => { console.warn('AMA load failed:', err); });
     }
@@ -2247,6 +2249,84 @@
   window.unlockAchievement = achievementSystem.unlock.bind(achievementSystem);
   // Unlock intro achievement
   setTimeout(() => { window.unlockAchievement('visitor', 'Welcome!', 'You explored the portfolio.'); }, 5000);
+
+  /* ============================================================
+     57. "ASK MY PORTFOLIO" AI CHATBOT (RAG over profile + AMA)
+     ============================================================ */
+  (function portfolioChat() {
+    const fab = $('pchat-fab'), panel = $('pchat-panel'), closeBtn = $('pchat-close');
+    const log = $('pchat-log'), form = $('pchat-form'), inputEl = $('pchat-input'), sendBtn = $('pchat-send');
+    if (!fab || !panel || !form) return;
+    const history = [];
+    let busy = false, greeted = false;
+
+    function bubble(role, text) {
+      const el = document.createElement('div');
+      el.className = 'pchat-msg pchat-' + role;
+      el.textContent = text;
+      log.appendChild(el);
+      log.scrollTop = log.scrollHeight;
+      return el;
+    }
+    function typingBubble() {
+      const el = document.createElement('div');
+      el.className = 'pchat-msg pchat-bot pchat-typing';
+      el.innerHTML = '<span></span><span></span><span></span>';
+      log.appendChild(el); log.scrollTop = log.scrollHeight;
+      return el;
+    }
+    function open() {
+      panel.hidden = false;
+      requestAnimationFrame(() => panel.classList.add('open'));
+      fab.classList.add('hidden');
+      if (!greeted) {
+        greeted = true;
+        bubble('bot', 'Hi! I can answer questions about Yatin — his projects, skills, and background. What would you like to know?');
+      }
+      setTimeout(() => inputEl.focus(), 120);
+    }
+    function close() {
+      panel.classList.remove('open');
+      fab.classList.remove('hidden');
+      setTimeout(() => { panel.hidden = true; }, 220);
+    }
+    fab.addEventListener('click', open);
+    closeBtn.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !panel.hidden) close(); });
+
+    async function ask(message) {
+      if (busy) return;
+      busy = true; sendBtn.disabled = true;
+      bubble('user', message);
+      history.push({ role: 'user', content: message });
+      const typing = typingBubble();
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, history: history.slice(0, -1), ama: window.__amaContext || [] })
+        });
+        const data = await res.json().catch(() => ({}));
+        typing.remove();
+        const reply = (data && data.reply) || 'Sorry, I couldn’t answer that right now.';
+        bubble('bot', reply);
+        history.push({ role: 'assistant', content: reply });
+      } catch (e) {
+        typing.remove();
+        bubble('bot', 'Couldn’t reach the assistant. Please try again in a moment.');
+      } finally {
+        busy = false; sendBtn.disabled = false; inputEl.focus();
+      }
+    }
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const msg = inputEl.value.trim();
+      if (!msg || busy) return;
+      inputEl.value = '';
+      ask(msg);
+    });
+    if (window.unlockAchievement) fab.addEventListener('click', () => window.unlockAchievement('askbot', 'Curious', 'Opened the portfolio assistant.'), { once: true });
+  })();
 
   /* ============================================================
      61. KONAMI CODE EASTER EGG (↑↑↓↓←→←→ B A → confetti + party mode)

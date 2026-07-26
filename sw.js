@@ -5,7 +5,7 @@
  Cache version matches bot version: v6.1
  ============================================================ */
 
-var CACHE_NAME = 'portfolio-v7.5';
+var CACHE_NAME = 'portfolio-v7.6';
 
 /* Static assets to pre-cache on install */
 var PRECACHE_ASSETS = [
@@ -22,6 +22,7 @@ var NO_CACHE_PATTERNS = [
   '/api/lastfm',
   '/api/telegram',
   '/api/telegram-webhook',
+  '/api/chat',
   'firestore.googleapis.com',
   'api.github.com',
   'graphql.anilist.co',

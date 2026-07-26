@@ -60,7 +60,7 @@
   <link rel="dns-prefetch" href="https://api.github.com"/>
   <link rel="dns-prefetch" href="https://www.youtube.com"/>
   <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml"/>
-  <link rel="stylesheet" href="style.css?v=7.5"/>
+  <link rel="stylesheet" href="style.css?v=7.6"/>
 </head>
 <body>
 
@@ -665,7 +665,24 @@
     </div>
   </div>
 
-  <script src="script.js?v=7.5"></script>
+  <!-- ============ ASK-MY-PORTFOLIO AI CHATBOT (57) ============ -->
+  <button class="pchat-fab" id="pchat-fab" aria-label="Ask my portfolio" title="Ask my portfolio">
+    <span class="material-symbols-outlined">forum</span>
+  </button>
+  <div class="pchat-panel" id="pchat-panel" role="dialog" aria-label="Ask my portfolio" aria-modal="false" hidden>
+    <div class="pchat-head">
+      <div class="pchat-title"><span class="pchat-dot"></span> Ask my portfolio</div>
+      <button class="pchat-close" id="pchat-close" aria-label="Close chat">✕</button>
+    </div>
+    <div class="pchat-log" id="pchat-log"></div>
+    <form class="pchat-form" id="pchat-form">
+      <input type="text" class="pchat-input" id="pchat-input" maxlength="1000" placeholder="Ask about Yatin's projects, skills…" autocomplete="off" aria-label="Your question"/>
+      <button type="submit" class="pchat-send" id="pchat-send" aria-label="Send"><span class="material-symbols-outlined">send</span></button>
+    </form>
+    <div class="pchat-foot">AI answers may be imperfect — for anything specific, use <a href="#ama">Ask Me Anything</a>.</div>
+  </div>
+
+  <script src="script.js?v=7.6"></script>
   <script src="games.js"></script>
 <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a202415a8b5ed895',t:'MTc4NDg4OTA4Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
