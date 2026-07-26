@@ -1708,15 +1708,173 @@
         '<span class="ama-vote-count" data-count="' + q.id + '">' + q.votes + '</span>' +
         '<button class="ama-vote-btn ' + (up ? 'voted' : '') + '" data-id="' + q.id + '" data-dir="-1" title="Undo">\u25BC</button>' +
         '</div>' +
-        '<div class="ama-q-reactions">' + reactionHTML + '</div>' +
+        '<div class="ama-q-reactions">' + reactionHTML +
+          '<button class="ama-share-btn" data-share="' + q.id + '" title="Share this answer" aria-label="Share this answer"><span class="material-symbols-outlined">ios_share</span></button>' +
+        '</div>' +
         reactionSummary +
         '</div>';
+    }
+
+    function findAmaDoc(id) {
+      return answeredDocs.find(d => d.id === id) || null;
     }
 
     function wireAmaActions(root) {
       if (!root) return;
       root.querySelectorAll('.ama-vote-btn').forEach(b => b.addEventListener('click', () => vote(b.dataset.id, +b.dataset.dir)));
       root.querySelectorAll('.ama-react-btn').forEach(b => b.addEventListener('click', () => toggleReaction(b.dataset.id, b.dataset.emoji)));
+      root.querySelectorAll('.ama-share-btn').forEach(b => b.addEventListener('click', () => { const d = findAmaDoc(b.dataset.share); if (d) openShareCard(d); }));
+    }
+
+    /* ── 33. SHAREABLE AMA ANSWER CARDS (canvas-generated OG image) ── */
+    // Accent hex mirrors the accent picker so shared cards match the site theme.
+    const SHARE_ACCENTS = { cyan: '#00c8ff', violet: '#8b5cf6', emerald: '#10b981', rose: '#f43f5e', amber: '#f59e0b', blue: '#3b82f6' };
+    let shareModal = null;
+
+    function wrapCanvasText(ctx, text, maxWidth, maxLines) {
+      const words = String(text || '').split(/\s+/);
+      const lines = [];
+      let line = '';
+      for (let i = 0; i < words.length; i++) {
+        const test = line ? line + ' ' + words[i] : words[i];
+        if (ctx.measureText(test).width > maxWidth && line) {
+          lines.push(line); line = words[i];
+          if (lines.length === maxLines - 1) break;
+        } else { line = test; }
+      }
+      if (lines.length < maxLines) lines.push(line);
+      // Ellipsis if truncated.
+      const used = lines.join(' ').split(/\s+/).length;
+      if (used < words.length) lines[lines.length - 1] = (lines[lines.length - 1] || '').replace(/\s*\S*$/, '') + '…';
+      return lines.filter(Boolean);
+    }
+
+    function drawShareCanvas(q) {
+      const W = 1200, H = 630, dpr = 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = W * dpr; canvas.height = H * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      const accentId = localStorage.getItem('accent') || 'cyan';
+      const accent = SHARE_ACCENTS[accentId] || SHARE_ACCENTS.cyan;
+
+      // Background
+      ctx.fillStyle = '#05050a'; ctx.fillRect(0, 0, W, H);
+      const grad = ctx.createLinearGradient(0, 0, W, H);
+      grad.addColorStop(0, 'rgba(0,200,255,0.10)'); grad.addColorStop(1, 'rgba(120,90,255,0.06)');
+      ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+      // Accent bar
+      ctx.fillStyle = accent; ctx.fillRect(0, 0, 12, H);
+      // Border
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, W - 2, H - 2);
+
+      const PAD = 70;
+      // Label
+      ctx.fillStyle = accent;
+      ctx.font = '600 22px "JetBrains Mono", monospace';
+      ctx.fillText('ASK  ME  ANYTHING', PAD, 84);
+
+      // Question
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '800 46px Inter, sans-serif';
+      const qLines = wrapCanvasText(ctx, q.question, W - PAD * 2, 3);
+      let y = 150;
+      qLines.forEach(l => { ctx.fillText(l, PAD, y); y += 58; });
+
+      // Divider
+      y += 6;
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - PAD, y); ctx.stroke();
+      y += 46;
+
+      // Answer
+      ctx.fillStyle = 'rgba(255,255,255,0.86)';
+      ctx.font = '400 30px Inter, sans-serif';
+      const aLines = wrapCanvasText(ctx, q.answer, W - PAD * 2, 6);
+      aLines.forEach(l => { ctx.fillText(l, PAD, y); y += 42; });
+
+      // Footer
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.font = '500 24px Inter, sans-serif';
+      ctx.fillText('— Yatin Sharma', PAD, H - 54);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = accent;
+      ctx.font = '600 22px "JetBrains Mono", monospace';
+      ctx.fillText('portfolio.yatinsharma.me', W - PAD, H - 54);
+      ctx.textAlign = 'left';
+      return canvas;
+    }
+
+    function ensureShareModal() {
+      if (shareModal) return shareModal;
+      shareModal = document.createElement('div');
+      shareModal.className = 'ama-share-modal';
+      shareModal.hidden = true;
+      shareModal.innerHTML =
+        '<div class="ama-share-backdrop"></div>' +
+        '<div class="ama-share-dialog" role="dialog" aria-modal="true" aria-label="Share answer">' +
+          '<button class="ama-share-x" aria-label="Close">✕</button>' +
+          '<div class="ama-share-preview" id="ama-share-preview"></div>' +
+          '<div class="ama-share-actions">' +
+            '<button class="ama-share-action" data-act="download"><span class="material-symbols-outlined">download</span>Download</button>' +
+            '<button class="ama-share-action" data-act="share" hidden><span class="material-symbols-outlined">share</span>Share</button>' +
+            '<button class="ama-share-action" data-act="copylink"><span class="material-symbols-outlined">link</span>Copy link</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(shareModal);
+      const close = () => { shareModal.hidden = true; document.body.style.overflow = ''; };
+      shareModal.querySelector('.ama-share-x').addEventListener('click', close);
+      shareModal.querySelector('.ama-share-backdrop').addEventListener('click', close);
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !shareModal.hidden) close(); });
+      return shareModal;
+    }
+
+    function openShareCard(q) {
+      const modal = ensureShareModal();
+      const canvas = drawShareCanvas(q);
+      const preview = modal.querySelector('#ama-share-preview');
+      preview.innerHTML = '';
+      canvas.className = 'ama-share-canvas';
+      canvas.style.width = '100%'; canvas.style.height = 'auto';
+      preview.appendChild(canvas);
+
+      const link = 'https://portfolio.yatinsharma.me/#ama';
+      const fileName = 'ama-' + (q.id || 'answer') + '.png';
+      const shareBtn = modal.querySelector('[data-act="share"]');
+      const dlBtn = modal.querySelector('[data-act="download"]');
+      const copyBtn = modal.querySelector('[data-act="copylink"]');
+
+      const toBlob = () => new Promise(res => canvas.toBlob(res, 'image/png'));
+
+      dlBtn.onclick = async () => {
+        const blob = await toBlob(); if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = fileName; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      };
+
+      // Web Share API (with image file) where supported.
+      const canShareFiles = !!(navigator.canShare && navigator.share);
+      shareBtn.hidden = !canShareFiles;
+      if (canShareFiles) shareBtn.onclick = async () => {
+        const blob = await toBlob(); if (!blob) return;
+        const file = new File([blob], fileName, { type: 'image/png' });
+        try {
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: 'AMA — Yatin Sharma', text: q.question, url: link });
+          } else {
+            await navigator.share({ title: 'AMA — Yatin Sharma', text: q.question, url: link });
+          }
+        } catch (e) {}
+      };
+
+      copyBtn.onclick = async () => {
+        try { await navigator.clipboard.writeText(link); copyBtn.classList.add('copied'); const span = copyBtn.querySelector('span:last-child') || copyBtn; setTimeout(() => copyBtn.classList.remove('copied'), 1500); }
+        catch (e) {}
+      };
+
+      modal.hidden = false;
+      document.body.style.overflow = 'hidden';
     }
 
     function render() {
