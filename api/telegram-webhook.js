@@ -2082,43 +2082,6 @@ function extractQuestionId(replyText) {
   return match ? match[1] : '';
 }
 
-/* -- Send a list of questions (for /pending, /refresh) -- */
-async function sendQuestionsList(chatId, title, items, replyToId, editMessageId) {
-  var chunk = title + '\n\n';
-  var sent = 0;
-  for (var i = 0; i < items.length; i++) {
-    var q = items[i];
-    var tag = questionState(q);
-    var tagEmoji = tag === 'UNANSWERED' ? '\u23F3' : '\uD83D\uDE48';
-    var qAge = timeAgo(q.createdAt);
-    var line = [
-      cardTop(tagEmoji + ' <b>' + tag + '</b>'),
-      BOX_V,
-      BOX_V + ' Visitor \u2500 <b>' + esc(visitorName(q.name)) + '</b>' + (qAge ? ' · ' + esc(qAge) : '') + (q.pinned ? ' · \uD83D\uDCCD' : ''),
-      BOX_V + ' ID \u2500 <code>' + esc(q.id) + '</code>',
-      BOX_V,
-      BOX_V + ' “' + esc(clipText(q.question, 150)) + '”',
-      BOX_V,
-      cardBottom,
-      ''
-    ].join('\n');
-    if ((chunk + line + '\n').length > 3500) {
-      if (sent === 0 && editMessageId) await editMessage(chatId, editMessageId, chunk.trim());
-      else await sendTelegram(chatId, chunk.trim(), sent === 0 ? replyToId : undefined);
-      sent++;
-      chunk = '';
-    }
-    chunk += line + '\n';
-  }
-  if (chunk.trim()) {
-    if (sent === 0 && editMessageId) await editMessage(chatId, editMessageId, chunk.trim());
-    else await sendTelegram(chatId, chunk.trim(), sent === 0 ? replyToId : undefined);
-    sent++;
-  }
-  await sendTelegram(chatId,
-    cardTop('\u2705 <b>LIST READY</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Listed <b>' + items.length + '</b> question' + (items.length === 1 ? '' : 's') + '.\n' + BOX_V + ' Tap Answer or reply to answer.\n' + BOX_V + '\n' + cardBottom,
-    undefined, REPLY_KEYBOARD);
-}
 
 /* ============================================================
  J-FEATURE HELPERS (items 41–56)
@@ -2256,12 +2219,12 @@ async function aiTransform(kind, currentText, questionText) {
  HANDLER
  ============================================================ */
 module.exports = async function handler(req, res) {
-  /* Clear per-invocation caches for fresh data on each webhook request.
-     The JWT token cache is also cleared so a stale token from a
-     previous invocation never leaks into a new cold-start. */
+  /* Clear the per-request questions cache so each webhook sees fresh data.
+     The JWT token cache is intentionally NOT cleared here: it self-refreshes
+     via its own expiry check, so keeping it avoids re-minting a token on every
+     request and prevents concurrent invocations from clobbering each other's
+     token mid-flight. */
   _questionsCache = null;
-  _cachedToken = null;
-  _cachedTokenExpiry = 0;
 
   if (req.method !== 'POST') {
     return res.status(200).json({ ok: true, message: 'Telegram webhook endpoint is live.' });
@@ -3825,6 +3788,7 @@ module.exports = async function handler(req, res) {
         var d = new Date(swhen); if (!isNaN(d.getTime())) when = d.toISOString();
       }
       if (!when) { await sendTelegram(chatId, infoCard('⚠️ <b>BAD TIME</b>', ['Could not parse “' + esc(swhen) + '”.', 'Use +2h, +30m, +1d, or an ISO time.']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }
+      if (new Date(when).getTime() <= Date.now()) { await sendTelegram(chatId, infoCard('⚠️ <b>TIME IN THE PAST</b>', ['“' + esc(swhen) + '” is not in the future.', 'Pick a later time, or use /publish to go live now.']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }
       try {
         var q = await getQuestion(sid);
         if (!q) { await sendTelegram(chatId, infoCard('⚠️ <b>NOT FOUND</b>', ['No question <code>' + esc(sid) + '</code>.']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }
