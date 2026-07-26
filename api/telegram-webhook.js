@@ -18,6 +18,7 @@
  ============================================================ */
 
 var crypto = require('crypto');
+var ai = require('./_ai');
 
 var TELEGRAM_API = 'https://api.telegram.org/bot';
 var COLLECTION = 'amaQuestions';
@@ -25,6 +26,10 @@ var EDIT_SESSION_COLLECTION = 'telegramEditSessions';
 var LOOKUP_SESSION_COLLECTION = 'telegramLookupSessions';
 var PREVIEW_SESSION_COLLECTION = 'telegramPreviewSessions';
 var ANSWER_SESSION_COLLECTION = 'telegramAnswerSessions';
+var TEMPLATE_COLLECTION = 'telegramTemplates';   // saved reply templates (52)
+var UNDO_COLLECTION = 'telegramUndo';            // last-action snapshot for /undo (45)
+var DELETEALL_CONFIRM_COLLECTION = 'telegramDeleteAllConfirm'; // typed-token confirm (46)
+var DELETEALL_TOKEN = 'DELETE ALL';
 var SESSION_TTL_MS = 10 * 60 * 1000;
 
 /* Per-invocation caches — cleared at the start of each webhook request.
@@ -621,7 +626,15 @@ function fromFirestoreDoc(doc) {
     answeredAt: (f.answeredAt && f.answeredAt.stringValue) || '',
     editedAt: (f.editedAt && f.editedAt.stringValue) || '',
     votes: Number((f.votes && f.votes.integerValue) || (f.votes && f.votes.doubleValue) || 0),
-    reactions: reactions
+    reactions: reactions,
+    // Draft / scheduled-publish state (54, 56)
+    draft: !!(f.draft && f.draft.booleanValue),
+    draftAnswer: (f.draftAnswer && f.draftAnswer.stringValue) || '',
+    draftAt: (f.draftAt && f.draftAt.stringValue) || '',
+    publishAt: (f.publishAt && f.publishAt.stringValue) || '',
+    // Spam/profanity auto-flag (55)
+    flagged: !!(f.flagged && f.flagged.booleanValue),
+    flagReason: (f.flagReason && f.flagReason.stringValue) || ''
   };
 }
 
@@ -944,7 +957,7 @@ function answerPreviewCard(q, answerText, questionId) {
 function previewButtons() {
   return { inline_keyboard: [
     [{ text: '\u2705 Publish', callback_data: 'previewconfirm' }, { text: '\u270F\uFE0F Revise', callback_data: 'previewedit' }],
-    [{ text: '\u274C Cancel', callback_data: 'previewcancel' }]
+    [{ text: '\uD83D\uDCDD Save as draft', callback_data: 'previewdraft' }, { text: '\u274C Cancel', callback_data: 'previewcancel' }]
   ] };
 }
 
@@ -2072,6 +2085,132 @@ async function sendQuestionsList(chatId, title, items, replyToId, editMessageId)
 }
 
 /* ============================================================
+ J-FEATURE HELPERS (items 41–56)
+ ============================================================ */
+
+/* Compact card builder — cardTop + body lines + cardBottom. */
+function infoCard(title, lines) {
+  var body = (lines || []).map(function (l) { return BOX_V + (l ? ' ' + l : ''); }).join('\n');
+  return cardTop(title) + '\n' + BOX_V + '\n' + body + '\n' + BOX_V + '\n' + cardBottom;
+}
+
+/* -- Undo (45): snapshot last destructive action per chat -- */
+async function saveUndo(chatId, payload) {
+  try {
+    await firestore('PATCH', docPath(UNDO_COLLECTION, String(chatId)), {
+      fields: {
+        chatId: { stringValue: String(chatId) },
+        payload: { stringValue: JSON.stringify(payload).slice(0, 90000) },
+        createdAt: { stringValue: new Date().toISOString() }
+      }
+    });
+  } catch (e) {}
+}
+async function getUndo(chatId) {
+  try {
+    var doc = await firestore('GET', docPath(UNDO_COLLECTION, String(chatId)));
+    var raw = doc && doc.fields && doc.fields.payload && doc.fields.payload.stringValue;
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+async function clearUndo(chatId) {
+  try { await firestore('DELETE', docPath(UNDO_COLLECTION, String(chatId))); } catch (e) {}
+}
+/* Fetch the raw Firestore fields object for a doc (for delete snapshots). */
+async function getRawFields(id) {
+  try { var doc = await firestore('GET', docPath(COLLECTION, id)); return (doc && doc.fields) || null; }
+  catch (e) { return null; }
+}
+/* Recreate a deleted doc from a saved fields snapshot. */
+async function recreateFromSnapshot(id, fields) {
+  return firestore('PATCH', docPath(COLLECTION, id), { fields: fields });
+}
+
+/* -- Saved reply templates (52) -- */
+function templateKey(name) {
+  return String(name || '').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+}
+async function saveTemplate(name, textVal) {
+  var key = templateKey(name);
+  if (!key) throw new Error('bad name');
+  await firestore('PATCH', docPath(TEMPLATE_COLLECTION, key), {
+    fields: { name: { stringValue: key }, text: { stringValue: String(textVal).slice(0, 1000) }, createdAt: { stringValue: new Date().toISOString() } }
+  });
+  return key;
+}
+async function getTemplate(name) {
+  try {
+    var doc = await firestore('GET', docPath(TEMPLATE_COLLECTION, templateKey(name)));
+    return (doc && doc.fields && doc.fields.text && doc.fields.text.stringValue) || null;
+  } catch (e) { return null; }
+}
+async function deleteTemplate(name) {
+  try { await firestore('DELETE', docPath(TEMPLATE_COLLECTION, templateKey(name))); return true; } catch (e) { return false; }
+}
+async function listTemplates() {
+  try {
+    var url = 'https://firestore.googleapis.com/v1/projects/' + projectId() + '/databases/(default)/documents/' + TEMPLATE_COLLECTION + '?pageSize=100';
+    var data = await firestore('GET', url);
+    return ((data && data.documents) || []).map(function (d) {
+      return { name: (d.fields && d.fields.name && d.fields.name.stringValue) || d.name.split('/').pop(), text: (d.fields && d.fields.text && d.fields.text.stringValue) || '' };
+    });
+  } catch (e) { return []; }
+}
+
+/* -- Draft / unpublish (54) + scheduled publish (56) -- */
+async function saveDraftAnswer(id, answer, publishAt) {
+  var fieldNames = ['draft', 'draftAnswer', 'draftAt', 'answered', 'dismissed', 'publishAt'];
+  var fields = {
+    draft: { booleanValue: true },
+    draftAnswer: { stringValue: String(answer).slice(0, 1000) },
+    draftAt: { stringValue: new Date().toISOString() },
+    answered: { booleanValue: false },
+    dismissed: { booleanValue: false },
+    publishAt: { stringValue: publishAt || '' }
+  };
+  var result = await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(fieldNames), { fields: fields });
+  if (!_suppressItemLogs) await sendLog(publishAt ? 'ANSWER SCHEDULED' : 'ANSWER DRAFTED', { ID: id, Draft: clipText(answer, 120), When: publishAt || 'manual' }, '📝');
+  return result;
+}
+/* Publish a stored draft to the public site. */
+async function publishDraftAnswer(id) {
+  var q = await getQuestion(id);
+  if (!q) throw new Error('not found');
+  var text = q.draftAnswer || q.answer;
+  if (!text) throw new Error('no draft');
+  await firestore('PATCH', docPath(COLLECTION, id) + '?' + mask(['answer', 'answered', 'answeredAt', 'dismissed', 'draft', 'draftAnswer', 'publishAt']), {
+    fields: {
+      answer: { stringValue: text.slice(0, 1000) },
+      answered: { booleanValue: true },
+      answeredAt: { stringValue: new Date().toISOString() },
+      dismissed: { booleanValue: false },
+      draft: { booleanValue: false },
+      draftAnswer: { stringValue: '' },
+      publishAt: { stringValue: '' }
+    }
+  });
+  if (!_suppressItemLogs) await sendLog('DRAFT PUBLISHED', { ID: id, Answer: clipText(text, 120) }, '✅');
+  return text;
+}
+
+/* -- AI helpers (41, 42) -- */
+async function aiDraftAnswer(q) {
+  var system = 'You are helping Yatin Sharma answer questions on his portfolio "Ask Me Anything". '
+    + 'Write a concise, friendly, first-person answer (as Yatin) to the visitor\'s question. '
+    + '1–3 short sentences, warm and genuine, no preamble, no sign-off. Output only the answer text.';
+  var name = q.name && q.name !== 'Anonymous' ? q.name : 'a visitor';
+  return ai.claude({ system: system, prompt: 'Question from ' + name + ': "' + q.question + '"', maxTokens: 400 });
+}
+async function aiTransform(kind, currentText, questionText) {
+  var instr = kind === 'shorten' ? 'Rewrite this AMA answer to be noticeably shorter and punchier while keeping the meaning.'
+    : kind === 'expand' ? 'Expand this AMA answer with a little more helpful detail and warmth, staying concise (max ~4 sentences).'
+    : 'Improve this AMA answer: fix grammar, tighten wording, and make it clear and friendly. Keep the same meaning and length roughly.';
+  var system = 'You edit short first-person answers for a developer\'s portfolio AMA. Output ONLY the revised answer text, no preamble or quotes.';
+  var prompt = instr + (questionText ? '\n\nThe question was: "' + questionText + '"' : '') + '\n\nCurrent answer:\n' + currentText;
+  return ai.claude({ system: system, prompt: prompt, maxTokens: 500 });
+}
+
+/* ============================================================
  HANDLER
  ============================================================ */
 module.exports = async function handler(req, res) {
@@ -2131,10 +2270,12 @@ module.exports = async function handler(req, res) {
       }
       else if (action === 'confirmdelete') {
         try {
+          var snapFields = await getRawFields(questionId);
           await deleteQuestion(questionId);
+          if (snapFields) await saveUndo(cbChatId, { type: 'delete', items: [{ id: questionId, fields: snapFields }] });
           await answerCallback(callback.id, '\u2705 Deleted');
           await editMessage(cbChatId, cbMessageId,
-            cardTop('\uD83D\uDDD1 <b>DELETED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Question removed permanently.\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n' + BOX_V + '\n' + cardBottom
+            infoCard('\uD83D\uDDD1 <b>DELETED</b>', ['Question removed permanently.', '', '\u21A9\uFE0F /undo restores it.', '', '\uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST'])
           );
         } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not delete - try again'); }
       }
@@ -2167,9 +2308,24 @@ module.exports = async function handler(req, res) {
           cardTop('\uD83D\uDCAC <b>ANSWER MODE</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Reply with your answer. Preview comes first.\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDC64 Visitor \u2500 <b>' + esc(visitorName(aq && aq.name)) + '</b>\n' + BOX_V + ' \uD83C\uDD94 ID \u2500 <code>' + esc(questionId) + '</code>\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDCAC <b>Question</b>\n' + BOX_V + ' “' + esc(clipText(aq && aq.question || 'Question unavailable', 150)) + '”\n' + BOX_V + '\n' + BOX_V + ' /cancel to exit.\n' + BOX_V + '\n' + cardBottom
         );
       }
+      // 41/53. AI-draft an answer inline, then show the publish preview.
+      else if (action === 'aidraft') {
+        if (!ai.aiConfigured()) { await answerCallback(callback.id, '\uD83E\uDD16 Set ANTHROPIC_API_KEY to enable AI'); return res.status(200).json({ ok: true }); }
+        await answerCallback(callback.id, '\uD83E\uDD16 Drafting\u2026');
+        try {
+          var q = await getQuestion(questionId);
+          if (!q) { await sendTelegram(cbChatId, infoCard('\u26A0\uFE0F <b>NOT FOUND</b>', ['That question no longer exists.'])); return res.status(200).json({ ok: true }); }
+          var aiText = (await aiDraftAnswer(q) || '').trim();
+          if (!aiText) { await sendTelegram(cbChatId, infoCard('\u26A0\uFE0F <b>NO OUTPUT</b>', ['AI returned nothing. Try /draft ' + esc(questionId) + '.'])); return res.status(200).json({ ok: true }); }
+          await clearAnswerSession(cbChatId); await clearEditSession(cbChatId);
+          await savePreviewSession(cbChatId, questionId, aiText);
+          await sendTelegram(cbChatId, answerPreviewCard(q, aiText, questionId), undefined, previewButtons());
+        } catch (e) { await sendTelegram(cbChatId, infoCard('\u26A0\uFE0F <b>AI ERROR</b>', [esc(clipText(e.message || 'failed', 120))])); }
+      }
       else if (action === 'dismiss') {
         try {
           await dismissQuestion(questionId);
+          await saveUndo(cbChatId, { type: 'dismiss', items: [{ id: questionId }] });
           await answerCallback(callback.id, '\uD83D\uDE48 Dismissed');
           var dq = await getQuestion(questionId);
           var dPinned = dq && dq.pinned;
@@ -2257,6 +2413,22 @@ module.exports = async function handler(req, res) {
           cardTop('\u274C <b>ANSWER CANCELLED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Your answer was not published.\n' + BOX_V + ' The question is unchanged.\n' + BOX_V + '\n' + cardBottom
         );
       }
+      // 54. Save the previewed answer as a private draft (publish later).
+      else if (action === 'previewdraft') {
+        try {
+          var session = await getPreviewSession(cbChatId);
+          if (!session || !session.fields || isSessionExpired(session)) { await clearPreviewSession(cbChatId); await answerCallback(callback.id, '\u26A0\uFE0F Session expired'); return res.status(200).json({ ok: true }); }
+          var qid = session.fields.questionId && session.fields.questionId.stringValue;
+          var ansText = session.fields.answerText && session.fields.answerText.stringValue;
+          if (!qid || !ansText) { await clearPreviewSession(cbChatId); await answerCallback(callback.id, '\u26A0\uFE0F Session data missing'); return res.status(200).json({ ok: true }); }
+          await saveDraftAnswer(qid, ansText);
+          await clearPreviewSession(cbChatId);
+          await answerCallback(callback.id, '\uD83D\uDCDD Saved as draft');
+          await editMessage(cbChatId, cbMessageId,
+            infoCard('\uD83D\uDCDD <b>DRAFT SAVED</b>', ['Answer stored privately \u2014 not on the site yet.', '', '\uD83C\uDD94 <code>' + esc(qid) + '</code>', '/publish ' + esc(qid) + ' to go live', '/schedule ' + esc(qid) + ' +2h to auto-publish'])
+          );
+        } catch (e) { await answerCallback(callback.id, '\u26A0\uFE0F Could not save draft'); }
+      }
       else if (action === 'retrieve') {
         try {
           var result = await retrieveQuestion(questionId);
@@ -2303,11 +2475,18 @@ module.exports = async function handler(req, res) {
             cardTop('\uD83D\uDDD1 <b>DELETING ALL\u2026</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Removing ' + count + ' questions\u2026\n' + BOX_V + '\n' + cardBottom
           );
           var deleted = 0;
+          var undoItems = [];
           _suppressItemLogs = true;
           for (var di = 0; di < all.length; di++) {
-            try { await deleteQuestion(all[di].id); deleted++; } catch (e) {}
+            try {
+              var snap = await getRawFields(all[di].id);
+              await deleteQuestion(all[di].id);
+              if (snap) undoItems.push({ id: all[di].id, fields: snap });
+              deleted++;
+            } catch (e) {}
           }
           _suppressItemLogs = false;
+          if (undoItems.length) await saveUndo(cbChatId, { type: 'delete', items: undoItems });
           await sendLog('BULK DELETE ALL', { Requested: count, Deleted: deleted }, '\uD83D\uDDD1');
           await editMessage(cbChatId, cbMessageId,
             cardTop('\u2705 <b>ALL DELETED</b>') + '\n' + BOX_V + '\n' + BOX_V + ' Successfully deleted <b>' + deleted + '</b> question' + (deleted === 1 ? '' : 's') + '.\n' + BOX_V + '\n' + BOX_V + ' \uD83D\uDD50 ' + formatTime(new Date().toISOString()) + ' IST\n' + BOX_V + '\n' + cardBottom
@@ -3204,15 +3383,23 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ ok: true });
       }
       var count = all.length;
+      // 46. Typed-token confirmation \u2014 safer than a single tap.
+      try {
+        await firestore('PATCH', docPath(DELETEALL_CONFIRM_COLLECTION, String(chatId)), {
+          fields: { chatId: { stringValue: String(chatId) }, count: { integerValue: String(count) }, createdAt: { stringValue: new Date().toISOString() } }
+        });
+      } catch (e) {}
       await respondTelegram(chatId,
-        cardTop('\u26A0\uFE0F <b>DELETE ALL?</b>') + '\n' + BOX_V + '\n' + BOX_V + ' This permanently deletes <b>' + count + '</b> question' + (count === 1 ? '' : 's') + '.\n' + BOX_V + ' This cannot be undone.\n' + BOX_V + '\n' + BOX_V + ' Use only when you want a clean reset.\n' + BOX_V + '\n' + cardBottom,
-        message.message_id,
-        { inline_keyboard: [[
-          { text: '\u2705 Yes, Delete All', callback_data: 'confirmdeleteall' },
-          { text: '\u274C Cancel', callback_data: 'canceldeleteall' }
-        ]] },
-        loadingId
-      );
+        infoCard('\u26A0\uFE0F <b>DELETE ALL?</b>', [
+          'This permanently deletes <b>' + count + '</b> question' + (count === 1 ? '' : 's') + '.',
+          '',
+          'To confirm, reply with exactly:',
+          '<code>' + DELETEALL_TOKEN + '</code>',
+          '',
+          'Anything else cancels. /undo can restore',
+          'the batch right after.'
+        ]),
+        message.message_id, REPLY_KEYBOARD, loadingId);
       return res.status(200).json({ ok: true });
     }
     /* /delete <id> - delete a single question with confirmation */
@@ -3456,6 +3643,260 @@ module.exports = async function handler(req, res) {
       }
     }
 
+
+    /* 46. Delete-all typed-token confirmation (intercept before other sessions) */
+    if (!text.startsWith('/')) {
+      var daConfirm = null;
+      try { daConfirm = await firestore('GET', docPath(DELETEALL_CONFIRM_COLLECTION, String(chatId))); } catch (e) {}
+      if (daConfirm && daConfirm.fields) {
+        try { await firestore('DELETE', docPath(DELETEALL_CONFIRM_COLLECTION, String(chatId))); } catch (e) {}
+        if (isSessionExpired(daConfirm)) {
+          await sendTelegram(chatId, infoCard('⌛ <b>CONFIRMATION EXPIRED</b>', ['Run /deleteall again to retry.']), message.message_id, REPLY_KEYBOARD);
+          return res.status(200).json({ ok: true });
+        }
+        if (text.trim().toUpperCase() === DELETEALL_TOKEN) {
+          var loadingId = await sendLoadingCard(chatId, '🗑 <b>DELETING ALL…</b>', 'Removing every question…', message.message_id);
+          var all = await listAllQuestions();
+          var deleted = 0, undoItems = [];
+          _suppressItemLogs = true;
+          for (var di = 0; di < all.length; di++) {
+            try { var snap = await getRawFields(all[di].id); await deleteQuestion(all[di].id); if (snap) undoItems.push({ id: all[di].id, fields: snap }); deleted++; } catch (e) {}
+          }
+          _suppressItemLogs = false;
+          if (undoItems.length) await saveUndo(chatId, { type: 'delete', items: undoItems });
+          await sendLog('BULK DELETE ALL', { Deleted: deleted, Via: 'typed-token' }, '🗑');
+          await respondTelegram(chatId, infoCard('✅ <b>ALL DELETED</b>', ['Deleted <b>' + deleted + '</b> question' + (deleted === 1 ? '' : 's') + '.', '', '↩️ /undo restores the whole batch.']), message.message_id, REPLY_KEYBOARD, loadingId);
+        } else {
+          await sendTelegram(chatId, infoCard('✅ <b>CANCELLED</b>', ['Token did not match — nothing deleted.']), message.message_id, REPLY_KEYBOARD);
+        }
+        return res.status(200).json({ ok: true });
+      }
+    }
+
+    /* ===== J-FEATURE COMMANDS (41,42,45,50,51,52,54,56) ===== */
+    if (command === '/undo') {
+      var undo = await getUndo(chatId);
+      if (!undo) { await sendTelegram(chatId, infoCard('↩️ <b>NOTHING TO UNDO</b>', ['No recent delete or dismiss to reverse.']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }
+      var loadingId = await sendLoadingCard(chatId, '↩️ <b>UNDOING…</b>', 'Reversing the last action…', message.message_id);
+      var restored = 0;
+      try {
+        _suppressItemLogs = true;
+        if (undo.type === 'delete') {
+          for (var ui = 0; ui < (undo.items || []).length; ui++) {
+            try { await recreateFromSnapshot(undo.items[ui].id, undo.items[ui].fields); restored++; } catch (e) {}
+          }
+        } else if (undo.type === 'dismiss') {
+          for (var ui2 = 0; ui2 < (undo.items || []).length; ui2++) {
+            try { await retrieveQuestion(undo.items[ui2].id); restored++; } catch (e) {}
+          }
+        }
+        _suppressItemLogs = false;
+        await clearUndo(chatId);
+        await sendLog('UNDO', { Type: undo.type, Restored: restored }, '↩️');
+        await respondTelegram(chatId, infoCard('✅ <b>UNDONE</b>', ['Restored <b>' + restored + '</b> ' + (undo.type === 'delete' ? 'deleted' : 'dismissed') + ' item' + (restored === 1 ? '' : 's') + '.']), message.message_id, REPLY_KEYBOARD, loadingId);
+      } catch (e) {
+        _suppressItemLogs = false;
+        await respondTelegram(chatId, infoCard('⚠️ <b>UNDO FAILED</b>', ['Could not fully reverse the action.']), message.message_id, REPLY_KEYBOARD, loadingId);
+      }
+      return res.status(200).json({ ok: true });
+    }
+
+    if (command === '/draft' || command === '/improve' || command === '/shorten' || command === '/expand') {
+      var did = text.split(/\s+/)[1];
+      if (!ai.aiConfigured()) { await sendTelegram(chatId, infoCard('🤖 <b>AI NOT SET UP</b>', ['Set ANTHROPIC_API_KEY in your Vercel', 'environment to enable AI features.']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }
+      if (!did) { await sendTelegram(chatId, infoCard('🤖 <b>' + command.slice(1).toUpperCase() + '</b>', ['Usage: <code>' + command + ' &lt;id&gt;</code>', 'Find IDs via /pending or /all.']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }
+      var loadingId = await sendLoadingCard(chatId, '🤖 <b>THINKING…</b>', 'Generating with AI…', message.message_id);
+      try {
+        var q = await getQuestion(did);
+        if (!q) { await respondTelegram(chatId, infoCard('⚠️ <b>NOT FOUND</b>', ['No question with ID <code>' + esc(did) + '</code>.']), message.message_id, REPLY_KEYBOARD, loadingId); return res.status(200).json({ ok: true }); }
+        var aiText;
+        if (command === '/draft') {
+          aiText = await aiDraftAnswer(q);
+        } else {
+          var current = q.draftAnswer || q.answer;
+          if (!current) { await respondTelegram(chatId, infoCard('⚠️ <b>NO ANSWER YET</b>', ['There is no answer to ' + command.slice(1) + '.', 'Use /draft ' + did + ' or answer it first.']), message.message_id, REPLY_KEYBOARD, loadingId); return res.status(200).json({ ok: true }); }
+          aiText = await aiTransform(command.slice(1), current, q.question);
+        }
+        aiText = (aiText || '').trim();
+        if (!aiText) { await respondTelegram(chatId, infoCard('⚠️ <b>NO OUTPUT</b>', ['The AI returned nothing. Try again.']), message.message_id, REPLY_KEYBOARD, loadingId); return res.status(200).json({ ok: true }); }
+        await clearAnswerSession(chatId); await clearEditSession(chatId);
+        await savePreviewSession(chatId, did, aiText);
+        await respondTelegram(chatId, answerPreviewCard(q, aiText, did), message.message_id, previewButtons(), loadingId);
+      } catch (e) {
+        await respondTelegram(chatId, infoCard('⚠️ <b>AI ERROR</b>', [esc(clipText(e.message || 'Request failed', 120))]), message.message_id, REPLY_KEYBOARD, loadingId);
+      }
+      return res.status(200).json({ ok: true });
+    }
+
+    if (command === '/publish') {
+      var pid = text.split(/\s+/)[1];
+      if (!pid) { await sendTelegram(chatId, infoCard('📤 <b>PUBLISH</b>', ['Publish a saved draft to the site.', 'Usage: <code>/publish &lt;id&gt;</code>', 'See drafts with /drafts.']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }
+      try {
+        var pubText = await publishDraftAnswer(pid);
+        await sendAnsweredCard(chatId, pid, pubText, message.message_id, false);
+      } catch (e) {
+        await sendTelegram(chatId, infoCard('⚠️ <b>CANNOT PUBLISH</b>', ['No draft found for <code>' + esc(pid) + '</code>.', 'Save one first (Save as draft).']), message.message_id, REPLY_KEYBOARD);
+      }
+      return res.status(200).json({ ok: true });
+    }
+
+    if (command === '/drafts') {
+      var loadingId = await sendLoadingCard(chatId, '📝 <b>DRAFTS…</b>', 'Loading unpublished answers…', message.message_id);
+      var all = await listAllQuestions();
+      var drafts = all.filter(function (q) { return q.draft && (q.draftAnswer || q.answer); });
+      if (!drafts.length) { await respondTelegram(chatId, infoCard('📝 <b>NO DRAFTS</b>', ['You have no unpublished answers.']), message.message_id, REPLY_KEYBOARD, loadingId); return res.status(200).json({ ok: true }); }
+      var lines = ['<b>' + drafts.length + '</b> draft' + (drafts.length === 1 ? '' : 's') + ':', ''];
+      drafts.slice(0, 15).forEach(function (q) {
+        lines.push('🆔 <code>' + esc(q.id) + '</code>' + (q.publishAt ? ' ⏰ ' + esc(formatTime(q.publishAt)) : ''));
+        lines.push('“' + esc(clipText(q.question, 60)) + '”');
+        lines.push('↳ ' + esc(clipText(q.draftAnswer || q.answer, 90)));
+        lines.push('');
+      });
+      lines.push('/publish &lt;id&gt; to go live · /schedule &lt;id&gt; &lt;when&gt;');
+      await respondTelegram(chatId, infoCard('📝 <b>DRAFTS</b>', lines), message.message_id, REPLY_KEYBOARD, loadingId);
+      return res.status(200).json({ ok: true });
+    }
+
+    if (command === '/schedule') {
+      var sparts = text.split(/\s+/);
+      var sid = sparts[1], swhen = sparts.slice(2).join(' ').trim();
+      if (!sid || !swhen) { await sendTelegram(chatId, infoCard('⏰ <b>SCHEDULE</b>', ['Publish a draft automatically later.', 'Usage: <code>/schedule &lt;id&gt; &lt;when&gt;</code>', 'when = +2h, +30m, +1d, or ISO time.']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }
+      var when = null;
+      var rel = swhen.match(/^\+(\d+)\s*([mhd])$/i);
+      if (rel) {
+        var n = parseInt(rel[1], 10); var unit = rel[2].toLowerCase();
+        var msAdd = unit === 'm' ? n * 60000 : unit === 'h' ? n * 3600000 : n * 86400000;
+        when = new Date(Date.now() + msAdd).toISOString();
+      } else {
+        var d = new Date(swhen); if (!isNaN(d.getTime())) when = d.toISOString();
+      }
+      if (!when) { await sendTelegram(chatId, infoCard('⚠️ <b>BAD TIME</b>', ['Could not parse “' + esc(swhen) + '”.', 'Use +2h, +30m, +1d, or an ISO time.']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }
+      try {
+        var q = await getQuestion(sid);
+        if (!q) { await sendTelegram(chatId, infoCard('⚠️ <b>NOT FOUND</b>', ['No question <code>' + esc(sid) + '</code>.']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }
+        var draftText = q.draftAnswer || q.answer;
+        if (!draftText) { await sendTelegram(chatId, infoCard('⚠️ <b>NO DRAFT</b>', ['Save an answer as a draft first,', 'then schedule it.']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }
+        await saveDraftAnswer(sid, draftText, when);
+        await sendTelegram(chatId, infoCard('⏰ <b>SCHEDULED</b>', ['Will publish at:', '<b>' + esc(formatTime(when)) + '</b> IST', '', '🆔 <code>' + esc(sid) + '</code>', 'Cancel by editing/publishing before then.']), message.message_id, REPLY_KEYBOARD);
+      } catch (e) {
+        await sendTelegram(chatId, infoCard('⚠️ <b>SCHEDULE FAILED</b>', [esc(clipText(e.message || 'error', 100))]), message.message_id, REPLY_KEYBOARD);
+      }
+      return res.status(200).json({ ok: true });
+    }
+
+    if (command === '/top') {
+      var loadingId = await sendLoadingCard(chatId, '🏆 <b>TOP ANSWERS…</b>', 'Ranking by votes and reactions…', message.message_id);
+      var all = await listAllQuestions();
+      var answered = all.filter(function (q) { return questionState(q) === 'ANSWERED'; });
+      var score = function (q) { var r = 0; Object.keys(q.reactions || {}).forEach(function (k) { r += q.reactions[k] || 0; }); return (q.votes || 0) + r; };
+      answered.sort(function (a, b) { return score(b) - score(a); });
+      var topN = answered.slice(0, 10).filter(function (q) { return score(q) > 0; });
+      if (!topN.length) { await respondTelegram(chatId, infoCard('🏆 <b>TOP ANSWERS</b>', ['No votes or reactions yet.']), message.message_id, REPLY_KEYBOARD, loadingId); return res.status(200).json({ ok: true }); }
+      var medals = ['🥇', '🥈', '🥉'];
+      var lines = [];
+      topN.forEach(function (q, i) {
+        var r = 0; Object.keys(q.reactions || {}).forEach(function (k) { r += q.reactions[k] || 0; });
+        lines.push((medals[i] || (i + 1) + '.') + ' ▲' + (q.votes || 0) + ' · ' + r + ' reactions');
+        lines.push('“' + esc(clipText(q.question, 70)) + '”');
+        lines.push('');
+      });
+      await respondTelegram(chatId, infoCard('🏆 <b>TOP ANSWERS</b>', lines), message.message_id, REPLY_KEYBOARD, loadingId);
+      return res.status(200).json({ ok: true });
+    }
+
+    if (command === '/trends') {
+      var loadingId = await sendLoadingCard(chatId, '📈 <b>TRENDS…</b>', 'Crunching activity & response times…', message.message_id);
+      var all = await listAllQuestions();
+      var answered = all.filter(function (q) { return questionState(q) === 'ANSWERED'; });
+      var rts = answered.filter(function (q) { return q.createdAt && q.answeredAt; }).map(function (q) { return new Date(q.answeredAt).getTime() - new Date(q.createdAt).getTime(); }).filter(function (m) { return m >= 0; });
+      var avg = rts.length ? rts.reduce(function (a, b) { return a + b; }, 0) / rts.length : 0;
+      var fastest = rts.length ? Math.min.apply(null, rts) : 0;
+      var slowest = rts.length ? Math.max.apply(null, rts) : 0;
+      var now = Date.now(), day = 86400000;
+      var last7 = 0, prev7 = 0;
+      all.forEach(function (q) {
+        if (!q.createdAt) return; var age = now - new Date(q.createdAt).getTime();
+        if (age <= 7 * day) last7++; else if (age <= 14 * day) prev7++;
+      });
+      var trend = prev7 === 0 ? (last7 > 0 ? '📈 new activity' : 'flat') : (last7 > prev7 ? '📈 +' + (last7 - prev7) + ' vs prior week' : last7 < prev7 ? '📉 -' + (prev7 - last7) + ' vs prior week' : 'flat vs prior week');
+      var lines = [
+        '📥 Total: <b>' + all.length + '</b> · Answered: <b>' + answered.length + '</b>',
+        '🗓 Last 7 days: <b>' + last7 + '</b> (' + trend + ')',
+        '',
+        '⏱ <b>Response time</b>',
+        '  avg ' + formatDuration(avg),
+        '  fastest ' + formatDuration(fastest) + ' · slowest ' + formatDuration(slowest),
+        '  answered w/ timing: ' + rts.length
+      ];
+      await respondTelegram(chatId, infoCard('📈 <b>TRENDS</b>', lines), message.message_id, REPLY_KEYBOARD, loadingId);
+      return res.status(200).json({ ok: true });
+    }
+
+    if (command === '/templates') {
+      var tpls = await listTemplates();
+      var lines = tpls.length ? [] : ['No templates yet.'];
+      tpls.forEach(function (t) { lines.push('🏷 <code>' + esc(t.name) + '</code>'); lines.push('  ' + esc(clipText(t.text, 80))); lines.push(''); });
+      lines.push('/addtemplate &lt;name&gt; | &lt;text&gt;');
+      lines.push('/usetemplate &lt;name&gt; &lt;id&gt; · /deltemplate &lt;name&gt;');
+      await sendTelegram(chatId, infoCard('🏷 <b>REPLY TEMPLATES</b>', lines), message.message_id, REPLY_KEYBOARD);
+      return res.status(200).json({ ok: true });
+    }
+    if (command === '/addtemplate') {
+      var rest = text.slice(command.length).trim();
+      var bar = rest.indexOf('|');
+      if (bar < 0) { await sendTelegram(chatId, infoCard('🏷 <b>ADD TEMPLATE</b>', ['Usage:', '<code>/addtemplate name | template text</code>']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }
+      var tName = rest.slice(0, bar).trim(), tText = rest.slice(bar + 1).trim();
+      if (!tName || !tText) { await sendTelegram(chatId, infoCard('⚠️ <b>MISSING PARTS</b>', ['Need both a name and text.']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }
+      try { var key = await saveTemplate(tName, tText); await sendTelegram(chatId, infoCard('✅ <b>TEMPLATE SAVED</b>', ['🏷 <code>' + esc(key) + '</code>', 'Use it: /usetemplate ' + esc(key) + ' &lt;id&gt;']), message.message_id, REPLY_KEYBOARD); }
+      catch (e) { await sendTelegram(chatId, infoCard('⚠️ <b>FAILED</b>', ['Could not save template.']), message.message_id, REPLY_KEYBOARD); }
+      return res.status(200).json({ ok: true });
+    }
+    if (command === '/deltemplate') {
+      var dName = text.split(/\s+/)[1];
+      if (!dName) { await sendTelegram(chatId, infoCard('🏷 <b>DELETE TEMPLATE</b>', ['Usage: <code>/deltemplate &lt;name&gt;</code>']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }
+      await deleteTemplate(dName);
+      await sendTelegram(chatId, infoCard('✅ <b>TEMPLATE REMOVED</b>', ['🏷 <code>' + esc(templateKey(dName)) + '</code>']), message.message_id, REPLY_KEYBOARD);
+      return res.status(200).json({ ok: true });
+    }
+    if (command === '/usetemplate') {
+      var uparts = text.split(/\s+/); var uName = uparts[1], uId = uparts[2];
+      if (!uName || !uId) { await sendTelegram(chatId, infoCard('🏷 <b>USE TEMPLATE</b>', ['Usage: <code>/usetemplate &lt;name&gt; &lt;id&gt;</code>', 'Loads the template as a preview to publish.']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }
+      var tplText = await getTemplate(uName);
+      if (!tplText) { await sendTelegram(chatId, infoCard('⚠️ <b>NO SUCH TEMPLATE</b>', ['🏷 <code>' + esc(templateKey(uName)) + '</code> not found.', 'See /templates.']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }
+      var q = await getQuestion(uId);
+      if (!q) { await sendTelegram(chatId, infoCard('⚠️ <b>NOT FOUND</b>', ['No question <code>' + esc(uId) + '</code>.']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }
+      await clearAnswerSession(chatId); await clearEditSession(chatId);
+      await savePreviewSession(chatId, uId, tplText);
+      await sendTelegram(chatId, answerPreviewCard(q, tplText, uId), message.message_id, previewButtons());
+      return res.status(200).json({ ok: true });
+    }
+
+    /* 53. Inline / bulk answering — each pending question as its own actionable card. */
+    if (command === '/queue' || command === '/answerall') {
+      var loadingId = await sendLoadingCard(chatId, '📥 <b>ANSWER QUEUE…</b>', 'Loading pending questions…', message.message_id);
+      var all = await listAllQuestions();
+      var items = all.filter(function (q) { return questionState(q) === 'UNANSWERED'; })
+        .sort(function (a, b) { return new Date(a.createdAt || 0) - new Date(b.createdAt || 0); });
+      if (!items.length) {
+        await respondTelegram(chatId, infoCard('✅ <b>ALL CAUGHT UP</b>', ['No pending questions to answer.']), message.message_id, REPLY_KEYBOARD, loadingId);
+        return res.status(200).json({ ok: true });
+      }
+      var shown = items.slice(0, 8);
+      await respondTelegram(chatId, infoCard('📥 <b>ANSWER QUEUE</b>', ['<b>' + items.length + '</b> pending — showing ' + shown.length + '.', 'Answer or draft each inline below.']), message.message_id, REPLY_KEYBOARD, loadingId);
+      for (var qi = 0; qi < shown.length; qi++) {
+        var q = shown[qi];
+        var card = infoCard('⏳ <b>PENDING #' + (qi + 1) + '</b>', [
+          'Visitor — <b>' + esc(visitorName(q.name)) + '</b>' + (timeAgo(q.createdAt) ? ' · ' + esc(timeAgo(q.createdAt)) : ''),
+          'ID — <code>' + esc(q.id) + '</code>',
+          '',
+          '“' + esc(clipText(q.question, 200)) + '”'
+        ]);
+        var rows = [[{ text: '💬 Answer', callback_data: 'answer:' + q.id }, { text: '🙈 Dismiss', callback_data: 'dismiss:' + q.id }]];
+        if (ai.aiConfigured()) rows.push([{ text: '🤖 AI draft', callback_data: 'aidraft:' + q.id }]);
+        await sendTelegram(chatId, card, undefined, { inline_keyboard: rows });
+      }
+      return res.status(200).json({ ok: true });
+    }
 
     /* Answer session (from Answer button) */
     var answerSess = await getAnswerSession(chatId);
