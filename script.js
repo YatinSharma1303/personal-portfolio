@@ -435,7 +435,7 @@
             ytReady = true;
             const vol = $('mp-vol');
             try { ytPlayer.setVolume(vol ? Number(vol.value) : 70); } catch (e) {}
-            try { ytPlayer.setLoop(true); } catch (e) {}     // loop the whole playlist by default
+            applyRepeat();     // apply the current repeat mode (default: repeat all)
             setTimeout(syncMeta, 400);
             if (wantPlay) { try { ytPlayer.playVideo(); } catch (e) {} }
           },
@@ -443,7 +443,10 @@
             if (e.data === 1) { setVisuals(true); progressLoop(); syncMeta(); }        // playing
             else if (e.data === 2) { setVisuals(false); }                              // paused
             else if (e.data === 3 || e.data === 5) { syncMeta(); }                     // buffering / cued -> refresh meta
-            else if (e.data === 0) { setVisuals(false); }                             // ended (loop advances)
+            else if (e.data === 0) {                                                   // ended
+              if (repeatMode === 'one') { try { ytPlayer.seekTo(0); ytPlayer.playVideo(); } catch (er) {} }  // loop this song
+              else { setVisuals(false); }                                              // 'all' loops the list via setLoop; 'off' stops
+            }
           },
           onError: function (e) { ytError = true; setVisuals(false); console.warn('YouTube player error:', e.data); }
         }
@@ -497,12 +500,31 @@
   if (mpPrev) mpPrev.addEventListener('click', function () { wantPlay = true; try { ytPlayer.previousVideo(); } catch (e) {} });
   if (mpNext) mpNext.addEventListener('click', function () { wantPlay = true; try { ytPlayer.nextVideo(); } catch (e) {} });
 
-  // Shuffle + Repeat (repeat/loop on by default so the mix keeps going).
-  let shuffleOn = false, repeatOn = true;
-  const mpShuffle = $('mp-shuffle'), mpRepeat = $('mp-repeat');
-  if (mpRepeat) mpRepeat.classList.add('active');
+  // Shuffle.
+  let shuffleOn = false;
+  const mpShuffle = $('mp-shuffle');
   if (mpShuffle) mpShuffle.addEventListener('click', function () { shuffleOn = !shuffleOn; try { ytPlayer.setShuffle(shuffleOn); } catch (e) {} mpShuffle.classList.toggle('active', shuffleOn); });
-  if (mpRepeat) mpRepeat.addEventListener('click', function () { repeatOn = !repeatOn; try { ytPlayer.setLoop(repeatOn); } catch (e) {} mpRepeat.classList.toggle('active', repeatOn); });
+
+  // Repeat — three-state cycle: all (loop playlist) -> one (loop this song) -> off.
+  // YouTube has no native "loop one" for playlists, so 'one' is handled in the
+  // ENDED handler above by replaying the current track.
+  let repeatMode = 'all';
+  const mpRepeat = $('mp-repeat');
+  const mpRepeatIcon = mpRepeat ? mpRepeat.querySelector('.material-symbols-outlined') : null;
+  function applyRepeat() {
+    try { ytPlayer.setLoop(repeatMode === 'all'); } catch (e) {}
+    if (mpRepeat) {
+      mpRepeat.classList.toggle('active', repeatMode !== 'off');
+      mpRepeat.title = repeatMode === 'one' ? 'Repeat one' : repeatMode === 'all' ? 'Repeat all' : 'Repeat off';
+      mpRepeat.setAttribute('aria-label', mpRepeat.title);
+    }
+    if (mpRepeatIcon) mpRepeatIcon.textContent = repeatMode === 'one' ? 'repeat_one' : 'repeat';
+  }
+  applyRepeat();
+  if (mpRepeat) mpRepeat.addEventListener('click', function () {
+    repeatMode = repeatMode === 'all' ? 'one' : (repeatMode === 'one' ? 'off' : 'all');
+    applyRepeat();
+  });
 
   // Seek bar — smooth: only repaint while dragging, seek ONCE on release
   // (calling seekTo on every pointermove made YouTube re-buffer and stutter).
