@@ -485,6 +485,13 @@
   }
   function closePlayer() { if (miniPlayer) { miniPlayer.classList.remove('open', 'expanded'); miniPlayer.setAttribute('aria-hidden', 'true'); } }
   if (musicWidget) musicWidget.addEventListener('click', openPlayer);
+  // Tap anywhere outside the player (and not on the topbar music button that
+  // opens it) closes it — easy dismiss. Playback keeps going; only the panel hides.
+  document.addEventListener('click', function (e) {
+    if (!miniPlayer || !miniPlayer.classList.contains('open')) return;
+    if (e.target.closest('#mini-player') || e.target.closest('#topbar-music-icon')) return;
+    closePlayer();
+  });
   const mpClose = $('mp-close'); if (mpClose) mpClose.addEventListener('click', closePlayer);
   const mpPlay = $('mp-play'); if (mpPlay) mpPlay.addEventListener('click', togglePlay);
   const mpExpand = $('mp-expand'); if (mpExpand) mpExpand.addEventListener('click', function () { if (miniPlayer) miniPlayer.classList.toggle('expanded'); });
