@@ -340,7 +340,15 @@
       { id: 'pink',   name: 'Pink',   accent: 'rgba(236,72,153,0.6)', accent2: 'rgba(219,39,119,0.5)', swatch: '#ec4899' },
       { id: 'lime',   name: 'Lime',   accent: 'rgba(132,204,22,0.6)', accent2: 'rgba(101,163,13,0.5)', swatch: '#84cc16' },
       { id: 'indigo', name: 'Indigo', accent: 'rgba(99,102,241,0.6)', accent2: 'rgba(79,70,229,0.5)',  swatch: '#6366f1' },
-      { id: 'red',    name: 'Red',    accent: 'rgba(239,68,68,0.6)',  accent2: 'rgba(220,38,38,0.5)',  swatch: '#ef4444' }
+      { id: 'red',    name: 'Red',    accent: 'rgba(239,68,68,0.6)',  accent2: 'rgba(220,38,38,0.5)',  swatch: '#ef4444' },
+      { id: 'fuchsia',name: 'Fuchsia',accent: 'rgba(217,70,239,0.6)', accent2: 'rgba(162,28,175,0.5)', swatch: '#d946ef' },
+      { id: 'yellow', name: 'Yellow', accent: 'rgba(234,179,8,0.6)',  accent2: 'rgba(217,119,6,0.5)',  swatch: '#eab308' },
+      { id: 'green',  name: 'Green',  accent: 'rgba(34,197,94,0.6)',  accent2: 'rgba(22,163,74,0.5)',  swatch: '#22c55e' },
+      { id: 'sky',    name: 'Sky',    accent: 'rgba(14,165,233,0.6)', accent2: 'rgba(2,132,199,0.5)',  swatch: '#0ea5e9' },
+      { id: 'purple', name: 'Purple', accent: 'rgba(168,85,247,0.6)', accent2: 'rgba(124,58,237,0.5)', swatch: '#a855f7' },
+      { id: 'crimson',name: 'Crimson',accent: 'rgba(190,18,60,0.6)',  accent2: 'rgba(225,29,72,0.5)',  swatch: '#be123c' },
+      { id: 'mint',   name: 'Mint',   accent: 'rgba(45,212,191,0.6)', accent2: 'rgba(13,148,136,0.5)', swatch: '#2dd4bf' },
+      { id: 'slate',  name: 'Slate',  accent: 'rgba(100,116,139,0.6)',accent2: 'rgba(71,85,105,0.5)',  swatch: '#64748b' }
     ];
     let activeId = localStorage.getItem('accent') || 'cyan';
     if (!ACCENTS.some(a => a.id === activeId)) activeId = 'cyan';
