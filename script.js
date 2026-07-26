@@ -419,7 +419,7 @@
     const artist = d.author ? d.author.replace(/ - Topic$/, '') : '';
     const id = d.video_id;
     const art = 'https://img.youtube.com/vi/' + id + '/maxresdefault.jpg';
-    ['mp-thumb', 'mp-big-art', 'mp-backdrop', 'tb-art'].forEach(function (x) { const el = $(x); if (el) el.style.backgroundImage = "url('" + art + "')"; });
+    ['mp-thumb', 'mp-big-art', 'mp-backdrop'].forEach(function (x) { const el = $(x); if (el) el.style.backgroundImage = "url('" + art + "')"; });
     const set = function (x, t) { const el = $(x); if (el) el.textContent = t; };
     set('mp-title', title); set('mp-artist', artist); set('mp-big-title', title); set('mp-big-artist', artist);
     const yt = $('mp-yt'); if (yt) yt.href = 'https://youtu.be/' + id;
