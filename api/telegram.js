@@ -40,7 +40,7 @@ function classifySpam(name, question) {
 async function aiTopic(question) {
   var system = 'You label AMA questions with a very short topic tag of 1–3 words in Title Case '
     + '(e.g. "React Hooks", "Career Advice", "SmartHealthCare"). Output ONLY the tag, no punctuation or quotes.';
-  var t = await ai.claude({ system: system, prompt: 'Question: ' + question, maxTokens: 20 });
+  var t = await ai.complete({ system: system, prompt: 'Question: ' + question, maxTokens: 20 });
   return String(t || '').replace(/["'.\n]/g, '').trim().split(/\s+/).slice(0, 3).join(' ').slice(0, 40);
 }
 

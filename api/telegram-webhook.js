@@ -2199,7 +2199,7 @@ async function aiDraftAnswer(q) {
     + 'Write a concise, friendly, first-person answer (as Yatin) to the visitor\'s question. '
     + '1–3 short sentences, warm and genuine, no preamble, no sign-off. Output only the answer text.';
   var name = q.name && q.name !== 'Anonymous' ? q.name : 'a visitor';
-  return ai.claude({ system: system, prompt: 'Question from ' + name + ': "' + q.question + '"', maxTokens: 400 });
+  return ai.complete({ system: system, prompt: 'Question from ' + name + ': "' + q.question + '"', maxTokens: 400 });
 }
 async function aiTransform(kind, currentText, questionText) {
   var instr = kind === 'shorten' ? 'Rewrite this AMA answer to be noticeably shorter and punchier while keeping the meaning.'
@@ -2207,7 +2207,7 @@ async function aiTransform(kind, currentText, questionText) {
     : 'Improve this AMA answer: fix grammar, tighten wording, and make it clear and friendly. Keep the same meaning and length roughly.';
   var system = 'You edit short first-person answers for a developer\'s portfolio AMA. Output ONLY the revised answer text, no preamble or quotes.';
   var prompt = instr + (questionText ? '\n\nThe question was: "' + questionText + '"' : '') + '\n\nCurrent answer:\n' + currentText;
-  return ai.claude({ system: system, prompt: prompt, maxTokens: 500 });
+  return ai.complete({ system: system, prompt: prompt, maxTokens: 500 });
 }
 
 /* ============================================================
@@ -2310,7 +2310,7 @@ module.exports = async function handler(req, res) {
       }
       // 41/53. AI-draft an answer inline, then show the publish preview.
       else if (action === 'aidraft') {
-        if (!ai.aiConfigured()) { await answerCallback(callback.id, '\uD83E\uDD16 Set ANTHROPIC_API_KEY to enable AI'); return res.status(200).json({ ok: true }); }
+        if (!ai.aiConfigured()) { await answerCallback(callback.id, '\uD83E\uDD16 Set GROQ_API_KEY to enable AI'); return res.status(200).json({ ok: true }); }
         await answerCallback(callback.id, '\uD83E\uDD16 Drafting\u2026');
         try {
           var q = await getQuestion(questionId);
@@ -3703,7 +3703,7 @@ module.exports = async function handler(req, res) {
 
     if (command === '/draft' || command === '/improve' || command === '/shorten' || command === '/expand') {
       var did = text.split(/\s+/)[1];
-      if (!ai.aiConfigured()) { await sendTelegram(chatId, infoCard('🤖 <b>AI NOT SET UP</b>', ['Set ANTHROPIC_API_KEY in your Vercel', 'environment to enable AI features.']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }
+      if (!ai.aiConfigured()) { await sendTelegram(chatId, infoCard('🤖 <b>AI NOT SET UP</b>', ['Set GROQ_API_KEY in your Vercel', 'environment to enable AI features.']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }
       if (!did) { await sendTelegram(chatId, infoCard('🤖 <b>' + command.slice(1).toUpperCase() + '</b>', ['Usage: <code>' + command + ' &lt;id&gt;</code>', 'Find IDs via /pending or /all.']), message.message_id, REPLY_KEYBOARD); return res.status(200).json({ ok: true }); }
       var loadingId = await sendLoadingCard(chatId, '🤖 <b>THINKING…</b>', 'Generating with AI…', message.message_id);
       try {

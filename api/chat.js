@@ -8,7 +8,7 @@
               ama?: [{question, answer}...] }
  Returns:   { reply: string }
 
- Requires ANTHROPIC_API_KEY (see api/_ai.js). Without it the
+ Requires GROQ_API_KEY (see api/_ai.js). Without it the
  endpoint responds 503 with a friendly message.
  ============================================================ */
 
@@ -90,7 +90,7 @@ module.exports = async function handler(req, res) {
   messages.push({ role: 'user', content: message });
 
   try {
-    var reply = await ai.claude({ system: system, messages: messages, maxTokens: 700 });
+    var reply = await ai.complete({ system: system, messages: messages, maxTokens: 700 });
     res.status(200).json({ reply: reply || 'Sorry, I couldn’t come up with an answer for that one.' });
   } catch (err) {
     console.error('chat error:', err && err.message);
