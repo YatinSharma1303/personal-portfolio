@@ -158,6 +158,13 @@ a { color: inherit; text-decoration: none; }
 .mini-player .mp-play .mp-icon-pause { display: none; }
 .mini-player .mp-play.playing .mp-icon-play { display: none; }
 .mini-player .mp-play.playing .mp-icon-pause { display: block; }
+/* secondary controls (shuffle / repeat) */
+.mini-player .mp-controls .mp-sec { width: 34px; height: 34px; color: var(--gray); }
+.mini-player .mp-controls .mp-sec:hover { color: var(--white); background: var(--mp-fill-h); }
+.mini-player .mp-controls .mp-sec.active { color: var(--accent-solid); }
+.mini-player .mp-controls .mp-sec.active::after { content: ""; position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; border-radius: 50%; background: var(--accent-solid); box-shadow: 0 0 6px var(--accent-solid); }
+.mini-player .mp-sec { position: relative; }
+.mini-player .mp-sec .material-symbols-outlined { font-size: 19px; }
 
 /* volume + youtube */
 .mini-player .mp-bottom { display: flex; align-items: center; gap: 11px; }

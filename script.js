@@ -16,10 +16,12 @@
        /api/lastfm proxy which injects the key server-side.
        Set LASTFM_API_KEY in Vercel environment variables. */
     lastfmKey: '',
-    ytVideoId: 'XtwqzajH_8A', // legacy single-track id (fallback)
+    ytVideoId: 'XtwqzajH_8A', // legacy single-track fallback
+    // YouTube Music playlist — the player loads this whole list and pulls
+    // each track's title/artist/artwork from YouTube automatically.
+    ytPlaylistId: 'OLAK5uy_mjNB8hu_s5goDncwoopQoSRXjmRjEPq54',
     playlist: [
-      { id: 'XtwqzajH_8A', title: 'FMA Brotherhood OST', artist: 'Akira Senju' }
-      // add more tracks here, e.g. { id: '<youtubeVideoId>', title: 'Title', artist: 'Artist' }
+      { id: 'XtwqzajH_8A', title: 'YouTube Music', artist: 'Playlist' }
     ],
     amaLimit: 20,
     firebase: {
@@ -399,23 +401,7 @@
   let ytPlayer = null, ytReady = false, ytError = false, wantPlay = false, isPlaying = false;
   const miniPlayer = $('mini-player');
   const musicWidget = $('topbar-music-icon');
-  const PLAYLIST = (CONFIG.playlist && CONFIG.playlist.length) ? CONFIG.playlist : [{ id: CONFIG.ytVideoId, title: 'FMA Brotherhood OST', artist: 'Anime OST' }];
-  let currentTrack = 0;
-  function applyTrackMeta(i) {
-    const t = PLAYLIST[i] || PLAYLIST[0];
-    const art = 'https://img.youtube.com/vi/' + t.id + '/maxresdefault.jpg';
-    ['mp-thumb', 'mp-big-art', 'mp-backdrop', 'tb-art'].forEach(function (id) { const el = $(id); if (el) el.style.backgroundImage = "url('" + art + "')"; });
-    const set = function (id, txt) { const el = $(id); if (el) el.textContent = txt; };
-    set('mp-title', t.title); set('mp-artist', t.artist); set('mp-big-title', t.title); set('mp-big-artist', t.artist);
-    const yt = $('mp-yt'); if (yt) yt.href = 'https://youtu.be/' + t.id;
-  }
-  applyTrackMeta(0);
-  function loadTrack(i) {
-    currentTrack = ((i % PLAYLIST.length) + PLAYLIST.length) % PLAYLIST.length;
-    applyTrackMeta(currentTrack);
-    wantPlay = true;
-    if (ytReady) { try { ytPlayer.loadVideoById(PLAYLIST[currentTrack].id); } catch (e) {} }
-  }
+  const YT_PLAYLIST_ID = CONFIG.ytPlaylistId || '';
 
   function setVisuals(playing) {
     isPlaying = playing;
@@ -424,28 +410,40 @@
     const tip = $('tb-music-tooltip'); if (tip) tip.textContent = playing ? 'Now playing' : 'Tap to play';
   }
 
+  // Pull the current track's title / artist / artwork straight from YouTube.
+  function syncMeta() {
+    if (!ytReady) return;
+    let d = null; try { d = ytPlayer.getVideoData(); } catch (e) {}
+    if (!d || !d.video_id) return;
+    const title = d.title || 'Now Playing';
+    const artist = d.author ? d.author.replace(/ - Topic$/, '') : '';
+    const id = d.video_id;
+    const art = 'https://img.youtube.com/vi/' + id + '/maxresdefault.jpg';
+    ['mp-thumb', 'mp-big-art', 'mp-backdrop', 'tb-art'].forEach(function (x) { const el = $(x); if (el) el.style.backgroundImage = "url('" + art + "')"; });
+    const set = function (x, t) { const el = $(x); if (el) el.textContent = t; };
+    set('mp-title', title); set('mp-artist', artist); set('mp-big-title', title); set('mp-big-artist', artist);
+    const yt = $('mp-yt'); if (yt) yt.href = 'https://youtu.be/' + id;
+  }
+
   window.onYouTubeIframeAPIReady = function () {
     if (typeof YT === 'undefined' || !YT.Player) { ytError = true; return; }
     try {
       ytPlayer = new YT.Player('yt-music-iframe', {
-        videoId: PLAYLIST[currentTrack].id,
-        playerVars: { autoplay: 0, controls: 0, disablekb: 1, modestbranding: 1, playsinline: 1, rel: 0, iv_load_policy: 3 },
+        playerVars: { autoplay: 0, controls: 0, disablekb: 1, modestbranding: 1, playsinline: 1, rel: 0, iv_load_policy: 3, listType: 'playlist', list: YT_PLAYLIST_ID },
         events: {
           onReady: function () {
             ytReady = true;
-            try { ytPlayer.setVolume(70); } catch (e) {}
+            const vol = $('mp-vol');
+            try { ytPlayer.setVolume(vol ? Number(vol.value) : 70); } catch (e) {}
+            try { ytPlayer.setLoop(true); } catch (e) {}     // loop the whole playlist by default
+            setTimeout(syncMeta, 400);
             if (wantPlay) { try { ytPlayer.playVideo(); } catch (e) {} }
           },
           onStateChange: function (e) {
-            if (e.data === 1) { setVisuals(true); progressLoop(); }
-            else if (e.data === 2) { setVisuals(false); }
-            else if (e.data === 0) {
-              if (wantPlay) {
-                if (PLAYLIST.length > 1) { loadTrack(currentTrack + 1); }
-                else { try { ytPlayer.seekTo(0); ytPlayer.playVideo(); } catch (er) {} }
-              }
-              else setVisuals(false);
-            }
+            if (e.data === 1) { setVisuals(true); progressLoop(); syncMeta(); }        // playing
+            else if (e.data === 2) { setVisuals(false); }                              // paused
+            else if (e.data === 3 || e.data === 5) { syncMeta(); }                     // buffering / cued -> refresh meta
+            else if (e.data === 0) { setVisuals(false); }                             // ended (loop advances)
           },
           onError: function (e) { ytError = true; setVisuals(false); console.warn('YouTube player error:', e.data); }
         }
@@ -455,71 +453,72 @@
   const tag = document.createElement('script'); tag.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(tag);
   setTimeout(function () { if (!ytReady && !ytError) { ytError = true; } }, 8000);
 
-  function doPlay() {
-    if (ytError) return;
-    wantPlay = true;
-    if (!ytReady) { setVisuals(true); return; }
-    try { ytPlayer.playVideo(); } catch (e) {}
-  }
-  function doPause() {
-    wantPlay = false;
-    if (!ytReady) { setVisuals(false); return; }
-    try { ytPlayer.pauseVideo(); } catch (e) {}
-  }
+  function doPlay() { if (ytError) return; wantPlay = true; if (!ytReady) { setVisuals(true); return; } try { ytPlayer.playVideo(); } catch (e) {} }
+  function doPause() { wantPlay = false; if (!ytReady) { setVisuals(false); return; } try { ytPlayer.pauseVideo(); } catch (e) {} }
   function togglePlay() { if (isPlaying) doPause(); else doPlay(); }
   function setVolume(v) { if (ytReady) { try { ytPlayer.setVolume(v); } catch (e) {} } }
   function fmt(t) { t = Math.max(0, Math.floor(t || 0)); const m = Math.floor(t / 60); const s = t % 60; return m + ':' + (s < 10 ? '0' : '') + s; }
-  let loopId = null;
+
+  // seeking flag lets the drag own the seek bar without the rAF loop fighting it.
+  let seeking = false, seekRatio = 0, loopId = null;
   function progressLoop() {
     cancelAnimationFrame(loopId);
     (function step() {
       if (!ytReady || !isPlaying) return;
-      let cur = 0, dur = 0;
-      try { cur = ytPlayer.getCurrentTime() || 0; dur = ytPlayer.getDuration() || 0; } catch (e) {}
-      const ct = $('mp-cur'), dt = $('mp-dur'), fl = $('mp-seek-fill');
-      if (ct) ct.textContent = fmt(cur); if (dt) dt.textContent = fmt(dur);
-      if (fl) fl.style.width = (dur ? (cur / dur * 100) : 0) + '%';
+      if (!seeking) {
+        let cur = 0, dur = 0;
+        try { cur = ytPlayer.getCurrentTime() || 0; dur = ytPlayer.getDuration() || 0; } catch (e) {}
+        const ct = $('mp-cur'), dt = $('mp-dur'), fl = $('mp-seek-fill');
+        if (ct) ct.textContent = fmt(cur); if (dt) dt.textContent = fmt(dur);
+        if (fl) fl.style.width = (dur ? (cur / dur * 100) : 0) + '%';
+      }
       loopId = requestAnimationFrame(step);
     })();
   }
 
   function openPlayer() {
     if (miniPlayer) { miniPlayer.classList.add('open'); miniPlayer.setAttribute('aria-hidden', 'false'); }
-    // Do NOT auto-play on open — playback should only start when the user
-    // explicitly presses play. Auto-playing here caused the YouTube video to
-    // start just from opening the widget, which external Last.fm scrobblers
-    // (browser extensions / YouTube links) would then pick up and scrobble.
+    // No auto-play on open (prevents incidental external scrobbles) — play starts on explicit press.
   }
-  function closePlayer() {
-    if (miniPlayer) { miniPlayer.classList.remove('open', 'expanded'); miniPlayer.setAttribute('aria-hidden', 'true'); }
-  }
+  function closePlayer() { if (miniPlayer) { miniPlayer.classList.remove('open', 'expanded'); miniPlayer.setAttribute('aria-hidden', 'true'); } }
   if (musicWidget) musicWidget.addEventListener('click', openPlayer);
   const mpClose = $('mp-close'); if (mpClose) mpClose.addEventListener('click', closePlayer);
   const mpPlay = $('mp-play'); if (mpPlay) mpPlay.addEventListener('click', togglePlay);
+  const mpExpand = $('mp-expand'); if (mpExpand) mpExpand.addEventListener('click', function () { if (miniPlayer) miniPlayer.classList.toggle('expanded'); });
+
+  // Volume — native range (smooth), with an accent fill that follows the thumb.
   const mpVol = $('mp-vol'), mpVolIcon = $('mp-vol-icon');
   function updateVolIcon(v) { var n = Number(v); if (mpVolIcon) mpVolIcon.textContent = (n === 0) ? 'volume_off' : (n < 50 ? 'volume_down' : 'volume_up'); }
-  if (mpVol) mpVol.addEventListener('input', function (e) { var v = e.target.value; setVolume(v); updateVolIcon(v); });
-  const mpExpand = $('mp-expand'); if (mpExpand) mpExpand.addEventListener('click', function () { if (miniPlayer) miniPlayer.classList.toggle('expanded'); });
+  function paintVol(v) { if (mpVol) mpVol.style.background = 'linear-gradient(90deg, var(--accent-solid) ' + v + '%, var(--mp-fill-h) ' + v + '%)'; }
+  if (mpVol) { mpVol.addEventListener('input', function (e) { var v = e.target.value; setVolume(v); updateVolIcon(v); paintVol(v); }); paintVol(mpVol.value); }
+
+  // Prev / Next — navigate the YouTube playlist natively.
   const mpPrev = $('mp-prev'), mpNext = $('mp-next');
-  if (mpPrev) mpPrev.addEventListener('click', function () { loadTrack(currentTrack - 1); });
-  if (mpNext) mpNext.addEventListener('click', function () { loadTrack(currentTrack + 1); });
-  if (PLAYLIST.length < 2) { if (mpPrev) mpPrev.style.display = 'none'; if (mpNext) mpNext.style.display = 'none'; }
-  // Seek bar (click + drag).
+  if (mpPrev) mpPrev.addEventListener('click', function () { wantPlay = true; try { ytPlayer.previousVideo(); } catch (e) {} });
+  if (mpNext) mpNext.addEventListener('click', function () { wantPlay = true; try { ytPlayer.nextVideo(); } catch (e) {} });
+
+  // Shuffle + Repeat (repeat/loop on by default so the mix keeps going).
+  let shuffleOn = false, repeatOn = true;
+  const mpShuffle = $('mp-shuffle'), mpRepeat = $('mp-repeat');
+  if (mpRepeat) mpRepeat.classList.add('active');
+  if (mpShuffle) mpShuffle.addEventListener('click', function () { shuffleOn = !shuffleOn; try { ytPlayer.setShuffle(shuffleOn); } catch (e) {} mpShuffle.classList.toggle('active', shuffleOn); });
+  if (mpRepeat) mpRepeat.addEventListener('click', function () { repeatOn = !repeatOn; try { ytPlayer.setLoop(repeatOn); } catch (e) {} mpRepeat.classList.toggle('active', repeatOn); });
+
+  // Seek bar — smooth: only repaint while dragging, seek ONCE on release
+  // (calling seekTo on every pointermove made YouTube re-buffer and stutter).
   const seekBar = $('mp-seek-bar');
   if (seekBar) {
-    let dragging = false;
-    function seekTo(clientX) {
-      if (!ytReady) return;
-      const r = seekBar.getBoundingClientRect();
-      const ratio = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
-      try { ytPlayer.seekTo(ratio * (ytPlayer.getDuration() || 0), true); } catch (e) {}
-      const fl = $('mp-seek-fill'); if (fl) fl.style.width = (ratio * 100) + '%';
+    const fl = $('mp-seek-fill');
+    function seekPct(clientX) { const r = seekBar.getBoundingClientRect(); return Math.max(0, Math.min(1, (clientX - r.left) / r.width)); }
+    function paintSeek(ratio) {
+      if (fl) fl.style.width = (ratio * 100) + '%';
+      const ct = $('mp-cur'); if (ct && ytReady) { let dur = 0; try { dur = ytPlayer.getDuration() || 0; } catch (e) {} ct.textContent = fmt(ratio * dur); }
     }
-    seekBar.addEventListener('mousedown', function (e) { dragging = true; seekTo(e.clientX); });
-    window.addEventListener('mousemove', function (e) { if (dragging) seekTo(e.clientX); });
-    window.addEventListener('mouseup', function () { dragging = false; });
-    seekBar.addEventListener('touchstart', function (e) { seekTo(e.touches[0].clientX); }, { passive: true });
-    seekBar.addEventListener('touchmove', function (e) { seekTo(e.touches[0].clientX); }, { passive: true });
+    seekBar.addEventListener('pointerdown', function (e) { seeking = true; try { seekBar.setPointerCapture(e.pointerId); } catch (_) {} seekRatio = seekPct(e.clientX); paintSeek(seekRatio); e.preventDefault(); });
+    seekBar.addEventListener('pointermove', function (e) { if (!seeking) return; seekRatio = seekPct(e.clientX); paintSeek(seekRatio); });
+    function endSeek() { if (!seeking) return; seeking = false; if (ytReady) { try { ytPlayer.seekTo(seekRatio * (ytPlayer.getDuration() || 0), true); } catch (e) {} } }
+    seekBar.addEventListener('pointerup', endSeek);
+    seekBar.addEventListener('pointercancel', endSeek);
   }
 
   // Drag the mini player anywhere on screen (persists position in localStorage).
