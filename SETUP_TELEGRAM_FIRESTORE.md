@@ -247,6 +247,9 @@ Vercel Project → Settings → Environment Variables
 | `FIREBASE_SERVICE_ACCOUNT_KEY` | yes | Full Firebase service account JSON |
 | `LASTFM_API_KEY` | yes for Last.fm | Last.fm API key for proxy |
 | `WAKATIME_API_KEY` | optional | WakaTime stats |
+| `GROQ_API_KEY` | optional | Enables AI features — the "Ask my portfolio" chatbot and AI bot commands (`/draft`, `/improve`, `/shorten`, `/expand`, AI auto-topic). Free tier at console.groq.com |
+| `GROQ_MODEL` | optional | Override the Groq model (default `llama-3.3-70b-versatile`) |
+| `CRON_SECRET` | optional | Secures the scheduled endpoints `/api/digest-cron` and `/api/health-cron` |
 | `TELEGRAM_LOG_CHAT_ID` | optional | Telegram group/channel for logs |
 | `TELEGRAM_LOG_THREAD_MAP` | optional | Forum topic routing for logs |
 
@@ -405,23 +408,28 @@ The site should show a topic pill on AMA cards.
 
 # Telegram commands
 
+> The authoritative, always-current list lives in `botfather-commands.txt`
+> (paste it into BotFather). The groups below mirror it.
+
 ## System
 
 ```txt
 /start
 /help
 /cancel
+/refresh
+/stats
+/health
 ```
 
 ## Queues and browsing
 
 ```txt
 /pending
-/refresh
+/queue
 /recent
 /all
 /dismissed
-/pinned
 ```
 
 ## Find and inspect
@@ -440,14 +448,37 @@ The site should show a topic pill on AMA cards.
 /inbox
 /topics
 /quality
-/health
+/trends
+/top
 ```
 
 ## Answering
 
 ```txt
 /answer <id> <text>
+/answerall
 /edit <id>
+```
+
+## AI drafting (requires GROQ_API_KEY)
+
+```txt
+/draft <id>          AI-generate an answer suggestion, then preview
+/improve <id>        AI-improve an existing answer
+/shorten <id>        AI-shorten an existing answer
+/expand <id>         AI-expand an existing answer
+/publish <id>        Publish a saved draft answer
+/drafts              List unpublished draft answers
+/schedule <id> +2h   Auto-publish a draft later (or ISO time)
+```
+
+## Reply templates
+
+```txt
+/templates
+/addtemplate name | template text
+/usetemplate name <id>
+/deltemplate name
 ```
 
 ## Pin and featured AMA
@@ -455,6 +486,7 @@ The site should show a topic pill on AMA cards.
 ```txt
 /pin <id>
 /unpin <id>
+/pinned
 /spotlight <id>
 /featured
 /unspotlight
@@ -473,7 +505,8 @@ The site should show a topic pill on AMA cards.
 
 ```txt
 /delete <id>
-/deleteall
+/deleteall     (type-token confirm; /undo can restore)
+/undo
 ```
 
 ## Topic management
