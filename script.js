@@ -36,6 +36,33 @@
   const $ = (id) => document.getElementById(id);
   const esc = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+  /* ── 62. Shared search-input + filter-pill widgets (dedupes AMA / AniList / future) ── */
+  const Widgets = {
+    // Wire a search input (+ optional clear button). onChange(trimmedValue) fires on input, Escape and clear.
+    bindSearch(opts) {
+      const input = opts.input, clear = opts.clear, onChange = opts.onChange || function () {};
+      if (!input) return { reset() {} };
+      const sync = (v) => { if (clear) clear.hidden = !v; };
+      input.addEventListener('input', () => { const v = input.value.trim(); sync(v); onChange(v); });
+      input.addEventListener('keydown', (e) => { if (e.key === 'Escape' && input.value) { input.value = ''; sync(''); onChange(''); } });
+      if (clear) clear.addEventListener('click', () => { input.value = ''; sync(''); onChange(''); input.focus(); });
+      return { reset() { input.value = ''; sync(''); } };
+    },
+    // Delegated single-select pill group. onSelect(dataValue, btn) fires on click; manages the .active class.
+    bindPills(opts) {
+      const container = opts.container; if (!container) return;
+      const sel = opts.selector || 'button';
+      const attr = opts.attr || 'value';
+      const onSelect = opts.onSelect || function () {};
+      container.addEventListener('click', (e) => {
+        const t = e.target.closest(sel); if (!t || !container.contains(t)) return;
+        container.querySelectorAll(sel).forEach(b => b.classList.remove('active'));
+        t.classList.add('active');
+        onSelect(t.dataset[attr], t);
+      });
+    }
+  };
+
   // === Last.fm helpers (defined early so the intro can safely call fetchLastfm) ===
   /* All Last.fm calls now go through /api/lastfm proxy — the API key is
      injected server-side and never exposed to the browser. */
@@ -917,19 +944,15 @@
           '</div>';
         list.parentNode.insertBefore(controlsBar, list);
         const si = controlsBar.querySelector('#al-search'), sc = controlsBar.querySelector('#al-search-clear');
-        si.addEventListener('input', () => { activeSearch = si.value.trim(); sc.hidden = !activeSearch; page = 1; render(); });
-        si.addEventListener('keydown', (e) => { if (e.key === 'Escape' && activeSearch) { si.value = ''; activeSearch = ''; sc.hidden = true; page = 1; render(); } });
-        sc.addEventListener('click', () => { si.value = ''; activeSearch = ''; sc.hidden = true; page = 1; render(); si.focus(); });
-        controlsBar.querySelector('#al-sort').addEventListener('click', (e) => {
-          const b = e.target.closest('.al-sort-btn'); if (!b) return;
-          controlsBar.querySelectorAll('.al-sort-btn').forEach(x => x.classList.remove('active'));
-          b.classList.add('active'); activeSort = b.dataset.sort; page = 1; render();
-        });
+        Widgets.bindSearch({ input: si, clear: sc, onChange: (v) => { activeSearch = v; page = 1; render(); } });
+        Widgets.bindPills({ container: controlsBar.querySelector('#al-sort'), selector: '.al-sort-btn', attr: 'sort', onSelect: (v) => { activeSort = v; page = 1; render(); } });
       }
       if (!genreBar) {
         genreBar = document.createElement('div');
         genreBar.className = 'al-genres';
         list.parentNode.insertBefore(genreBar, list);
+        // Delegated so it keeps working as renderGenres() rebuilds the pills.
+        Widgets.bindPills({ container: genreBar, selector: '.al-genre-pill', attr: 'genre', onSelect: (v) => { activeGenre = v || ''; page = 1; renderGenres(); render(); } });
       }
       if (!pagerEl) { pagerEl = document.createElement('div'); pagerEl.className = 'al-pagination'; card.appendChild(pagerEl); }
     }
@@ -1070,12 +1093,10 @@
       allEntries.forEach(e => ((e.media && e.media.genres) || []).forEach(g => counts[g] = (counts[g] || 0) + 1));
       const top = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 12);
       if (!top.length) { genreBar.innerHTML = ''; return; }
+      // Click handling is delegated once in ensureChrome() via Widgets.bindPills.
       genreBar.innerHTML =
         '<button class="al-genre-pill ' + (activeGenre === '' ? 'active' : '') + '" data-genre="">All</button>' +
         top.map(g => '<button class="al-genre-pill ' + (activeGenre === g ? 'active' : '') + '" data-genre="' + esc(g) + '">' + esc(g) + '</button>').join('');
-      genreBar.querySelectorAll('.al-genre-pill').forEach(b => b.addEventListener('click', () => {
-        activeGenre = b.dataset.genre; page = 1; renderGenres(); render();
-      }));
     }
     function updateTabCounts() {
       if (!tabs) return;
@@ -2026,32 +2047,10 @@
     }
     if (send) send.addEventListener('click', submit);
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submit(); });
-    if (sortWrap) sortWrap.addEventListener('click', (e) => {
-      const t = e.target.closest('.ama-sort-btn'); if (!t) return;
-      sortWrap.querySelectorAll('.ama-sort-btn').forEach(b => b.classList.remove('active'));
-      t.classList.add('active'); activeSort = t.dataset.sort; page = 1; render();
-    });
-
+    // Sort pills + search box share the same widgets as the AniList section (see Widgets, item 62).
+    Widgets.bindPills({ container: sortWrap, selector: '.ama-sort-btn', attr: 'sort', onSelect: (v) => { activeSort = v; page = 1; render(); } });
     /* Search box — filter answered questions by question, answer, topic or name */
-    if (searchInput) {
-      searchInput.addEventListener('input', () => {
-        activeSearch = searchInput.value.trim();
-        if (searchClear) searchClear.hidden = !activeSearch;
-        page = 1; render();
-      });
-      searchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && activeSearch) {
-          searchInput.value = ''; activeSearch = '';
-          if (searchClear) searchClear.hidden = true;
-          page = 1; render();
-        }
-      });
-    }
-    if (searchClear) searchClear.addEventListener('click', () => {
-      searchInput.value = ''; activeSearch = '';
-      searchClear.hidden = true; page = 1; render();
-      searchInput.focus();
-    });
+    Widgets.bindSearch({ input: searchInput, clear: searchClear, onChange: (v) => { activeSearch = v; page = 1; render(); } });
 
     /* Refresh button — manual reload of answered questions */
     const refreshBtn = $('ama-refresh');
