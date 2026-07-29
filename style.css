@@ -1118,7 +1118,6 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .lfm-recent-name { font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
 .lfm-recent-artist { font-size: 9px; color: var(--gray-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
 .lfm-recent-time { font-size: 8px; color: var(--accent); font-family: var(--mono); opacity: 0.7; white-space: nowrap; }
-.lfm-section-badge { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 10px; color: var(--gray-dim); margin-left: 8px; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border); background: rgba(255,255,255,0.02); }
 @media (max-width: 820px) { .lfm-columns { grid-template-columns: 1fr; } }
 
 /* ============ ANILIST ============ */
@@ -1857,7 +1856,6 @@ html.light .visitor-badge { background: rgba(255,255,255,0.6); }
   .lfm-np-art { width: 56px; height: 56px; border-radius: 10px; }
   .lfm-np-track { font-size: 14px; }
   .lfm-np-artist { font-size: 11px; }
-  .lfm-section-badge { display: none; }
 }
 
 /* ============ WAKATIME ============ */
@@ -2362,7 +2360,6 @@ html.light .lastfm-card { background: rgba(255,255,255,0.6); }
 html.light .lfm-nowplaying { background: linear-gradient(135deg, color-mix(in srgb, var(--accent-solid) 5%, transparent), color-mix(in srgb, var(--accent-solid) 3%, transparent)); border-color: rgba(0,0,0,0.08); }
 html.light .lfm-nowplaying.live { border-color: rgba(16, 185, 129, 0.4); box-shadow: 0 0 16px rgba(16, 185, 129, 0.1); }
 html.light .lfm-track:hover, html.light .lfm-artist:hover { background: rgba(0,0,0,0.03); }
-html.light .lfm-section-badge { border-color: rgba(0,0,0,0.1); background: rgba(0,0,0,0.03); }
 
 /* Contributions card */
 html.light .contrib-card { background: rgba(255,255,255,0.6); }

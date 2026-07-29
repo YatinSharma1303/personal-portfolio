@@ -803,13 +803,6 @@
         if (av) { const url = lfmImg(user.image); if (url) av.src = url; }
         const strip = $('lfm-statstrip');
         if (strip) strip.textContent = `${(user.playcount||0).toLocaleString()} scrobbles · ${(user.artist_count||0).toLocaleString()} artists · ${(user.album_count||0).toLocaleString()} albums`;
-        // Scrobble badge in section header
-        const sectionLabel = document.querySelector('#music .section-label');
-        if (sectionLabel) {
-          let badge = sectionLabel.querySelector('.lfm-section-badge');
-          if (!badge) { badge = document.createElement('span'); badge.className = 'lfm-section-badge'; sectionLabel.appendChild(badge); }
-          badge.textContent = formatPlays(user.playcount) + ' scrobbles';
-        }
       }
 
       const tracksWrap = $('lfm-tracks');
