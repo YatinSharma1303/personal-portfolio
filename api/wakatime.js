@@ -7,7 +7,7 @@
 const RANGES = {
   '7d':  'Last%207%20days',
   '30d': 'Last%2030%20days',
-  '1y':  'Last%20year'
+  '1y':  'Last%2012%20months'
 };
 
 // Official-ish WakaTime language colors
@@ -89,9 +89,14 @@ module.exports = async function handler(req, res) {
 
   try {
     const auth = Buffer.from(apiKey).toString('base64');
+    const timeout = rangeKey === '1y' ? 25000 : 10000;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
     const response = await fetch('https://wakatime.com/api/v1/users/current/summaries?range=' + rangeParam, {
-      headers: { Authorization: 'Basic ' + auth }
+      headers: { Authorization: 'Basic ' + auth },
+      signal: controller.signal
     });
+    clearTimeout(timer);
 
     if (!response.ok) {
       return res.status(200).json({ error: 'WakaTime API error' });
