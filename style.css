@@ -1618,32 +1618,51 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
 
 /* ============ GITHUB CONTRIBUTION GRAPH ============ */
 .contrib-card { padding: 28px; }
-.contrib-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 18px; }
+.contrib-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 .contrib-total { font-size: 28px; font-weight: 800; color: var(--accent); }
 .contrib-label { font-size: 13px; color: var(--gray); }
-.contrib-grid { display: flex; gap: 3px; overflow-x: auto; padding-bottom: 8px; }
+
+/* Streak badge */
+.contrib-streak { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--gray); display: flex; align-items: center; gap: 5px; }
+.contrib-streak-fire { font-size: 14px; }
+.contrib-streak-num { font-weight: 800; color: var(--accent); font-size: 15px; }
+.contrib-streak-slash { color: var(--gray-dim); }
+
+/* Summary stats bar */
+.contrib-summary { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+.contrib-stat { display: flex; flex-direction: column; gap: 2px; }
+.contrib-stat-value { font-size: 18px; font-weight: 800; color: var(--fg); }
+.contrib-stat-label { font-family: var(--mono); font-size: 10px; color: var(--gray-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Month labels */
+.contrib-months { display: flex; position: relative; height: 16px; margin-bottom: 4px; min-width: max-content; }
+.contrib-month-label { position: absolute; font-family: var(--mono); font-size: 9px; color: var(--gray-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Grid */
+.contrib-grid { display: flex; gap: 3px; overflow-x: auto; padding-bottom: 8px; position: relative; }
 .contrib-grid::-webkit-scrollbar { height: 4px; }
 .contrib-grid::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 2px; }
 .contrib-week { display: flex; flex-direction: column; gap: 3px; }
-.contrib-day { width: 11px; height: 11px; border-radius: 2px; background: color-mix(in srgb, var(--accent-solid) 10%, transparent); background: color-mix(in srgb, var(--accent-solid) 10%, transparent); position: relative; cursor: pointer; }
-.contrib-day[data-level="1"] { background: color-mix(in srgb, var(--accent-solid) 25%, transparent); background: color-mix(in srgb, var(--accent-solid) 25%, transparent); }
-.contrib-day[data-level="2"] { background: color-mix(in srgb, var(--accent-solid) 45%, transparent); background: color-mix(in srgb, var(--accent-solid) 45%, transparent); }
-.contrib-day[data-level="3"] { background: color-mix(in srgb, var(--accent-solid) 70%, transparent); background: color-mix(in srgb, var(--accent-solid) 70%, transparent); }
-.contrib-day[data-level="4"] { background: color-mix(in srgb, var(--accent-solid) 100%, transparent); background: var(--accent-solid); }
+.contrib-day { width: 11px; height: 11px; border-radius: 2px; background: color-mix(in srgb, var(--accent-solid) 10%, transparent); position: relative; cursor: pointer; transition: transform 0.1s, outline 0.1s; outline: 2px solid transparent; outline-offset: 1px; }
+.contrib-day:hover { transform: scale(1.4); z-index: 2; outline-color: var(--accent); border-radius: 3px; }
+.contrib-day[data-level="1"] { background: color-mix(in srgb, var(--accent-solid) 25%, transparent); }
+.contrib-day[data-level="2"] { background: color-mix(in srgb, var(--accent-solid) 45%, transparent); }
+.contrib-day[data-level="3"] { background: color-mix(in srgb, var(--accent-solid) 70%, transparent); }
+.contrib-day[data-level="4"] { background: var(--accent-solid); }
+
+/* Busy day highlight */
+.contrib-day.busiest::after { content: ''; position: absolute; top: -3px; right: -3px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: contrib-pulse 2s ease-in-out infinite; }
+@keyframes contrib-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.5); } }
+
+/* Skeleton grid */
+.contrib-skeleton-grid { display: flex; gap: 3px; }
 /* Custom glass tooltip */
-.contrib-tip {
-  position: fixed; z-index: 9000; pointer-events: none;
-  background: rgba(12,12,16,0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border); border-radius: 8px;
-  padding: 6px 12px; font-family: var(--mono); font-size: 11px; color: var(--gray);
-  white-space: nowrap; opacity: 0; transition: opacity 0.15s ease;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
-}
+.contrib-tip { position: fixed; z-index: 9000; pointer-events: none; background: rgba(12,12,16,0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-family: var(--mono); font-size: 11px; color: var(--gray); white-space: nowrap; opacity: 0; transition: opacity 0.15s ease; box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
 html.light .contrib-tip { background: rgba(255,255,255,0.95); border-color: rgba(0,0,0,0.1); color: #555; box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
 .contrib-tip.visible { opacity: 1; }
 .contrib-tip-date { color: var(--white); font-weight: 600; }
+.contrib-tip-day { color: var(--gray-dim); }
 .contrib-tip-count { color: var(--accent); }
-.contrib-loading { color: var(--gray-dim); font-family: var(--mono); font-size: 12px; }
 .contrib-legend { display: flex; align-items: center; gap: 6px; margin-top: 12px; font-family: var(--mono); font-size: 10px; color: var(--gray-dim); }
 .contrib-legend-boxes { display: flex; gap: 3px; }
 .contrib-legend-boxes i { width: 11px; height: 11px; border-radius: 2px; background: var(--accent-solid); display: inline-block; }

@@ -375,11 +375,28 @@
       <h2 class="section-title">Commit <em>activity.</em></h2>
     </div>
     <div class="contrib-card glass-card fade-in">
+      <!-- Header -->
       <div class="contrib-header">
-        <span id="contrib-total" class="contrib-total">—</span>
+        <span id="contrib-total" class="contrib-total"><span class="skeleton" style="width:60px;height:28px;display:inline-block;border-radius:4px"></span></span>
         <span class="contrib-label">contributions in the last year</span>
+        <span id="contrib-streak" class="contrib-streak"><span class="skeleton" style="width:100px;height:14px;display:inline-block;border-radius:4px"></span></span>
       </div>
-      <div class="contrib-grid" id="contrib-grid"><div class="contrib-loading">Loading activity...</div></div>
+
+      <!-- Summary bar -->
+      <div class="contrib-summary" id="contrib-summary">
+        <div class="contrib-stat"><span class="skeleton" style="width:30px;height:18px;display:inline-block;border-radius:4px"></span><span class="contrib-stat-label">this month</span></div>
+        <div class="contrib-stat"><span class="skeleton" style="width:20px;height:18px;display:inline-block;border-radius:4px"></span><span class="contrib-stat-label">this week</span></div>
+        <div class="contrib-stat"><span class="skeleton" style="width:50px;height:12px;display:inline-block;border-radius:4px"></span><span class="contrib-stat-label">best day</span></div>
+        <div class="contrib-stat"><span class="skeleton" style="width:50px;height:12px;display:inline-block;border-radius:4px"></span><span class="contrib-stat-label">busiest month</span></div>
+      </div>
+
+      <!-- Month labels -->
+      <div class="contrib-months" id="contrib-months"></div>
+
+      <!-- Grid -->
+      <div class="contrib-grid" id="contrib-grid"><div class="contrib-skeleton-grid" id="contrib-skeleton"></div></div>
+
+      <!-- Legend -->
       <div class="contrib-legend">
         <span>Less</span>
         <div class="contrib-legend-boxes">

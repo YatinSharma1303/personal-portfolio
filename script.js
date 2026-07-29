@@ -2537,49 +2537,93 @@
   (function contributions() {
     const grid = $('contrib-grid'); if (!grid) return;
     const totalEl = $('contrib-total');
+    const streakEl = $('contrib-streak');
+    const summaryEl = $('contrib-summary');
+    const monthsEl = $('contrib-months');
     const tip = $('contrib-tip');
+    const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-    // Custom tooltip handlers
+    // Build skeleton grid (14 weeks x 7 days)
+    const sk = $('contrib-skeleton');
+    if (sk) sk.innerHTML = Array.from({length:14}, () => '<div class="sk-week">' + Array.from({length:7}, () => '<div class="sk-day skeleton"></div>').join('') + '</div>').join('');
+
     function showTip(e) {
       const day = e.target.closest('.contrib-day');
       if (!day || !tip) return;
       const date = day.dataset.date;
-      const level = day.dataset.level;
-      const count = level === '0' ? 'No' : level;
-      tip.innerHTML = '<span class="contrib-tip-date">' + esc(date) + '</span> · <span class="contrib-tip-count">' + count + ' contribution' + (level === '1' ? '' : 's') + '</span>';
+      const count = parseInt(day.dataset.count || '0');
+      const dt = new Date(date + 'T00:00:00');
+      const dayName = DAY_NAMES[dt.getDay()];
+      const formatted = MONTH_NAMES[dt.getMonth()] + ' ' + dt.getDate();
+      const countText = count === 0 ? 'No contributions' : count + ' contribution' + (count === 1 ? '' : 's');
+      tip.innerHTML = '<span class="contrib-tip-date">' + formatted + '</span> <span class="contrib-tip-day">' + dayName + '</span> · <span class="contrib-tip-count">' + countText + '</span>';
       tip.classList.add('visible');
       positionTip(e);
     }
-    function moveTip(e) {
-      positionTip(e);
-    }
-    function hideTip() {
-      if (tip) tip.classList.remove('visible');
-    }
+    function moveTip(e) { positionTip(e); }
+    function hideTip() { if (tip) tip.classList.remove('visible'); }
     function positionTip(e) {
       if (!tip) return;
-      const x = e.clientX;
-      const y = e.clientY;
-      const tw = tip.offsetWidth;
-      const th = tip.offsetHeight;
-      const left = Math.min(x + 12, window.innerWidth - tw - 12);
-      const top = y - th - 12;
-      tip.style.left = left + 'px';
-      tip.style.top = Math.max(4, top) + 'px';
+      const x = e.clientX, y = e.clientY;
+      const tw = tip.offsetWidth, th = tip.offsetHeight;
+      tip.style.left = Math.min(x + 12, window.innerWidth - tw - 12) + 'px';
+      tip.style.top = Math.max(4, y - th - 12) + 'px';
     }
 
     fetch('/api/contributions?user=' + CONFIG.githubUser)
       .then(r => r.json())
       .then(d => {
         if (d.error || !d.days) { grid.innerHTML = '<div class="contrib-loading">Could not load (GitHub may be rate-limited).</div>'; return; }
-        if (totalEl) totalEl.textContent = (d.total || d.days.filter(x => x.level > 0).length).toLocaleString();
-        // Group days into weeks (columns).
+
+        // Total
+        if (totalEl) totalEl.textContent = (d.total || 0).toLocaleString();
+
+        // Streak badge
+        if (streakEl && d.streaks) {
+          const s = d.streaks;
+          streakEl.innerHTML = '<span class="material-symbols-outlined contrib-streak-fire" style="font-size:14px;color:var(--accent)">local_fire_department</span> <span class="contrib-streak-num">' + s.current + '</span><span class="contrib-streak-slash">/</span>' + s.longest + ' day streak';
+        }
+
+        // Summary stats
+        if (summaryEl) {
+          const bestDayText = d.bestDay ? esc(d.bestDay.text) + ' · ' + d.bestDay.count : '—';
+          summaryEl.innerHTML =
+            '<div class="contrib-stat"><span class="contrib-stat-value">' + (d.thisMonth || 0).toLocaleString() + '</span><span class="contrib-stat-label">this month</span></div>' +
+            '<div class="contrib-stat"><span class="contrib-stat-value">' + (d.thisWeek || 0).toLocaleString() + '</span><span class="contrib-stat-label">this week</span></div>' +
+            '<div class="contrib-stat"><span class="contrib-stat-value" style="font-size:13px">' + bestDayText + '</span><span class="contrib-stat-label">best day</span></div>' +
+            '<div class="contrib-stat"><span class="contrib-stat-value" style="font-size:13px">' + esc(d.busiestMonth || '—') + '</span><span class="contrib-stat-label">busiest month</span></div>';
+        }
+
+        // Find best day date for highlight
+        const bestDayDate = d.bestDay ? d.bestDay.date : null;
+
+        // Group days into weeks (columns)
         const weeks = [];
         let week = [];
         d.days.forEach(day => { week.push(day); if (week.length === 7) { weeks.push(week); week = []; } });
         if (week.length) weeks.push(week);
-        grid.innerHTML = weeks.map(w => '<div class="contrib-week">' + w.map(day => '<div class="contrib-day" data-level="' + day.level + '" data-date="' + day.date + '"></div>').join('') + '</div>').join('');
-        // Wire custom tooltip (no native title)
+
+        grid.innerHTML = weeks.map(w => '<div class="contrib-week">' + w.map(day => {
+          const cls = 'contrib-day' + (day.date === bestDayDate ? ' busiest' : '');
+          return '<div class="' + cls + '" data-level="' + day.level + '" data-date="' + day.date + '" data-count="' + (day.count || 0) + '"></div>';
+        }).join('') + '</div>').join('');
+
+        // Month labels
+        if (monthsEl && d.monthLabels) {
+          const colW = 14; // 11px cell + 3px gap
+          monthsEl.innerHTML = d.monthLabels.map(ml => {
+            const weekIdx = Math.floor(ml.index / 7);
+            const left = weekIdx * colW;
+            return '<span class="contrib-month-label" style="left:' + left + 'px">' + esc(ml.month) + '</span>';
+          }).join('');
+          // Set grid container width to match
+          const totalWeeks = weeks.length;
+          grid.style.minWidth = (totalWeeks * colW) + 'px';
+          monthsEl.style.minWidth = (totalWeeks * colW) + 'px';
+        }
+
+        // Wire custom tooltip
         grid.querySelectorAll('.contrib-day').forEach(day => {
           day.addEventListener('mouseenter', showTip);
           day.addEventListener('mousemove', moveTip);
