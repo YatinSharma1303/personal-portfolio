@@ -2541,6 +2541,7 @@
     const summaryEl = $('contrib-summary');
     const monthsEl = $('contrib-months');
     const tip = $('contrib-tip');
+    const scrollEl = $('contrib-scroll');
     const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -2555,9 +2556,9 @@
       const count = parseInt(day.dataset.count || '0');
       const dt = new Date(date + 'T00:00:00');
       const dayName = DAY_NAMES[dt.getDay()];
-      const formatted = MONTH_NAMES[dt.getMonth()] + ' ' + dt.getDate();
+      const formatted = MONTH_NAMES[dt.getMonth()] + ' ' + dt.getDate() + ', ' + dt.getFullYear();
       const countText = count === 0 ? 'No contributions' : count + ' contribution' + (count === 1 ? '' : 's');
-      tip.innerHTML = '<span class="contrib-tip-date">' + formatted + '</span> <span class="contrib-tip-day">' + dayName + '</span> · <span class="contrib-tip-count">' + countText + '</span>';
+      tip.innerHTML = '<span class="contrib-tip-date">' + formatted + '  <span class="contrib-tip-day">' + dayName + '</span></span><span class="contrib-tip-count">' + countText + '</span>';
       tip.classList.add('visible');
       positionTip(e);
     }
@@ -2567,8 +2568,12 @@
       if (!tip) return;
       const x = e.clientX, y = e.clientY;
       const tw = tip.offsetWidth, th = tip.offsetHeight;
-      tip.style.left = Math.min(x + 12, window.innerWidth - tw - 12) + 'px';
-      tip.style.top = Math.max(4, y - th - 12) + 'px';
+      const gap = 10;
+      const below = y + gap + th < window.innerHeight;
+      const tipX = Math.min(Math.max(gap, x - tw / 2), window.innerWidth - tw - gap);
+      const tipY = below ? y + gap + 14 : Math.max(gap, y - th - gap);
+      tip.style.left = tipX + 'px';
+      tip.style.top = tipY + 'px';
     }
 
     fetch('/api/contributions?user=' + CONFIG.githubUser)
@@ -2609,18 +2614,19 @@
           return '<div class="' + cls + '" data-level="' + day.level + '" data-date="' + day.date + '" data-count="' + (day.count || 0) + '"></div>';
         }).join('') + '</div>').join('');
 
-        // Month labels
+        // Month labels + set widths on scroll container
         if (monthsEl && d.monthLabels) {
-          const colW = 14; // 11px cell + 3px gap
+          const colW = 14;
           monthsEl.innerHTML = d.monthLabels.map(ml => {
             const weekIdx = Math.floor(ml.index / 7);
             const left = weekIdx * colW;
             return '<span class="contrib-month-label" style="left:' + left + 'px">' + esc(ml.month) + '</span>';
           }).join('');
-          // Set grid container width to match
           const totalWeeks = weeks.length;
-          grid.style.minWidth = (totalWeeks * colW) + 'px';
-          monthsEl.style.minWidth = (totalWeeks * colW) + 'px';
+          const totalW = totalWeeks * colW;
+          grid.style.minWidth = totalW + 'px';
+          monthsEl.style.minWidth = totalW + 'px';
+          if (scrollEl) scrollEl.style.minWidth = totalW + 'px';
         }
 
         // Wire custom tooltip

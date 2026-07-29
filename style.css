@@ -1634,14 +1634,18 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
 .contrib-stat-value { font-size: 18px; font-weight: 800; color: var(--fg); }
 .contrib-stat-label { font-family: var(--mono); font-size: 10px; color: var(--gray-dim); text-transform: uppercase; letter-spacing: 0.5px; }
 
+/* Scrollable wrapper for months + grid */
+.contrib-scroll { overflow-x: auto; padding-bottom: 6px; }
+.contrib-scroll::-webkit-scrollbar { height: 4px; }
+.contrib-scroll::-webkit-scrollbar-track { background: transparent; }
+.contrib-scroll::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 2px; }
+
 /* Month labels */
 .contrib-months { display: flex; position: relative; height: 16px; margin-bottom: 4px; min-width: max-content; }
 .contrib-month-label { position: absolute; font-family: var(--mono); font-size: 9px; color: var(--gray-dim); text-transform: uppercase; letter-spacing: 0.5px; }
 
 /* Grid */
-.contrib-grid { display: flex; gap: 3px; overflow-x: auto; padding-bottom: 8px; position: relative; }
-.contrib-grid::-webkit-scrollbar { height: 4px; }
-.contrib-grid::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 2px; }
+.contrib-grid { display: flex; gap: 3px; position: relative; }
 .contrib-week { display: flex; flex-direction: column; gap: 3px; }
 .contrib-day { width: 11px; height: 11px; border-radius: 2px; background: color-mix(in srgb, var(--accent-solid) 10%, transparent); position: relative; cursor: pointer; transition: transform 0.1s, outline 0.1s; outline: 2px solid transparent; outline-offset: 1px; }
 .contrib-day:hover { transform: scale(1.4); z-index: 2; outline-color: var(--accent); border-radius: 3px; }
@@ -1657,12 +1661,12 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
 /* Skeleton grid */
 .contrib-skeleton-grid { display: flex; gap: 3px; }
 /* Custom glass tooltip */
-.contrib-tip { position: fixed; z-index: 9000; pointer-events: none; background: rgba(12,12,16,0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-family: var(--mono); font-size: 11px; color: var(--gray); white-space: nowrap; opacity: 0; transition: opacity 0.15s ease; box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+.contrib-tip { position: fixed; z-index: 9000; pointer-events: none; background: rgba(12,12,16,0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; font-family: var(--mono); font-size: 11px; color: var(--gray); white-space: nowrap; opacity: 0; transition: opacity 0.15s ease; box-shadow: 0 6px 20px rgba(0,0,0,0.4); display: flex; flex-direction: column; gap: 4px; }
 html.light .contrib-tip { background: rgba(255,255,255,0.95); border-color: rgba(0,0,0,0.1); color: #555; box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
 .contrib-tip.visible { opacity: 1; }
-.contrib-tip-date { color: var(--white); font-weight: 600; }
-.contrib-tip-day { color: var(--gray-dim); }
-.contrib-tip-count { color: var(--accent); }
+.contrib-tip-date { color: var(--fg); font-weight: 600; font-size: 12px; }
+.contrib-tip-day { color: var(--gray); font-weight: 400; }
+.contrib-tip-count { color: var(--accent); font-weight: 700; font-size: 12px; }
 .contrib-legend { display: flex; align-items: center; gap: 6px; margin-top: 12px; font-family: var(--mono); font-size: 10px; color: var(--gray-dim); }
 .contrib-legend-boxes { display: flex; gap: 3px; }
 .contrib-legend-boxes i { width: 11px; height: 11px; border-radius: 2px; background: var(--accent-solid); display: inline-block; }
