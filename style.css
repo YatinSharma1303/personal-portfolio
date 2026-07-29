@@ -1635,7 +1635,7 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
 .contrib-stat-label { font-family: var(--mono); font-size: 10px; color: var(--gray-dim); text-transform: uppercase; letter-spacing: 0.5px; }
 
 /* Scrollable wrapper for months + grid */
-.contrib-scroll { overflow-x: auto; padding-bottom: 6px; }
+.contrib-scroll { overflow-x: auto; max-width: 100%; padding-bottom: 6px; }
 .contrib-scroll::-webkit-scrollbar { height: 4px; }
 .contrib-scroll::-webkit-scrollbar-track { background: transparent; }
 .contrib-scroll::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 2px; }
@@ -1824,7 +1824,6 @@ html.light .ama-q-pinned {
 .glass-card {
   position: relative; overflow: hidden;
 }
-.contrib-card { overflow: visible; }
 .glass-card::before {
   content: '';
   position: absolute; top: var(--mouse-y, 50%); left: var(--mouse-x, 50%); border-radius: 50%; pointer-events: none;
