@@ -1,0 +1,772 @@
+     1→     1→<!DOCTYPE html>
+     2→     2→<html lang="en">
+     3→     3→<head>
+     4→     4→  <meta charset="utf-8"/>
+     5→     5→  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+     6→     6→  <meta name="color-scheme" content="dark light"/>
+     7→     7→  <meta name="theme-color" content="#00c8ff"/>
+     8→     8→  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+     9→     9→  <title>Yatin Sharma — Full-Stack Developer</title>
+    10→    10→  <meta name="description" content="Yatin Sharma — full-stack web developer. AI apps, web platforms, React, Python, and everything end to end."/>
+    11→    11→  <meta name="keywords" content="Yatin Sharma, full-stack developer, React, Python, AI, machine learning, web developer, Agra"/>
+    12→    12→  <meta property="og:title" content="Yatin Sharma — Building software end to end."/>
+    13→    13→  <meta property="og:description" content="Full-stack web developer crafting dense interfaces, interactive widgets, and polished frontend experiences."/>
+    14→    14→  <meta property="og:image" content="https://avatars.githubusercontent.com/u/85959016?v=4"/>
+    15→    15→  <meta property="og:type" content="website"/>
+    16→    16→  <meta property="og:url" content="https://portfolio.yatinsharma.me"/>
+    17→    17→  <meta name="twitter:card" content="summary_large_image"/>
+    18→    18→  <meta name="twitter:title" content="Yatin Sharma — Building software end to end."/>
+    19→    19→  
+    20→    20→  <!-- O. Preconnect for faster API loading -->
+    21→    21→  <link rel="preconnect" href="https://api.github.com"/>
+    22→    22→  <link rel="preconnect" href="https://graphql.anilist.co"/>
+    23→    23→  <!-- Last.fm calls now go through /api/lastfm proxy, no direct preconnect needed -->
+    24→    24→  
+    25→    25→  <!-- A. Animated SVG Favicon -->
+    26→    26→  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%2305050a'/%3E%3Ctext x='50' y='70' font-size='60' font-family='sans-serif' font-weight='bold' text-anchor='middle' fill='%2300c8ff'%3EY%3C/text%3E%3C/svg%3E"/>
+    27→    27→
+    28→    28→  <!-- E. SEO STRUCTURED DATA (JSON-LD) -->
+    29→    29→  <script type="application/ld+json">
+    30→    30→  {
+    31→    31→    "@context": "https://schema.org",
+    32→    32→    "@type": "Person",
+    33→    33→    "name": "Yatin Sharma",
+    34→    34→    "url": "https://portfolio.yatinsharma.me",
+    35→    35→    "image": "https://avatars.githubusercontent.com/u/85959016?v=4",
+    36→    36→    "jobTitle": "Full-Stack Developer",
+    37→    37→    "worksFor": {
+    38→    38→      "@type": "Organization",
+    39→    39→      "name": "Freelance / Open Source"
+    40→    40→    },
+    41→    41→    "address": {
+    42→    42→      "@type": "PostalAddress",
+    43→    43→      "addressLocality": "Agra",
+    44→    44→      "addressRegion": "Uttar Pradesh",
+    45→    45→      "addressCountry": "India"
+    46→    46→    },
+    47→    47→    "sameAs": [
+    48→    48→      "https://github.com/YatinSharma1303",
+    49→    49→      "https://www.last.fm/user/YATINSHARMA",
+    50→    50→      "https://anilist.co/user/YatinSharma1303/"
+    51→    51→    ]
+    52→    52→  }
+    53→    53→  </script>
+    54→    54→  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    55→    55→  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>
+    56→    56→  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+    57→    57→  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+    58→    58→  <link rel="dns-prefetch" href="https://graphql.anilist.co"/>
+    59→    59→  <!-- Last.fm now proxied via /api/lastfm, no direct DNS prefetch needed -->
+    60→    60→  <link rel="dns-prefetch" href="https://api.github.com"/>
+    61→    61→  <link rel="dns-prefetch" href="https://www.youtube.com"/>
+    62→    62→  <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml"/>
+    63→    63→  <link rel="stylesheet" href="style.css?v=10.1"/>
+    64→    64→</head>
+    65→    65→<body>
+    66→    66→
+    67→    67→  <!-- ============ BACKGROUND LAYERS ============ -->
+    68→    68→  <div class="grid-bg"></div>
+    69→    69→  <div class="hero-gradient-orb"></div>
+    70→    70→  <canvas class="site-particles" id="hero-particles"></canvas>
+    71→    71→  <div class="click-splash" id="click-splash"></div>
+    72→    72→  <div class="click-splash-inner" id="click-splash-inner"></div>
+    73→    73→
+    74→    74→  <!-- Contribution graph tooltip -->
+    75→    75→  <div class="contrib-tip" id="contrib-tip"></div>
+    76→    76→
+    77→    77→  <!-- ============ CURSOR GLOW TRAIL ============ -->
+    78→    78→  <div class="cursor-glow" id="cursor-glow"></div>
+    79→    79→  <canvas class="cursor-trail" id="cursor-trail"></canvas>
+    80→    80→
+    81→    81→  <!-- ============ SCROLL PROGRESS BAR ============ -->
+    82→    82→  <div class="scroll-progress" id="scroll-progress"></div>
+    83→    83→
+    84→    84→  <!-- ============ BACK TO TOP ============ -->
+    85→    85→  <button class="back-to-top" id="back-to-top" aria-label="Back to top">
+    86→    86→    <svg viewBox="0 0 24 24"><path d="M12 5l-7 7 1.4 1.4L11 8.8V19h2V8.8l4.6 4.6L19 12z"/></svg>
+    87→    87→  </button>
+    88→    88→
+    89→    89→  <!-- ============ INTRO / PRELOADER OVERLAY ============ -->
+    90→    90→  <div class="intro-overlay" id="intro-overlay">
+    91→    91→    <div class="intro-topbar">
+    92→    92→      <span class="intro-status"><span class="intro-dot"></span> <span id="intro-status-text">compiling portfolio</span></span>
+    93→    93→      <span class="intro-tag">v4.2 · <span id="intro-time"></span></span>
+    94→    94→    </div>
+    95→    95→
+    96→    96→    <div class="intro-center">
+    97→    97→      <div class="intro-name" id="intro-name">
+    98→    98→        <span class="intro-char" data-i="0">Y</span>
+    99→    99→        <span class="intro-char" data-i="1">A</span>
+   100→   100→        <span class="intro-char" data-i="2">T</span>
+   101→   101→        <span class="intro-char" data-i="3">I</span>
+   102→   102→        <span class="intro-char" data-i="4">N</span>
+   103→   103→      </div>
+   104→   104→      <div class="intro-progress-wrap">
+   105→   105→        <div class="intro-progress-bar"><div class="intro-progress-fill" id="intro-progress-fill"></div></div>
+   106→   106→        <span class="intro-percent" id="intro-percent">0%</span>
+   107→   107→      </div>
+   108→   108→      <div class="intro-designed" id="intro-designed">designed by <b>yatin</b></div>
+   109→   109→    </div>
+   110→   110→
+   111→   111→    <div class="intro-swipe-hint" id="intro-swipe-hint">
+   112→   112→      <div class="swipe-icon">↑</div>
+   113→   113→      <span>swipe up to enter</span>
+   114→   114→    </div>
+   115→   115→  </div>
+   116→   116→
+   117→   117→  <!-- ============ FLOATING TOPBAR PILL ============ -->
+   118→   118→  <div class="topbar-container">
+   119→   119→    <nav class="topbar-pill" aria-label="Primary">
+   120→   120→      <!-- Music widget (left) -->
+   121→   121→      <button class="topbar-music-widget" id="topbar-music-icon" title="Toggle music player" aria-label="Toggle music player">
+   122→   122→        <span class="tb-eq-icon" id="tb-eq-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+   123→   123→        <span class="tb-music-tooltip" id="tb-music-tooltip">Tap to play</span>
+   124→   124→      </button>
+   125→   125→
+   126→   126→      <span class="topbar-divider"></span>
+   127→   127→
+   128→   128→      <!-- Nav icons -->
+   129→   129→      <div class="topbar-nav-icons">
+   130→   130→        <a class="tb-icon-btn" href="#about" title="About" aria-label="About"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></a>
+   131→   131→        <a class="tb-icon-btn" href="#skills" title="Skills" aria-label="Skills"><svg viewBox="0 0 24 24"><path d="M12 2l9 5v10l-9 5-9-5V7z M12 2v20 M3 7l9 5 9-5"/></svg></a>
+   132→   132→        <a class="tb-icon-btn" href="#projects" title="Projects" aria-label="Projects"><svg viewBox="0 0 24 24"><path d="M3 7h18v12H3z M8 7V4h8v3"/></svg></a>
+   133→   133→        <a class="tb-icon-btn" href="#ama" title="Ask" aria-label="Ask Me Anything"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z"/></svg></a>
+   134→   134→        <a class="tb-icon-btn" href="#playground" title="Playground" aria-label="Playground"><svg viewBox="0 0 24 24"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M7 3v18 M9 8h8 M9 12h6 M9 16h8"/></svg></a>
+   135→   135→      </div>
+   136→   136→
+   137→   137→      <span class="topbar-divider"></span>
+   138→   138→
+   139→   139→      <!-- Theme toggle -->
+   140→   140→      <button class="tb-icon-btn theme-toggle mode-auto" id="theme-toggle-btn" title="Toggle theme" aria-label="Toggle theme">
+   141→   141→        <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+   142→   142→        <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2 M12 20v2 M2 12h2 M20 12h2 M5 5l1.5 1.5 M17.5 17.5L19 19 M19 5l-1.5 1.5 M6.5 17.5L5 19"/></svg>
+   143→   143→        <svg class="icon-auto" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2v16a8 8 0 0 1 0-16z"/></svg>
+   144→   144→      </button>
+   145→   145→
+   146→   146→      <!-- Accent color picker -->
+   147→   147→      <button class="tb-icon-btn accent-toggle" id="accent-btn" title="Accent color" aria-label="Change accent color" aria-haspopup="true" aria-expanded="false">
+   148→   148→        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18 3 3 0 0 0 0-6 1.5 1.5 0 0 1 0-3 3 3 0 0 0 0-6z"/><circle cx="8" cy="9" r="1"/><circle cx="16" cy="9" r="1"/><circle cx="8.5" cy="14" r="1"/></svg>
+   149→   149→      </button>
+   150→   150→    </nav>
+   151→   151→  </div>
+   152→   152→
+   153→   153→  <!-- Accent color popover -->
+   154→   154→  <div class="accent-popover" id="accent-popover" role="menu" aria-label="Accent colors" hidden></div>
+   155→   155→
+   156→   156→  <!-- ============ MINI MUSIC PLAYER (Synthwave glass dock — theme-aware) ============ -->
+   157→   157→  <div class="mini-player" id="mini-player" aria-hidden="true">
+   158→   158→    <div class="mp-glass">
+   159→   159→      <div class="mp-backdrop" id="mp-backdrop"></div>
+   160→   160→
+   161→   161→      <div class="mp-head">
+   162→   162→        <div class="mp-eq" id="mp-eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+   163→   163→        <div class="mp-now-label"><span class="mp-dot"></span>NOW PLAYING</div>
+   164→   164→        <div class="mp-head-sp"></div>
+   165→   165→        <button class="mp-btn mp-mini-btn mp-expand" id="mp-expand" aria-label="Expand" title="Expand">
+   166→   166→          <svg viewBox="0 0 24 24"><path d="M12 8l6 6-1.4 1.4L12 10.8 7.4 15.4 6 14z"/></svg>
+   167→   167→        </button>
+   168→   168→        <button class="mp-btn mp-mini-btn mp-close" id="mp-close" aria-label="Close player" title="Close">✕</button>
+   169→   169→      </div>
+   170→   170→
+   171→   171→      <div class="mp-expand-panel">
+   172→   172→        <div class="mp-big-art" id="mp-big-art"></div>
+   173→   173→        <div class="mp-big-title" id="mp-big-title">YouTube Music</div>
+   174→   174→        <div class="mp-big-artist" id="mp-big-artist">Playlist</div>
+   175→   175→      </div>
+   176→   176→
+   177→   177→      <div class="mp-track">
+   178→   178→        <div class="mp-thumb" id="mp-thumb"></div>
+   179→   179→        <div class="mp-bar-main">
+   180→   180→          <div class="mp-title" id="mp-title">YouTube Music</div>
+   181→   181→          <div class="mp-artist" id="mp-artist">Playlist</div>
+   182→   182→        </div>
+   183→   183→      </div>
+   184→   184→
+   185→   185→      <div class="mp-seek-row">
+   186→   186→        <span class="mp-time" id="mp-cur">0:00</span>
+   187→   187→        <div class="mp-seek-bar" id="mp-seek-bar"><div class="mp-seek-fill" id="mp-seek-fill"></div></div>
+   188→   188→        <span class="mp-time mp-time-r" id="mp-dur">0:00</span>
+   189→   189→      </div>
+   190→   190→
+   191→   191→      <div class="mp-controls">
+   192→   192→        <button class="mp-btn mp-sec mp-shuffle" id="mp-shuffle" aria-label="Shuffle" title="Shuffle"><span class="material-symbols-outlined">shuffle</span></button>
+   193→   193→        <button class="mp-btn mp-prev" id="mp-prev" aria-label="Previous" title="Previous"><svg viewBox="0 0 24 24"><path d="M6 19V5h2v14H6zm3.5-7L18 5v14L9.5 12z"/></svg></button>
+   194→   194→        <button class="mp-btn mp-play" id="mp-play" aria-label="Play / Pause">
+   195→   195→          <svg class="mp-icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+   196→   196→          <svg class="mp-icon-pause" viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+   197→   197→        </button>
+   198→   198→        <button class="mp-btn mp-next" id="mp-next" aria-label="Next" title="Next"><svg viewBox="0 0 24 24"><path d="M6 19V5l8.5 7L6 19zm10.5-14h2v14h-2z"/></svg></button>
+   199→   199→        <button class="mp-btn mp-sec mp-repeat" id="mp-repeat" aria-label="Repeat" title="Repeat"><span class="material-symbols-outlined">repeat</span></button>
+   200→   200→      </div>
+   201→   201→
+   202→   202→      <div class="mp-bottom">
+   203→   203→        <span class="material-symbols-outlined mp-vol-ic" id="mp-vol-icon">volume_up</span>
+   204→   204→        <input type="range" id="mp-vol" class="mp-vol-range" min="0" max="100" value="70" aria-label="Volume"/>
+   205→   205→        <a class="mp-btn mp-yt" id="mp-yt" href="https://music.youtube.com/playlist?list=OLAK5uy_mjNB8hu_s5goDncwoopQoSRXjmRjEPq54" target="_blank" rel="noopener" aria-label="Open on YouTube"><span class="material-symbols-outlined">open_in_new</span></a>
+   206→   206→      </div>
+   207→   207→    </div>
+   208→   208→  </div>
+   209→   209→
+   210→   210→  <!-- ============ HIDDEN YOUTUBE HOST (outside the panel so it initializes) ============ -->
+   211→   211→  <div class="yt-host" id="yt-music-iframe"></div>
+   212→   212→
+   213→   213→  <!-- ============ HERO ============ -->
+   214→   214→  <header class="hero" id="hero">
+   215→   215→    <div class="hero-inner">
+   216→   216→      <div class="hero-reveal" style="--d:0">
+   217→   217→        <div class="hero-status-badge"><span class="status-dot"></span> Available for work &amp; collabs</div>
+   218→   218→      </div>
+   219→   219→      <div class="hero-label hero-reveal" style="--d:1"><span class="hero-label-hash">&#9670;</span> full-stack dev <span class="hero-label-sep">·</span> ui engineer <span class="hero-label-sep">·</span> shipping since 2023</div>
+   220→   220→      <h1 class="hero-h1 hero-reveal" style="--d:2">Building software <span class="hero-h1-grad">end to end.</span></h1>
+   221→   221→      <p class="hero-sub hero-reveal" style="--d:3">Shipping full-stack web experiences — from clean front-ends to the models and APIs behind them.</p>
+   222→   222→      <!-- Terminal typing effect -->
+   223→   223→      <div class="hero-terminal hero-reveal" style="--d:4">
+   224→   224→        <div class="term-dots"><i></i><i></i><i></i></div>
+   225→   225→        <div class="term-body"><span class="term-line" id="term-line"></span><span class="term-caret">▌</span></div>
+   226→   226→      </div>
+   227→   227→      <div class="hero-tags hero-reveal" style="--d:5">
+   228→   228→        <span class="tag">AI Apps</span>
+   229→   229→        <span class="tag">Web Platforms</span>
+   230→   230→        <span class="tag">React</span>
+   231→   231→        <span class="tag">Python</span>
+   232→   232→      </div>
+   233→   233→      <div class="hero-actions hero-reveal" style="--d:6">
+   234→   234→        <a class="btn-primary magnetic" href="#projects">View Projects</a>
+   235→   235→        <a class="btn-ghost magnetic" href="https://github.com/YatinSharma1303" target="_blank" rel="noopener">GitHub ↗</a>
+   236→   236→      </div>
+   237→   237→      <div class="hero-scroll-hint hero-reveal" style="--d:7">⌄</div>
+   238→   238→    </div>
+   239→   239→  </header>
+   240→   240→
+   241→   241→  <!-- ============ ABOUT ============ -->
+   242→   242→  <section class="section" id="about">
+   243→   243→    <div class="section-head">
+   244→   244→      <span class="section-label">01 / about</span>
+   245→   245→      <h2 class="section-title">Owning the <em>whole stack.</em></h2>
+   246→   246→    </div>
+   247→   247→
+   248→   248→    <div class="about-grid">
+   249→   249→      <div class="about-text fade-in">
+   250→   250→        <p>I'm <strong>Yatin Sharma</strong> — a <strong>full-stack</strong> web developer who likes owning a product from the database to the pixel. I build <strong>AI</strong>-powered apps, web platforms, and automation bots, and I care about things that actually ship and work.</p>
+   251→   251→        <p>Lately I work across <strong>React</strong> and modern JavaScript on the front end, with <strong>Python</strong>, machine learning, and Streamlit driving the intelligence underneath. From a 41-disease diagnosis platform to a custom GPT app, I like turning ambitious ideas into things people can use.</p>
+   252→   252→        <p>Off the keyboard I'm usually watching movies and anime, cooking something, or chasing the next thing I haven't tried yet.</p>
+   253→   253→      </div>
+   254→   254→
+   255→   255→      <div class="about-side">
+   256→   256→        <div class="glass-card quote-card fade-in">
+   257→   257→          <div class="quote-label">Random Quote <button class="quote-swap" id="quote-swap" title="Swap quote">autorenew</button></div>
+   258→   258→          <blockquote id="quote-text">Talk is cheap. Show me the code.</blockquote>
+   259→   259→          <cite id="quote-author">— Linus Torvalds</cite>
+   260→   260→        </div>
+   261→   261→
+   262→   262→        <div class="glass-card bio-card fade-in">
+   263→   263→          <div class="bio-row"><span>Location</span><b>🇮🇳 Agra, India</b></div>
+   264→   264→          <div class="bio-row"><span>Focus</span><b>Frontend + AI</b></div>
+   265→   265→          <div class="bio-row"><span>Email</span><div class="email-wrap"><b id="email-display"></b><button class="copy-btn material-symbols-outlined" id="copy-email" title="Copy email">content_copy</button></div></div>
+   266→   266→          <div class="bio-row"><span>Status</span><b class="now-badge">now · building · shipping</b></div>
+   267→   267→        </div>
+   268→   268→
+   269→   269→        <div class="glass-card time-card fade-in">
+   270→   270→          <div class="time-label">Time Link</div>
+   271→   271→          <div class="time-grid">
+   272→   272→            <div class="time-col">
+   273→   273→              <div class="time-zone">India</div>
+   274→   274→              <div class="time-value" id="time-india">—</div>
+   275→   275→              <div class="time-sub">GMT+5:30 · my time</div>
+   276→   276→            </div>
+   277→   277→            <div class="time-divider"></div>
+   278→   278→            <div class="time-col">
+   279→   279→              <div class="time-zone">Visitor</div>
+   280→   280→              <div class="time-value" id="time-visitor">—</div>
+   281→   281→              <div class="time-sub" id="time-visitor-sub">your time</div>
+   282→   282→            </div>
+   283→   283→          </div>
+   284→   284→        </div>
+   285→   285→
+   286→   286→        <div class="glass-card stack-card fade-in">
+   287→   287→          <div class="stack-label">Daily Stack</div>
+   288→   288→          <div class="stack-pills">
+   289→   289→            <span>VS Code</span><span>React</span><span>Python</span><span>Git &amp; GitHub</span><span>Vercel</span><span>ChatGPT</span><span>Streamlit</span><span>Firebase</span>
+   290→   290→          </div>
+   291→   291→        </div>
+   292→   292→      </div>
+   293→   293→    </div>
+   294→   294→
+   295→   295→    <!-- GitHub profile card -->
+   296→   296→    <div class="gh-card fade-in" id="gh-card">
+   297→   297→      <div class="gh-top-row">
+   298→   298→        <img class="gh-avatar" id="gh-avatar" alt="Yatin Sharma" src="https://avatars.githubusercontent.com/u/85959016?v=4"/>
+   299→   299→        <div class="gh-info">
+   300→   300→          <div class="gh-name" id="gh-name">Yatin Sharma</div>
+   301→   301→          <div class="gh-handle">@YatinSharma1303 · GitHub</div>
+   302→   302→          <div class="gh-loc">Agra, India · React · Python · AI</div>
+   303→   303→          <div class="gh-stats">
+   304→   304→            <div class="gh-stat"><span id="gh-repos">—</span><label>Repos</label></div>
+   305→   305→            <div class="gh-stat"><span id="gh-followers">—</span><label>Followers</label></div>
+   306→   306→            <div class="gh-stat"><span id="gh-following">—</span><label>Following</label></div>
+   307→   307→          </div>
+   308→   308→          <a class="btn-ghost sm" href="https://github.com/YatinSharma1303" target="_blank" rel="noopener">Visit GitHub ↗</a>
+   309→   309→        </div>
+   310→   310→      </div>
+   311→   311→      <div class="gh-langs-wrap">
+   312→   312→        <div class="gh-lang-chart" id="gh-lang-chart"></div>
+   313→   313→        <div class="gh-lang-legend" id="gh-lang-legend"></div>
+   314→   314→      </div>
+   315→   315→    </div>
+   316→   316→    <!-- Tech stack orbit -->
+   317→   317→    <div class="orbit-section fade-in">
+   318→   318→      <div class="orbit-wrap">
+   319→   319→        <div class="orbit-core material-symbols-outlined">code</div>
+   320→   320→        <div class="orbit-ring" id="orbit-ring"></div>
+   321→   321→      </div>
+   322→   322→    </div>
+   323→   323→
+   324→   324→    <!-- I. Day in the Life Timeline -->
+   325→   325→    <div class="timeline-section fade-in">
+   326→   326→      <div class="timeline-title">A day in the life</div>
+   327→   327→      <div class="timeline-track">
+   328→   328→        <div class="timeline-item">
+   329→   329→          <div class="timeline-dot">☕</div>
+   330→   330→          <div class="timeline-time">Morning</div>
+   331→   331→          <div class="timeline-desc">Deep work on Python ML models & backend APIs.</div>
+   332→   332→        </div>
+   333→   333→        <div class="timeline-item">
+   334→   334→          <div class="timeline-dot">💻</div>
+   335→   335→          <div class="timeline-time">Afternoon</div>
+   336→   336→          <div class="timeline-desc">Building React frontends, fixing bugs, deploying to Vercel.</div>
+   337→   337→        </div>
+   338→   338→        <div class="timeline-item">
+   339→   339→          <div class="timeline-dot">🎬</div>
+   340→   340→          <div class="timeline-time">Night</div>
+   341→   341→          <div class="timeline-desc">Watching anime, cooking, and exploring new tech ideas.</div>
+   342→   342→        </div>
+   343→   343→      </div>
+   344→   344→    </div>
+   345→   345→  </section>
+   346→   346→
+   347→   347→  <!-- ============ SKILLS ============ -->
+   348→   348→  <section class="section" id="skills">
+   349→   349→    <div class="section-head">
+   350→   350→      <span class="section-label">02 / skills</span>
+   351→   351→      <h2 class="section-title">What I build <em>with.</em></h2>
+   352→   352→    </div>
+   353→   353→
+   354→   354→    <div class="skill-panel glass-card">
+   355→   355→      <div class="skill-panel-head">
+   356→   356→        <span class="build-icon">build</span>
+   357→   357→        <div><div class="skill-panel-title">Skill Set</div><div class="skill-panel-sub">yatin · full-stack &amp; ai</div></div>
+   358→   358→        <div class="skill-count" id="skill-count">20 skills</div>
+   359→   359→      </div>
+   360→   360→      <div class="skill-tabs" id="skill-tabs">
+   361→   361→        <button class="skill-tab active" data-cat="ALL">ALL</button>
+   362→   362→        <button class="skill-tab" data-cat="FRONTEND">FRONTEND</button>
+   363→   363→        <button class="skill-tab" data-cat="BACKEND">BACKEND</button>
+   364→   364→        <button class="skill-tab" data-cat="AI/ML">AI/ML</button>
+   365→   365→        <button class="skill-tab" data-cat="TOOLS">TOOLS</button>
+   366→   366→      </div>
+   367→   367→      <div class="skill-list" id="skill-list"><!-- populated by JS --></div>
+   368→   368→    </div>
+   369→   369→  </section>
+   370→   370→
+   371→   371→  <!-- ============ GITHUB CONTRIBUTIONS ============ -->
+   372→   372→  <section class="section" id="contributions">
+   373→   373→    <div class="section-head">
+   374→   374→      <span class="section-label">03 / contributions</span>
+   375→   375→      <h2 class="section-title">Commit <em>activity.</em></h2>
+   376→   376→    </div>
+   377→   377→    <div class="contrib-card glass-card fade-in">
+   378→   378→      <!-- Header -->
+   379→   379→      <div class="contrib-header">
+   380→   380→        <span id="contrib-total" class="contrib-total"><span class="skeleton" style="width:60px;height:28px;display:inline-block;border-radius:4px"></span></span>
+   381→   381→        <span class="contrib-label">contributions in the last year</span>
+   382→   382→        <span id="contrib-streak" class="contrib-streak"><span class="skeleton" style="width:100px;height:14px;display:inline-block;border-radius:4px"></span></span>
+   383→   383→      </div>
+   384→   384→
+   385→   385→      <!-- Summary bar -->
+   386→   386→      <div class="contrib-summary" id="contrib-summary">
+   387→   387→        <div class="contrib-stat"><span class="skeleton" style="width:30px;height:18px;display:inline-block;border-radius:4px"></span><span class="contrib-stat-label">this month</span></div>
+   388→   388→        <div class="contrib-stat"><span class="skeleton" style="width:20px;height:18px;display:inline-block;border-radius:4px"></span><span class="contrib-stat-label">this week</span></div>
+   389→   389→        <div class="contrib-stat"><span class="skeleton" style="width:50px;height:12px;display:inline-block;border-radius:4px"></span><span class="contrib-stat-label">best day</span></div>
+   390→   390→        <div class="contrib-stat"><span class="skeleton" style="width:50px;height:12px;display:inline-block;border-radius:4px"></span><span class="contrib-stat-label">busiest month</span></div>
+   391→   391→      </div>
+   392→   392→
+   393→   393→      <!-- Scrollable graph area -->
+   394→   394→      <div class="contrib-scroll" id="contrib-scroll">
+   395→   395→        <!-- Month labels -->
+   396→   396→        <div class="contrib-months" id="contrib-months"></div>
+   397→   397→
+   398→   398→        <!-- Grid -->
+   399→   399→        <div class="contrib-grid" id="contrib-grid"><div class="contrib-skeleton-grid" id="contrib-skeleton"></div></div>
+   400→   400→      </div>
+   401→   401→
+   402→   402→      <!-- Legend -->
+   403→   403→      <div class="contrib-legend">
+   404→   404→        <span>Less</span>
+   405→   405→        <div class="contrib-legend-boxes">
+   406→   406→          <i style="opacity:0.15"></i><i style="opacity:0.4"></i><i style="opacity:0.65"></i><i style="opacity:0.85"></i><i style="opacity:1"></i>
+   407→   407→        </div>
+   408→   408→        <span>More</span>
+   409→   409→      </div>
+   410→   410→    </div>
+   411→   411→  </section>
+   412→   412→
+   413→   413→  <!-- ============ WAKATIME ============ -->
+   414→   414→  <section class="section" id="wakatime">
+   415→   415→    <div class="section-head">
+   416→   416→      <span class="section-label">04 / coding</span>
+   417→   417→      <h2 class="section-title">Coding <em>stats.</em></h2>
+   418→   418→    </div>
+   419→   419→    <div class="wakatime-card glass-card fade-in" id="wakatime-card">
+   420→   420→      <!-- Header row -->
+   421→   421→      <div class="wt-head">
+   422→   422→        <span class="material-symbols-outlined wt-icon">timer</span>
+   423→   423→        <div>
+   424→   424→          <div class="wt-title">WakaTime</div>
+   425→   425→          <div class="wt-sub" id="wt-range-label">last 7 days</div>
+   426→   426→        </div>
+   427→   427→        <span class="wt-total" id="wt-total">
+   428→   428→          <span class="skeleton" style="width:80px;height:22px;display:inline-block;border-radius:4px"></span>
+   429→   429→        </span>
+   430→   430→        <span class="wt-daily" id="wt-daily">
+   431→   431→          <span class="skeleton" style="width:60px;height:12px;display:inline-block;border-radius:4px"></span>
+   432→   432→        </span>
+   433→   433→      </div>
+   434→   434→
+   435→   435→      <!-- Range selector -->
+   436→   436→      <div class="wt-range-selector" id="wt-range-selector">
+   437→   437→        <button class="wt-range-btn active" data-range="7d">7 days</button>
+   438→   438→        <button class="wt-range-btn" data-range="30d">30 days</button>
+   439→   439→        <button class="wt-range-btn" data-range="1y">1 year</button>
+   440→   440→      </div>
+   441→   441→
+   442→   442→      <!-- Days active streak -->
+   443→   443→      <div class="wt-streak" id="wt-streak">
+   444→   444→        <span class="skeleton" style="width:120px;height:14px;display:inline-block;border-radius:4px"></span>
+   445→   445→      </div>
+   446→   446→
+   447→   447→      <!-- Daily activity heatmap -->
+   448→   448→      <div class="wt-heatmap-section">
+   449→   449→        <div class="wt-heatmap-label">daily activity</div>
+   450→   450→        <div class="wt-heatmap" id="wt-heatmap">
+   451→   451→          <div class="wt-heatmap-bar"><div class="skeleton" style="width:100%;height:100%;border-radius:4px"></div></div>
+   452→   452→          <div class="wt-heatmap-bar"><div class="skeleton" style="width:100%;height:100%;border-radius:4px"></div></div>
+   453→   453→          <div class="wt-heatmap-bar"><div class="skeleton" style="width:100%;height:100%;border-radius:4px"></div></div>
+   454→   454→          <div class="wt-heatmap-bar"><div class="skeleton" style="width:100%;height:100%;border-radius:4px"></div></div>
+   455→   455→          <div class="wt-heatmap-bar"><div class="skeleton" style="width:100%;height:100%;border-radius:4px"></div></div>
+   456→   456→          <div class="wt-heatmap-bar"><div class="skeleton" style="width:100%;height:100%;border-radius:4px"></div></div>
+   457→   457→          <div class="wt-heatmap-bar"><div class="skeleton" style="width:100%;height:100%;border-radius:4px"></div></div>
+   458→   458→        </div>
+   459→   459→        <div class="wt-heatmap-days" id="wt-heatmap-days">
+   460→   460→          <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+   461→   461→        </div>
+   462→   462→      </div>
+   463→   463→
+   464→   464→      <!-- Languages -->
+   465→   465→      <div class="wt-languages" id="wt-languages">
+   466→   466→        <div class="wt-lang"><div class="skeleton" style="width:90px;height:13px;border-radius:4px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="width:100%;height:8px;border-radius:4px;margin-bottom:6px"></div></div><div class="skeleton" style="width:50px;height:11px;border-radius:4px;flex-shrink:0"></div></div>
+   467→   467→        <div class="wt-lang"><div class="skeleton" style="width:80px;height:13px;border-radius:4px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="width:75%;height:8px;border-radius:4px;margin-bottom:6px"></div></div><div class="skeleton" style="width:50px;height:11px;border-radius:4px;flex-shrink:0"></div></div>
+   468→   468→        <div class="wt-lang"><div class="skeleton" style="width:70px;height:13px;border-radius:4px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="width:55%;height:8px;border-radius:4px;margin-bottom:6px"></div></div><div class="skeleton" style="width:50px;height:11px;border-radius:4px;flex-shrink:0"></div></div>
+   469→   469→        <div class="wt-lang"><div class="skeleton" style="width:85px;height:13px;border-radius:4px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="width:40%;height:8px;border-radius:4px;margin-bottom:6px"></div></div><div class="skeleton" style="width:50px;height:11px;border-radius:4px;flex-shrink:0"></div></div>
+   470→   470→      </div>
+   471→   471→
+   472→   472→      <!-- Editors with progress -->
+   473→   473→      <div class="wt-section-title">Editors</div>
+   474→   474→      <div class="wt-editors" id="wt-editors">
+   475→   475→        <div class="wt-editor"><div class="skeleton" style="width:70px;height:12px;border-radius:4px;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:6px;border-radius:3px"></div><div class="skeleton" style="width:40px;height:12px;border-radius:4px;flex-shrink:0"></div></div>
+   476→   476→        <div class="wt-editor"><div class="skeleton" style="width:60px;height:12px;border-radius:4px;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:6px;border-radius:3px"></div><div class="skeleton" style="width:40px;height:12px;border-radius:4px;flex-shrink:0"></div></div>
+   477→   477→      </div>
+   478→   478→
+   479→   479→      <!-- Top Projects -->
+   480→   480→      <div class="wt-section-title">Top Projects</div>
+   481→   481→      <div class="wt-projects" id="wt-projects">
+   482→   482→        <div class="wt-project"><div class="skeleton" style="width:120px;height:12px;border-radius:4px;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:6px;border-radius:3px"></div><div class="skeleton" style="width:50px;height:11px;border-radius:4px;flex-shrink:0"></div></div>
+   483→   483→        <div class="wt-project"><div class="skeleton" style="width:100px;height:12px;border-radius:4px;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:6px;border-radius:3px"></div><div class="skeleton" style="width:50px;height:11px;border-radius:4px;flex-shrink:0"></div></div>
+   484→   484→        <div class="wt-project"><div class="skeleton" style="width:90px;height:12px;border-radius:4px;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:6px;border-radius:3px"></div><div class="skeleton" style="width:50px;height:11px;border-radius:4px;flex-shrink:0"></div></div>
+   485→   485→      </div>
+   486→   486→    </div>
+   487→   487→  </section>
+   488→   488→
+   489→   489→  <!-- ============ PROJECTS ============ -->
+   490→   490→  <section class="section" id="projects">
+   491→   491→    <div class="section-head">
+   492→   492→      <span class="section-label">05 / projects</span>
+   493→   493→      <h2 class="section-title">Things I've <em>built.</em></h2>
+   494→   494→    </div>
+   495→   495→
+   496→   496→    <div class="projects-grid stagger-children fade-in" id="projects-grid"><!-- populated by JS --></div>
+   497→   497→
+   498→   498→    <div class="gh-live">
+   499→   499→      <div class="gh-live-label">Live from GitHub</div>
+   500→   500→      <div class="gh-live-list stagger-children fade-in" id="gh-repos-list"><!-- populated by JS --></div>
+   501→   501→    </div>
+   502→   502→  </section>
+   503→   503→
+   504→   504→  <!-- ============ MUSIC (Last.fm) ============ -->
+   505→   505→  <section class="section" id="music">
+   506→   506→    <div class="section-head">
+   507→   507→      <span class="section-label">06 / music</span>
+   508→   508→      <h2 class="section-title">On <em>repeat.</em></h2>
+   509→   509→    </div>
+   510→   510→
+   511→   511→    <div class="lastfm-card glass-card fade-in">
+   512→   512→      <div class="lfm-head">
+   513→   513→        <img class="lfm-avatar" id="lfm-avatar" alt="Last.fm avatar" src=""/>
+   514→   514→        <div><div class="lfm-title">YATINSHARMA</div><div class="lfm-statstrip" id="lfm-statstrip">Last.fm · scrobbler</div></div>
+   515→   515→        <a class="lfm-link" href="https://www.last.fm/user/YATINSHARMA" target="_blank" rel="noopener">View ↗</a>
+   516→   516→      </div>
+   517→   517→
+   518→   518→      <div class="lfm-nowplaying" id="lfm-nowplaying">
+   519→   519→        <div class="lfm-np-art-wrap">
+   520→   520→          <div class="lfm-np-art" id="lfm-np-art"></div>
+   521→   521→          <div class="lfm-np-eq" id="lfm-np-eq"><i></i><i></i><i></i><i></i></div>
+   522→   522→        </div>
+   523→   523→        <div class="lfm-np-info">
+   524→   524→          <div class="lfm-np-label" id="lfm-np-label">NOW PLAYING</div>
+   525→   525→          <div class="lfm-np-track" id="lfm-np-track">—</div>
+   526→   526→          <div class="lfm-np-artist" id="lfm-np-artist">—</div>
+   527→   527→        </div>
+   528→   528→      </div>
+   529→   529→
+   530→   530→      <div class="lfm-columns">
+   531→   531→        <div class="lfm-col">
+   532→   532→          <div class="lfm-col-title">TOP TRACKS</div>
+   533→   533→          <div class="lfm-tracks" id="lfm-tracks">
+   534→   534→            <div class="lfm-track"><div class="skeleton" style="width:40px;height:40px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="width:80%;height:12px;margin-bottom:4px"></div><div class="skeleton" style="width:50%;height:10px"></div></div></div>
+   535→   535→            <div class="lfm-track"><div class="skeleton" style="width:40px;height:40px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="width:70%;height:12px;margin-bottom:4px"></div><div class="skeleton" style="width:40%;height:10px"></div></div></div>
+   536→   536→            <div class="lfm-track"><div class="skeleton" style="width:40px;height:40px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="width:90%;height:12px;margin-bottom:4px"></div><div class="skeleton" style="width:60%;height:10px"></div></div></div>
+   537→   537→          </div>
+   538→   538→        </div>
+   539→   539→        <div class="lfm-col">
+   540→   540→          <div class="lfm-col-title">TOP ARTISTS</div>
+   541→   541→          <div class="lfm-artists" id="lfm-artists">
+   542→   542→            <div class="lfm-artist"><div class="skeleton" style="width:40px;height:40px;border-radius:50%;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:12px"></div></div>
+   543→   543→            <div class="lfm-artist"><div class="skeleton" style="width:40px;height:40px;border-radius:50%;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:12px"></div></div>
+   544→   544→            <div class="lfm-artist"><div class="skeleton" style="width:40px;height:40px;border-radius:50%;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:12px"></div></div>
+   545→   545→          </div>
+   546→   546→        </div>
+   547→   547→      </div>
+   548→   548→
+   549→   549→      <div class="lfm-recent-wrap">
+   550→   550→        <div class="lfm-col-title">RECENTLY PLAYED</div>
+   551→   551→        <div class="lfm-recent" id="lfm-recent"></div>
+   552→   552→      </div>
+   553→   553→    </div>
+   554→   554→  </section>
+   555→   555→
+   556→   556→  <!-- ============ ANIME (AniList) ============ -->
+   557→   557→  <section class="section" id="anime">
+   558→   558→    <div class="section-head">
+   559→   559→      <span class="section-label">07 / anime</span>
+   560→   560→      <h2 class="section-title">On my <em>list.</em></h2>
+   561→   561→    </div>
+   562→   562→
+   563→   563→    <div class="anilist-card glass-card fade-in" id="anilist-card">
+   564→   564→      <div class="al-head">
+   565→   565→        <img class="al-avatar" id="al-avatar" alt="AniList avatar" src="https://s4.anilist.co/file/anilistcdn/user/avatar/large/default.png"/>
+   566→   566→        <div><div class="al-title">YatinSharma1303</div><div class="al-sub" id="al-sub">AniList · anime list</div></div>
+   567→   567→        <a class="al-link" href="https://anilist.co/user/YatinSharma1303/" target="_blank" rel="noopener">View Profile ↗</a>
+   568→   568→        <button class="ama-refresh-btn al-refresh-btn" id="al-refresh" title="Refresh AniList" aria-label="Refresh AniList"><span class="material-symbols-outlined">refresh</span></button>
+   569→   569→      </div>
+   570→   570→      <div class="al-media" id="al-media" role="tablist" aria-label="Media type">
+   571→   571→        <button class="al-media-btn active" data-media="ANIME" role="tab" aria-selected="true">Anime</button>
+   572→   572→        <button class="al-media-btn" data-media="MANGA" role="tab" aria-selected="false">Manga</button>
+   573→   573→      </div>
+   574→   574→      <div class="al-banner" id="al-banner" style="display:none;"></div>
+   575→   575→      <div class="al-tabs" id="al-tabs">
+   576→   576→        <button class="al-tab active" data-status="ALL">ALL</button>
+   577→   577→        <button class="al-tab" data-status="CURRENT">WATCHING</button>
+   578→   578→        <button class="al-tab" data-status="COMPLETED">COMPLETED</button>
+   579→   579→        <button class="al-tab" data-status="REPEATING">REWATCHING</button>
+   580→   580→        <button class="al-tab" data-status="PLANNING">PLAN TO WATCH</button>
+   581→   581→        <button class="al-tab" data-status="PAUSED">ON HOLD</button>
+   582→   582→        <button class="al-tab" data-status="DROPPED">DROPPED</button>
+   583→   583→      </div>
+   584→   584→          <div class="al-list" id="al-list">
+   585→   585→            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;width:100%">
+   586→   586→              <div><div class="skeleton" style="width:100%;aspect-ratio:3/4;border-radius:14px"></div><div class="skeleton" style="width:80%;height:12px;margin-top:8px"></div></div>
+   587→   587→              <div><div class="skeleton" style="width:100%;aspect-ratio:3/4;border-radius:14px"></div><div class="skeleton" style="width:70%;height:12px;margin-top:8px"></div></div>
+   588→   588→              <div><div class="skeleton" style="width:100%;aspect-ratio:3/4;border-radius:14px"></div><div class="skeleton" style="width:90%;height:12px;margin-top:8px"></div></div>
+   589→   589→              <div><div class="skeleton" style="width:100%;aspect-ratio:3/4;border-radius:14px"></div><div class="skeleton" style="width:60%;height:12px;margin-top:8px"></div></div>
+   590→   590→            </div>
+   591→   591→          </div>
+   592→   592→    </div>
+   593→   593→  </section>
+   594→   594→
+   595→   595→  <!-- ============ INTERESTS ============ -->
+   596→   596→  <section class="section" id="interests">
+   597→   597→    <div class="section-head">
+   598→   598→      <span class="section-label">08 / beyond</span>
+   599→   599→      <h2 class="section-title">Off the <em>keyboard.</em></h2>
+   600→   600→    </div>
+   601→   601→
+   602→   602→    <div class="interests-grid stagger-children fade-in">
+   603→   603→      <div class="interest-card fade-in">
+   604→   604→        <span class="interest-icon material-symbols-outlined">movie</span>
+   605→   605→        <h3>Movies &amp; Anime</h3>
+   606→   606→        <p>Great stories and great pacing — the same craft that makes good software makes good cinema.</p>
+   607→   607→      </div>
+   608→   608→      <div class="interest-card fade-in">
+   609→   609→        <span class="interest-icon material-symbols-outlined">restaurant</span>
+   610→   610→        <h3>Cooking</h3>
+   611→   611→        <p>Following a recipe is just debugging with better rewards. I like making something real with my hands.</p>
+   612→   612→      </div>
+   613→   613→      <div class="interest-card fade-in">
+   614→   614→        <span class="interest-icon material-symbols-outlined">explore</span>
+   615→   615→        <h3>Exploring New Things</h3>
+   616→   616→        <p>Endless curiosity — picking up new tools, ideas and hobbies is half the fun of building.</p>
+   617→   617→      </div>
+   618→   618→    </div>
+   619→   619→  </section>
+   620→   620→
+   621→   621→  <!-- ============ ASK ME ANYTHING ============ -->
+   622→   622→  <section class="section" id="ama">
+   623→   623→    <div class="section-head">
+   624→   624→      <span class="section-label">09 / ask</span>
+   625→   625→      <h2 class="section-title">Got a <em>question?</em></h2>
+   626→   626→      <p class="section-desc">Drop a question, collab idea, or project request. I read every one.</p>
+   627→   627→    </div>
+   628→   628→
+   629→   629→    <div class="ama-card glass-card fade-in">
+   630→   630→      <div class="ama-counter">Used <span id="ama-count">0</span>/20 today</div>
+   631→   631→      <input class="ama-name-input" id="ama-name-input" maxlength="60" placeholder="Your name (optional)" autocomplete="off" />
+   632→   632→      <textarea class="ama-input" id="ama-input" maxlength="280" placeholder="Ask me anything…"></textarea>
+   633→   633→      <button class="btn-primary ama-send" id="ama-send">Send</button>
+   634→   634→      <div class="ama-status" id="ama-status"></div>
+   635→   635→
+   636→   636→      <div class="ama-list-wrap" id="ama-list-wrap" hidden>
+   637→   637→        <div class="ama-featured" id="ama-featured" hidden></div>
+   638→   638→        <div class="ama-sort-label">Answered questions <button class="ama-refresh-btn" id="ama-refresh" title="Refresh answers"><span class="material-symbols-outlined">refresh</span></button></div>
+   639→   639→        <div class="ama-sort" id="ama-sort">
+   640→   640→          <button class="ama-sort-btn active" data-sort="top">Top</button>
+   641→   641→          <button class="ama-sort-btn" data-sort="recent">Recent</button>
+   642→   642→          <button class="ama-sort-btn" data-sort="oldest">Oldest</button>
+   643→   643→        </div>
+   644→   644→        <div class="ama-search-wrap">
+   645→   645→          <span class="material-symbols-outlined ama-search-icon">search</span>
+   646→   646→          <input type="text" class="ama-search-input" id="ama-search" maxlength="80" placeholder="Search answered questions…" autocomplete="off" aria-label="Search answered questions" />
+   647→   647→          <button class="ama-search-clear" id="ama-search-clear" hidden title="Clear search" aria-label="Clear search"><span class="material-symbols-outlined">close</span></button>
+   648→   648→        </div>
+   649→   649→        <div class="ama-list" id="ama-list"></div>
+   650→   650→        <div class="ama-pager" id="ama-pager"></div>
+   651→   651→      </div>
+   652→   652→    </div>
+   653→   653→  </section>
+   654→   654→
+   655→   655→  <!-- ============ PLAYGROUND (GAMES) ============ -->
+   656→   656→  <section class="section" id="playground">
+   657→   657→    <div class="section-head">
+   658→   658→      <span class="section-label">10 / playground</span>
+   659→   659→      <h2 class="section-title">A little <em>playground.</em></h2>
+   660→   660→      <p class="section-desc">games. reflexes. questionable life choices. built in vanilla JS.</p>
+   661→   661→    </div>
+   662→   662→    <div class="pg-cards" id="pg-cards"></div>
+   663→   663→  </section>
+   664→   664→
+   665→   665→  <!-- ============ ONLINE PRESENCE ============ -->
+   666→   666→  <footer class="section" id="presence">
+   667→   667→    <div class="section-head">
+   668→   668→      <span class="section-label">11 / connect</span>
+   669→   669→      <h2 class="section-title">My online <em>presence.</em></h2>
+   670→   670→    </div>
+   671→   671→    <div class="presence-grid stagger-children fade-in" id="presence-grid"><!-- populated by JS --></div>
+   672→   672→
+   673→   673→    <div class="footer-bar">
+   674→   674→      <div class="footer-line"></div>
+   675→   675→      <div class="footer-content">
+   676→   676→        <div class="footer-left">
+   677→   677→          <span class="footer-logo">Y</span>
+   678→   678→          <span class="footer-brand">Yatin Sharma</span>
+   679→   679→          <span class="footer-copy">© <span id="year"></span> All rights reserved.</span>
+   680→   680→        </div>
+   681→   681→        <div class="footer-center">
+   682→   682→          <nav class="footer-nav">
+   683→   683→            <a href="#about">About</a>
+   684→   684→            <a href="#skills">Skills</a>
+   685→   685→            <a href="#projects">Projects</a>
+   686→   686→            <a href="#music">Music</a>
+   687→   687→            <a href="#ama">Ask</a>
+   688→   688→            <a href="#playground">Playground</a>
+   689→   689→          </nav>
+   690→   690→        </div>
+   691→   691→        <div class="footer-right">
+   692→   692→          <a class="footer-link" href="https://github.com/YatinSharma1303" target="_blank" rel="noopener" aria-label="GitHub">
+   693→   693→            <svg viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"/></svg>
+   694→   694→          </a>
+   695→   695→          <a class="footer-link footer-mailto" id="footer-email-link" href="#" aria-label="Email">
+   696→   696→            <svg viewBox="0 0 24 24"><path class="envelope-body" d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path class="envelope-flap" d="M22 6l-10 7L2 6"/></svg>
+   697→   697→          </a>
+   698→   698→        </div>
+   699→   699→      </div>
+   700→   700→    </div>
+   701→   701→  </footer>
+   702→   702→
+   703→   703→  <!-- ============ KEYBOARD SHORTCUT OVERLAY ============ -->
+   704→   704→  <div class="shortcut-overlay" id="shortcut-overlay">
+   705→   705→    <div class="shortcut-card">
+   706→   706→      <div class="shortcut-head">Keyboard Shortcuts <button class="shortcut-close" id="shortcut-close" aria-label="Close">✕</button></div>
+   707→   707→      <div class="shortcut-list">
+   708→   708→        <div><kbd>?</kbd> Toggle this menu</div>
+   709→   709→        <div><kbd>G</kbd> Go to GitHub section</div>
+   710→   710→        <div><kbd>P</kbd> Go to Projects</div>
+   711→   711→        <div><kbd>A</kbd> Go to Ask Me Anything</div>
+   712→   712→        <div><kbd>M</kbd> Toggle music player</div>
+   713→   713→        <div><kbd>T</kbd> Toggle dark/light theme</div>
+   714→   714→      </div>
+   715→   715→    </div>
+   716→   716→  </div>
+   717→   717→
+   718→   718→  <!-- ============ ACHIEVEMENT TOAST ============ -->
+   719→   719→  <div class="achievement-toast" id="achievement-toast">
+   720→   720→    <div class="toast-icon">🏆</div>
+   721→   721→    <div class="toast-content">
+   722→   722→      <div class="toast-title" id="toast-title">Achievement Unlocked!</div>
+   723→   723→      <div class="toast-desc" id="toast-desc"></div>
+   724→   724→    </div>
+   725→   725→  </div>
+   726→   726→
+   727→   727→  <!-- ============ COMMAND PALETTE (Cmd+K) ============ -->
+   728→   728→  <div class="cmd-palette-overlay" id="cmd-overlay">
+   729→   729→    <div class="cmd-palette" id="cmd-palette">
+   730→   730→      <div class="cmd-input-wrap" id="cmd-input-wrap">
+   731→   731→        <button class="cmd-search-toggle" id="cmd-search-toggle" title="Search" aria-label="Expand search">
+   732→   732→          <span class="material-symbols-outlined">search</span>
+   733→   733→        </button>
+   734→   734→        <div class="cmd-input-bar" id="cmd-input-bar">
+   735→   735→          <input type="text" class="cmd-input" id="cmd-input" placeholder="Search commands..." autocomplete="off" spellcheck="false"/>
+   736→   736→          <button class="cmd-submit-btn" id="cmd-submit-btn" title="Show results" aria-label="Search">
+   737→   737→            <span class="material-symbols-outlined">manage_search</span>
+   738→   738→          </button>
+   739→   739→        </div>
+   740→   740→        <kbd class="cmd-esc-kbd">ESC</kbd>
+   741→   741→      </div>
+   742→   742→      <div class="cmd-results" id="cmd-results"></div>
+   743→   743→      <div class="cmd-footer">
+   744→   744→        <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+   745→   745→        <span><kbd>↵</kbd> Run</span>
+   746→   746→        <span class="cmd-hint">Powered by Yatin's Portfolio</span>
+   747→   747→      </div>
+   748→   748→    </div>
+   749→   749→  </div>
+   750→   750→
+   751→   751→  <!-- ============ ASK-MY-PORTFOLIO AI CHATBOT (57) ============ -->
+   752→   752→  <button class="pchat-fab" id="pchat-fab" aria-label="Ask my portfolio" title="Ask my portfolio">
+   753→   753→    <span class="material-symbols-outlined">forum</span>
+   754→   754→  </button>
+   755→   755→  <div class="pchat-panel" id="pchat-panel" role="dialog" aria-label="Ask my portfolio" aria-modal="false" hidden>
+   756→   756→    <div class="pchat-head">
+   757→   757→      <div class="pchat-title"><span class="pchat-dot"></span> Ask my portfolio</div>
+   758→   758→      <button class="pchat-close" id="pchat-close" aria-label="Close chat">✕</button>
+   759→   759→    </div>
+   760→   760→    <div class="pchat-log" id="pchat-log"></div>
+   761→   761→    <form class="pchat-form" id="pchat-form">
+   762→   762→      <input type="text" class="pchat-input" id="pchat-input" maxlength="1000" placeholder="Ask about Yatin's projects, skills…" autocomplete="off" aria-label="Your question"/>
+   763→   763→      <button type="submit" class="pchat-send" id="pchat-send" aria-label="Send"><span class="material-symbols-outlined">send</span></button>
+   764→   764→    </form>
+   765→   765→    <div class="pchat-foot">AI answers may be imperfect — for anything specific, use <a href="#ama">Ask Me Anything</a>.</div>
+   766→   766→  </div>
+   767→   767→
+   768→   768→  <script src="script.js?v=10.1"></script>
+   769→   769→  <script src="games.js"></script>
+   770→   770→<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a202415a8b5ed895',t:'MTc4NDg4OTA4Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+   771→   771→</html>
+   772→   772→
