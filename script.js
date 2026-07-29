@@ -2634,7 +2634,7 @@
       if (totalEl) totalEl.innerHTML = '<span class="skeleton" style="width:80px;height:22px;display:inline-block;border-radius:4px"></span>';
       if (dailyEl) dailyEl.innerHTML = '<span class="skeleton" style="width:60px;height:12px;display:inline-block;border-radius:4px"></span>';
       if (streakEl) streakEl.innerHTML = '<span class="skeleton" style="width:120px;height:14px;display:inline-block;border-radius:4px"></span>';
-      if (heatmapEl) heatmapEl.innerHTML = Array.from({length:7}, () => '<div class="wt-heatmap-bar" style="height:20%"><div class="skeleton" style="width:100%;height:100%;border-radius:4px"></div></div>').join('');
+      if (heatmapEl) heatmapEl.innerHTML = Array.from({length:7}, () => '<div class="wt-heatmap-bar"><div class="skeleton" style="width:100%;height:100%;border-radius:4px"></div></div>').join('');
       if (langsEl) langsEl.innerHTML = Array.from({length:4}, () => '<div class="wt-lang"><div class="skeleton" style="width:90px;height:13px;border-radius:4px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="width:80%;height:8px;border-radius:4px;margin-bottom:6px"></div></div><div class="skeleton" style="width:50px;height:11px;border-radius:4px;flex-shrink:0"></div></div>').join('');
       if (editorsEl) editorsEl.innerHTML = Array.from({length:2}, () => '<div class="wt-editor"><div class="skeleton" style="width:70px;height:12px;border-radius:4px;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:6px;border-radius:3px"></div><div class="skeleton" style="width:40px;height:12px;border-radius:4px;flex-shrink:0"></div></div>').join('');
       if (projectsEl) projectsEl.innerHTML = Array.from({length:3}, () => '<div class="wt-project"><div class="skeleton" style="width:120px;height:12px;border-radius:4px;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:6px;border-radius:3px"></div><div class="skeleton" style="width:50px;height:11px;border-radius:4px;flex-shrink:0"></div></div>').join('');
@@ -2658,17 +2658,17 @@
         // Daily heatmap
         if (heatmapEl && d.dailyData && d.dailyData.length) {
           const maxSec = Math.max(...d.dailyData.map(x => x.seconds), 1);
-          // Build day labels from actual dates
           let dayLabels = '';
           heatmapEl.innerHTML = d.dailyData.map((day, i) => {
-            const pct = Math.max(Math.round((day.seconds / maxSec) * 100), 4); // min 4% so empty days show a sliver
-            let label = 'Mon';
+            const pct = Math.max(Math.round((day.seconds / maxSec) * 100), 3);
+            let label = '---';
             if (day.date) {
-              const dt = new Date(day.date + 'T00:00:00');
-              label = DAY_NAMES[dt.getDay()];
+              const dt = new Date(day.date);
+              const dayNum = dt.getDay();
+              label = (dayNum >= 0 && dayNum <= 6) ? DAY_NAMES[dayNum] : '---';
             }
             dayLabels += '<span>' + label + '</span>';
-            return '<div class="wt-heatmap-bar" style="height:' + pct + '%"><div class="wt-heatmap-fill" style="height:' + pct + '%"></div><div class="wt-heatmap-tooltip">' + esc(day.text || label) + ' &middot; ' + esc(day.label || '0m') + '</div></div>';
+            return '<div class="wt-heatmap-bar"><div class="wt-heatmap-fill" style="height:' + pct + '%"></div><div class="wt-heatmap-tooltip">' + esc(day.text || label) + ' &middot; ' + esc(day.label || '0m') + '</div></div>';
           }).join('');
           if (heatmapDaysEl) heatmapDaysEl.innerHTML = dayLabels;
         }
