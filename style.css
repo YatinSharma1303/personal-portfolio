@@ -1583,6 +1583,23 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
   .topbar-nav-icons { gap: 0; }
   .hero-actions { flex-direction: column; align-items: center; }
   .btn-primary, .btn-ghost { width: 100%; max-width: 280px; justify-content: center; }
+
+  /* Contribution heatmap — mobile scrollable */
+  .contrib-card { padding: 16px; }
+  .contrib-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-hover) transparent;
+    margin: 0 -4px;
+    padding: 0 4px 10px;
+  }
+  .contrib-scroll::-webkit-scrollbar { height: 5px; }
+  .contrib-scroll::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 3px; }
+  .contrib-day { width: 10px; height: 10px; }
+  .contrib-week { gap: 2px; }
+  .contrib-grid { gap: 2px; }
+  .contrib-legend { margin-top: 8px; }
 }
 
 /* ============ CURSOR GLOW + TRAIL ============ */
@@ -1635,10 +1652,11 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
 .contrib-stat-label { font-family: var(--mono); font-size: 10px; color: var(--gray-dim); text-transform: uppercase; letter-spacing: 0.5px; }
 
 /* Scrollable wrapper for months + grid */
-.contrib-scroll { overflow-x: auto; max-width: 100%; padding-bottom: 6px; }
-.contrib-scroll::-webkit-scrollbar { height: 4px; }
+.contrib-scroll { overflow-x: auto; max-width: 100%; padding-bottom: 8px; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: var(--border-hover) transparent; }
+.contrib-scroll::-webkit-scrollbar { height: 6px; }
 .contrib-scroll::-webkit-scrollbar-track { background: transparent; }
-.contrib-scroll::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 2px; }
+.contrib-scroll::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 3px; }
+.contrib-scroll::-webkit-scrollbar-thumb:hover { background: var(--gray); }
 
 /* Month labels */
 .contrib-months { display: flex; position: relative; height: 16px; margin-bottom: 4px; min-width: max-content; }
@@ -1825,6 +1843,7 @@ html.light .ama-q-pinned {
   position: relative; overflow: hidden;
 }
 .contrib-card { overflow: visible; }
+.contrib-card .contrib-scroll { margin-left: -4px; margin-right: -4px; padding-left: 4px; padding-right: 4px; }
 .glass-card::before {
   content: '';
   position: absolute; top: var(--mouse-y, 50%); left: var(--mouse-x, 50%); border-radius: 50%; pointer-events: none;

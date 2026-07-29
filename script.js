@@ -2626,7 +2626,6 @@
           const totalW = totalWeeks * colW;
           grid.style.minWidth = totalW + 'px';
           monthsEl.style.minWidth = totalW + 'px';
-          if (scrollEl) scrollEl.style.minWidth = totalW + 'px';
         }
 
         // Wire custom tooltip
