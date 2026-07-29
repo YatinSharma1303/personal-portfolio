@@ -1824,6 +1824,7 @@ html.light .ama-q-pinned {
 .glass-card {
   position: relative; overflow: hidden;
 }
+.contrib-card { overflow: visible; }
 .glass-card::before {
   content: '';
   position: absolute; top: var(--mouse-y, 50%); left: var(--mouse-x, 50%); border-radius: 50%; pointer-events: none;
