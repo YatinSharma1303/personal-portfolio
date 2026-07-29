@@ -69,6 +69,23 @@
   /* All Last.fm calls now go through /api/lastfm proxy — the API key is
      injected server-side and never exposed to the browser. */
   const lfmAPI = '/api/lastfm';
+  // Format play counts: 1423 → "1.4k", 23456 → "23.5k"
+  function formatPlays(n) {
+    n = parseInt(n, 10) || 0;
+    if (n >= 10000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+    if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+    return n.toLocaleString();
+  }
+  // Relative time from unix timestamp
+  function timeAgo(uts) {
+    if (!uts) return '';
+    const diff = Math.floor(Date.now() / 1000) - parseInt(uts, 10);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+    return Math.floor(diff / 604800) + 'w ago';
+  }
   // Build a {size: url} map of Last.fm images, dropping default placeholder art.
   function lfmImgMap(images) {
     const map = {};
@@ -786,6 +803,13 @@
         if (av) { const url = lfmImg(user.image); if (url) av.src = url; }
         const strip = $('lfm-statstrip');
         if (strip) strip.textContent = `${(user.playcount||0).toLocaleString()} scrobbles · ${(user.artist_count||0).toLocaleString()} artists · ${(user.album_count||0).toLocaleString()} albums`;
+        // Scrobble badge in section header
+        const sectionLabel = document.querySelector('#music .section-label');
+        if (sectionLabel) {
+          let badge = sectionLabel.querySelector('.lfm-section-badge');
+          if (!badge) { badge = document.createElement('span'); badge.className = 'lfm-section-badge'; sectionLabel.appendChild(badge); }
+          badge.textContent = formatPlays(user.playcount) + ' scrobbles';
+        }
       }
 
       const tracksWrap = $('lfm-tracks');
@@ -796,7 +820,7 @@
           const art = url
             ? '<div class="lfm-track-img" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>'
             : '<div class="lfm-track-img lfm-noart" style="background:#141414 !important">♪</div>';
-          return '<div class="lfm-track"><span class="lfm-track-rank">' + (idx+1) + '</span>' + art + '<div class="lfm-track-info"><div class="lfm-track-name">' + esc(tr.name) + '</div><div class="lfm-track-artist">' + (tr.artist ? esc(tr.artist.name || tr.artist['#text'] || '') : '') + '</div></div><span class="lfm-track-plays">' + (tr.playcount||0) + 'x</span></div>';
+          return '<div class="lfm-track"><span class="lfm-track-rank">' + (idx+1) + '</span>' + art + '<div class="lfm-track-info"><div class="lfm-track-name">' + esc(tr.name) + '</div><div class="lfm-track-artist">' + (tr.artist ? esc(tr.artist.name || tr.artist['#text'] || '') : '') + '</div></div><span class="lfm-track-plays">' + formatPlays(tr.playcount) + '</span></div>';
         }).join('');
       }
 
@@ -806,7 +830,7 @@
         artistsWrap.innerHTML = artists.map((ar, idx) => {
           const url = ar.artUrl || lfmImg(ar.image);
           const art = url ? '<div class="lfm-artist-img" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>' : artistFallback(ar.name, idx);
-          return '<div class="lfm-artist">' + art + '<span class="lfm-artist-name">' + esc(ar.name) + '</span><span class="lfm-artist-plays">' + (ar.playcount||0) + 'x</span></div>';
+          return '<div class="lfm-artist">' + art + '<span class="lfm-artist-name">' + esc(ar.name) + '</span><span class="lfm-artist-plays">' + formatPlays(ar.playcount) + '</span></div>';
         }).join('');
       }
 
@@ -856,7 +880,10 @@
         recentWrap.innerHTML = tickerTracks.map(tr => {
           const name = esc(tr.name || '—');
           const artist = esc((tr.artist && (tr.artist['#text'] || tr.artist.name)) || '');
-          return '<div class="lfm-recent-item">' + artDiv('lfm-recent-img', recentTrackArt(tr), '♪') + '<div class="lfm-recent-info"><div class="lfm-recent-name">' + name + '</div><div class="lfm-recent-artist">' + artist + '</div></div></div>';
+          const uts = (tr.date && tr.date.uts) || '';
+          const ago = timeAgo(uts);
+          const timeHtml = ago ? '<div class="lfm-recent-time">' + ago + '</div>' : '';
+          return '<div class="lfm-recent-item">' + artDiv('lfm-recent-img', recentTrackArt(tr), '♪') + '<div class="lfm-recent-info"><div class="lfm-recent-name">' + name + '</div><div class="lfm-recent-artist">' + artist + '</div>' + timeHtml + '</div></div>';
         }).join('');
       }
     }

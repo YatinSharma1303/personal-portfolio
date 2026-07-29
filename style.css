@@ -1057,16 +1057,22 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .gh-repo-lang::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--lang-color, var(--accent)); }
 
 /* ============ LAST.FM ============ */
+.lastfm-card { padding: 32px; }
 .lfm-recent-wrap { margin-top: 22px; }
 .lfm-recent-wrap .lfm-col-title { margin-bottom: 12px; }
 .lfm-head { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
 .lfm-avatar { width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--border); object-fit: cover; }
 .lfm-title { font-weight: 800; font-size: 18px; }
 .lfm-statstrip { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); margin-top: 2px; }
-.lfm-link { font-size: 12px; color: var(--accent); margin-left: auto; }
-.lfm-nowplaying { display: flex; gap: 18px; align-items: center; padding: 18px; border-radius: 18px; border: 1px solid var(--border); background: linear-gradient(135deg, color-mix(in srgb, var(--accent-solid) 6%, transparent), rgba(120,80,255,0.04)); margin-bottom: 22px; }
+.lfm-link { font-size: 12px; color: var(--accent); margin-left: auto; text-decoration: none; }
+.lfm-link:hover { text-decoration: underline; }
+.lfm-nowplaying { display: flex; gap: 18px; align-items: center; padding: 18px; border-radius: 18px; border: 1px solid var(--border); background: linear-gradient(135deg, color-mix(in srgb, var(--accent-solid) 6%, transparent), rgba(120,80,255,0.04)); margin-bottom: 22px; transition: border-color 0.4s ease, box-shadow 0.4s ease; }
+.lfm-nowplaying.live { border-color: rgba(52, 211, 153, 0.35); box-shadow: 0 0 20px rgba(52, 211, 153, 0.08), inset 0 0 30px rgba(52, 211, 153, 0.03); animation: npPulse 3s ease-in-out infinite; }
+@keyframes npPulse { 0%, 100% { box-shadow: 0 0 20px rgba(52, 211, 153, 0.08), inset 0 0 30px rgba(52, 211, 153, 0.03); } 50% { box-shadow: 0 0 30px rgba(52, 211, 153, 0.14), inset 0 0 40px rgba(52, 211, 153, 0.06); } }
 .lfm-np-art-wrap { position: relative; flex-shrink: 0; }
-.lfm-np-art { width: 88px; height: 88px; border-radius: 14px; background-size: cover; background-position: center; background-color: #141414; box-shadow: 0 6px 20px rgba(0,0,0,0.3); flex-shrink: 0; }
+.lfm-np-art { width: 96px; height: 96px; border-radius: 14px; background-size: cover; background-position: center; background-color: #141414; box-shadow: 0 6px 20px rgba(0,0,0,0.3); flex-shrink: 0; transition: transform 0.3s ease; }
+.lfm-nowplaying.live .lfm-np-art { transform: scale(1); }
+.lfm-nowplaying.live:hover .lfm-np-art { transform: scale(1.03); }
 .lfm-np-art.lfm-noart { display: flex; align-items: center; justify-content: center; color: #52525b; font-size: 32px; }
 .lfm-np-eq { position: absolute; bottom: 8px; right: 8px; display: none; gap: 2px; align-items: flex-end; height: 16px; }
 .lfm-nowplaying.live .lfm-np-eq { display: flex; }
@@ -1084,8 +1090,8 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .lfm-col { min-width: 0; overflow: hidden; }
 .lfm-col-title { font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; color: var(--gray-dim); margin-bottom: 12px; }
 .lfm-tracks { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.lfm-track { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; transition: background 0.15s ease; min-width: 0; overflow: hidden; }
-.lfm-track:hover { background: rgba(255,255,255,0.04); }
+.lfm-track { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; transition: background 0.15s ease, transform 0.2s ease, border-color 0.2s ease; min-width: 0; overflow: hidden; border-left: 2px solid transparent; }
+.lfm-track:hover { background: rgba(255,255,255,0.04); transform: translateX(3px); border-left-color: var(--accent); }
 .lfm-track-rank { font-family: var(--mono); font-size: 12px; color: var(--gray-dim); width: 16px; text-align: center; flex-shrink: 0; }
 .lfm-track-img { width: 40px; height: 40px; border-radius: 8px; background-size: cover; background-position: center; background-color: #141414; flex-shrink: 0; }
 .lfm-track-img.lfm-noart { display: flex; align-items: center; justify-content: center; color: #52525b; font-size: 16px; }
@@ -1094,13 +1100,13 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .lfm-track-artist { font-size: 10px; color: var(--gray-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lfm-track-plays { font-family: var(--mono); font-size: 10px; color: var(--accent); flex-shrink: 0; }
 .lfm-artists { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.lfm-artist { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; transition: background 0.15s ease; min-width: 0; overflow: hidden; }
-.lfm-artist:hover { background: rgba(255,255,255,0.04); }
+.lfm-artist { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; transition: background 0.15s ease, transform 0.2s ease, border-color 0.2s ease; min-width: 0; overflow: hidden; border-left: 2px solid transparent; }
+.lfm-artist:hover { background: rgba(255,255,255,0.04); transform: translateX(3px); border-left-color: var(--accent); }
 .lfm-artist-img { width: 40px; height: 40px; border-radius: 50%; background-size: cover; background-position: center; background-color: #141414; flex-shrink: 0; }
 .lfm-artist-img.lfm-noart { display: flex; align-items: center; justify-content: center; color: #71717a; font-size: 16px; font-weight: 700; text-transform: uppercase; }
 .lfm-artist-name { font-size: 12px; font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lfm-artist-plays { font-family: var(--mono); font-size: 10px; color: var(--accent); flex-shrink: 0; }
-.lfm-recent { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; }
+.lfm-recent { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; padding-left: 4px; padding-right: 4px; -webkit-mask-image: linear-gradient(to right, transparent, black 10px, black calc(100% - 10px), transparent); mask-image: linear-gradient(to right, transparent, black 10px, black calc(100% - 10px), transparent); }
 .lfm-recent::-webkit-scrollbar { height: 4px; }
 .lfm-recent::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 2px; }
 .lfm-recent-item { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 10px; border: 1px solid var(--border); flex-shrink: 0; transition: all 0.15s ease; }
@@ -1111,6 +1117,8 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .lfm-recent-info { min-width: 0; }
 .lfm-recent-name { font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
 .lfm-recent-artist { font-size: 9px; color: var(--gray-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
+.lfm-recent-time { font-size: 8px; color: var(--accent); font-family: var(--mono); opacity: 0.7; white-space: nowrap; }
+.lfm-section-badge { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 10px; color: var(--gray-dim); margin-left: 8px; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border); background: rgba(255,255,255,0.02); }
 @media (max-width: 820px) { .lfm-columns { grid-template-columns: 1fr; } }
 
 /* ============ ANILIST ============ */
@@ -1658,6 +1666,8 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
   .lfm-columns { gap: 16px; }
   .lfm-col-title { font-size: 9px; }
   .lfm-recent-item { padding: 5px 10px 5px 5px; }
+  .lfm-recent-name { max-width: 90px; }
+  .lfm-recent-artist { max-width: 90px; }
 
   /* AniList */
   .al-head { gap: 10px; margin-bottom: 18px; }
@@ -1839,6 +1849,15 @@ html.light .visitor-badge { background: rgba(255,255,255,0.6); }
 @keyframes visitorFadeIn { to { opacity: 0.8; } }
 @media (max-width: 600px) {
   .visitor-badge { bottom: 14px; font-size: 10px; padding: 6px 12px; }
+}
+
+/* Extra-small screen — compact now-playing */
+@media (max-width: 380px) {
+  .lfm-nowplaying { padding: 12px; gap: 10px; }
+  .lfm-np-art { width: 56px; height: 56px; border-radius: 10px; }
+  .lfm-np-track { font-size: 14px; }
+  .lfm-np-artist { font-size: 11px; }
+  .lfm-section-badge { display: none; }
 }
 
 /* ============ WAKATIME ============ */
@@ -2340,7 +2359,10 @@ html.light .tb-cd-cover { box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 
 /* Last.fm card */
 html.light .lastfm-card { background: rgba(255,255,255,0.6); }
-html.light .lfm-nowplaying { background: linear-gradient(135deg, color-mix(in srgb, var(--accent-solid) 5%, transparent), color-mix(in srgb, var(--accent-solid) 3%, transparent)); }
+html.light .lfm-nowplaying { background: linear-gradient(135deg, color-mix(in srgb, var(--accent-solid) 5%, transparent), color-mix(in srgb, var(--accent-solid) 3%, transparent)); border-color: rgba(0,0,0,0.08); }
+html.light .lfm-nowplaying.live { border-color: rgba(16, 185, 129, 0.4); box-shadow: 0 0 16px rgba(16, 185, 129, 0.1); }
+html.light .lfm-track:hover, html.light .lfm-artist:hover { background: rgba(0,0,0,0.03); }
+html.light .lfm-section-badge { border-color: rgba(0,0,0,0.1); background: rgba(0,0,0,0.03); }
 
 /* Contributions card */
 html.light .contrib-card { background: rgba(255,255,255,0.6); }
