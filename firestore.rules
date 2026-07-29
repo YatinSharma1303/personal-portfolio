@@ -1,0 +1,74 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == "yatinsharma1303@gmail.com";
+    }
+
+    match /amaQuestions/{questionId} {
+      // Anyone can read answered questions; admin can read all.
+      // Dismissed questions are filtered client-side (fromDoc + .filter(!q.dismissed))
+      // because Firestore query-based rules reject queries that don't match all constraints.
+      // The bot uses a service account which bypasses these rules entirely.
+      allow read: if isAdmin() || resource.data.answered == true;
+
+      // Visitors create questions from the site (unauthenticated).
+      // Pinned defaults to false — admin can set it later via the bot (service account bypasses rules).
+      allow create: if request.resource.data.keys().hasOnly([
+        "id", "name", "question", "answer", "answered",
+        "createdAt", "answeredAt", "votes", "pinned", "dismissed",
+        "topic", "topicManual", "topicAt"
+      ])
+        && request.resource.data.id is string
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 60
+        && request.resource.data.question is string
+        && request.resource.data.question.size() > 0
+        && request.resource.data.question.size() <= 280
+        && request.resource.data.answer == ""
+        && request.resource.data.answered == false
+        && request.resource.data.answeredAt == null
+        && request.resource.data.votes is int
+        && request.resource.data.votes == 0
+        && request.resource.data.pinned is bool
+        && request.resource.data.pinned == false
+        && request.resource.data.dismissed is bool
+        && request.resource.data.dismissed == false
+        && request.resource.data.topic is string
+        && request.resource.data.topic.size() > 0
+        && request.resource.data.topic.size() <= 40
+        && request.resource.data.topicManual is bool
+        && request.resource.data.topicManual == false
+        && request.resource.data.topicAt is string;
+
+      // Only admin can update/delete directly. Reactions + votes are handled
+      // server-side by the service account (bypasses these rules entirely).
+      allow update, delete: if isAdmin();
+    }
+
+    // Bot session collections — no direct client access; bot uses service account
+    match /telegramEditSessions/{id} {
+      allow read, write: if false;
+    }
+
+    match /telegramLookupSessions/{id} {
+      allow read, write: if false;
+    }
+
+    match /telegramPreviewSessions/{id} {
+      allow read, write: if false;
+    }
+
+    match /telegramAnswerSessions/{id} {
+      allow read, write: if false;
+    }
+
+    match /siteStats/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

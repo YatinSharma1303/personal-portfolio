@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Sitemap: https://portfolio.yatinsharma.me/sitemap.xml
+
+# API proxy endpoints — no need to crawl
+Disallow: /api/lastfm
+Disallow: /api/telegram
+Disallow: /api/telegram-webhook
