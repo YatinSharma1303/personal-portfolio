@@ -1,0 +1,2002 @@
+   928→      if (tracksWrap && tracks.length) {
+   929→        tracksWrap.innerHTML = tracks.map((tr, idx) => {
+   930→          const url = tr.artUrl || lfmImg(tr.image);
+   931→          const art = url
+   932→            ? '<div class="lfm-track-img" style="background:#141414 url(\'' + url + '\'') center/cover no-repeat"></div>'
+   933→            : '<div class="lfm-track-img lfm-noart" style="background:#141414 !important">♪</div>';
+   934→          const artistName = tr.artist ? (tr.artist.name || tr.artist['#text'] || '') : '';
+   935→          const lovedHtml = isLovedTrack(tr.name, artistName) ? '<span class="lfm-loved">♥</span>' : '';
+   936→          const trackLink = artistName ? '<a href="' + lfmTrackUrl(artistName, tr.name) + '" target="_blank" rel="noopener">' + esc(tr.name) + lovedHtml + '</a>' : esc(tr.name) + lovedHtml;
+   937→          return '<div class="lfm-track"><span class="lfm-track-rank">' + (idx+1) + '</span>' + art + '<div class="lfm-track-info"><div class="lfm-track-name">' + trackLink + '</div><div class="lfm-track-artist">' + esc(artistName) + '</div><div class="lfm-track-tags" data-artist="' + esc(artistName) + '" data-track="' + esc(tr.name) + '"></div></div><span class="lfm-track-plays">' + formatPlays(tr.playcount) + '</span></div>';
+   938→        }).join('');
+   939→        // Fetch genre tags asynchronously
+   940→        fetchTrackTags(tracks);
+   941→      }
+   942→
+   943→      const artistsWrap = $('lfm-artists');
+   944→      const artists = (d.topartists && d.topartists.artist) || [];
+   945→      if (artistsWrap && artists.length) {
+   946→        artistsWrap.innerHTML = artists.map((ar, idx) => {
+   947→          const url = ar.artUrl || lfmImg(ar.image);
+   948→          const art = url ? '<div class="lfm-artist-img" style="background:#141414 url(\'' + url + '\'') center/cover no-repeat"></div>' : artistFallback(ar.name, idx);
+   949→          return '<div class="lfm-artist"><span class="lfm-artist-rank">' + (idx+1) + '</span>' + art + '<span class="lfm-artist-name"><a href="' + lfmArtistUrl(ar.name) + '" target="_blank" rel="noopener">' + esc(ar.name) + '</a></span><span class="lfm-artist-plays">' + formatPlays(ar.playcount) + '</span></div>';
+   950→        }).join('');
+   951→      }
+   952→
+   953→      renderRecent(d.recenttracks);
+   954→    }
+   955→
+   956→
+   957→    // Resolve crisp cover art for a recent / now-playing track. Prefers the
+   958→    // server-enriched iTunes art (from the bundle), caches it so the 12s live
+   959→    // poll stays sharp without another server call, then falls back to Last.fm.
+   960→    // Cover-art priority for Now Playing / Recently Played:
+   961→    // 1) Last.fm high-res art if present (always correct + sharp),
+   962→    // 2) iTunes (validated) when Last.fm has no high-res art,
+   963→    // 3) Last.fm low-res art as a last resort (correct, even if soft),
+   964→    // 4) '' -> placeholder.
+   965→    // Cover-art priority for Now Playing / Recently Played — favor the SHARPEST
+   966→    // correct cover. iTunes is validated server-side (correct artist) AND 600px,
+   967→    // so it goes first; Last.fm (always correct but maxes ~300px, often 174px) is
+   968→    // the fallback only when iTunes has no confident match. Then placeholder.
+   969→    function recentTrackArt(tr) {
+   970→      if (!tr) return '';
+   971→      const a = (tr.artist && (tr.artist['#text'] || tr.artist.name)) || '';
+   972→      const n = tr.name || '';
+   973→      if (tr.artUrl) { try { localStorage.setItem('lfm_track_art_' + a + '::' + n, tr.artUrl); } catch (e) {} return tr.artUrl; }
+   974→      try { const c = localStorage.getItem('lfm_track_art_' + a + '::' + n); if (c) return c; } catch (e) {}
+   975→      return lfmImg(tr.image);
+   976→    }
+   977→
+   978→    function renderActivityChart(tracks) {
+   979→      const wrap = $('lfm-activity');
+   980→      if (!wrap) return;
+   981→      const days = [];
+   982→      const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+   983→      for (let i = 6; i >= 0; i--) {
+   984→        const d = new Date(); d.setDate(d.getDate() - i);
+   985→        const key = d.toISOString().slice(0, 10);
+   986→        days.push({ label: dayNames[d.getDay()], date: key, count: 0 });
+   987→      }
+   988→      tracks.forEach(tr => {
+   989→        const uts = (tr.date && tr.date.uts) || '';
+   990→        if (!uts) return;
+   991→        const d = new Date(parseInt(uts, 10) * 1000);
+   992→        const key = d.toISOString().slice(0, 10);
+   993→        const day = days.find(dd => dd.date === key);
+   994→        if (day) day.count++;
+   995→      });
+   996→      const maxCount = Math.max(...days.map(d => d.count), 1);
+   997→      const total = days.reduce((s, d) => s + d.count, 0);
+   998→      if (total === 0) { wrap.innerHTML = ''; return; }
+   999→      wrap.innerHTML = '<div class="lfm-activity-label">' + total + ' tracks this week</div><div class="lfm-activity-bars">' + days.map(d => {
+  1000→        const h = Math.max(3, (d.count / maxCount) * 32);
+  1001→        const opacity = d.count > 0 ? (0.3 + (d.count / maxCount) * 0.7) : 0.15;
+  1002→        return '<div class="lfm-activity-day"><div class="lfm-activity-bar" style="height:' + h + 'px;opacity:' + opacity.toFixed(2) + '"></div><div class="lfm-activity-day-label">' + d.label + '</div></div>';
+  1003→      }).join('') + '</div>';
+  1004→    }
+  1005→
+  1006→    function renderRecent(recenttracks) {
+  1007→      const tracks = (recenttracks && recenttracks.track) || [];
+  1008→      if (!tracks.length) return;
+  1009→      const first = tracks[0];
+  1010→      const isLive = first['@attr'] && first['@attr'].nowplaying === 'true';
+  1011→      const npArtEl = $('lfm-np-art');
+  1012→      const npBgEl = $('lfm-np-bg');
+  1013→      if (npArtEl) {
+  1014→        const url = recentTrackArt(first);
+  1015→        if (url) { npArtEl.style.cssText = 'background:#141414 url('' + url + ''') center/cover no-repeat'; npArtEl.classList.remove('lfm-noart'); npArtEl.textContent = ''; }
+  1016→        else { npArtEl.style.cssText = 'background:#141414'; npArtEl.classList.add('lfm-noart'); npArtEl.textContent = '♪'; }
+  1017→        npArtEl.style.visibility = 'visible';
+  1018→        if (npBgEl) {
+  1019→          if (url && isLive) { npBgEl.style.backgroundImage = 'url('' + url + ''')'; }
+  1020→          else { npBgEl.style.backgroundImage = ''; }
+  1021→        }
+  1022→      }
+  1023→      const npTrack = $('lfm-np-track'); if (npTrack) npTrack.textContent = first.name || '—';
+  1024→      const npArtist = $('lfm-np-artist'); if (npArtist) npArtist.textContent = (first.artist && (first.artist['#text'] || first.artist.name)) || '—';
+  1025→      const npAlbum = $('lfm-np-album'); if (npAlbum) {
+  1026→        const albumName = (first.album && first.album['#text']) || '';
+  1027→        npAlbum.textContent = albumName || '';
+  1028→        npAlbum.style.display = albumName ? '' : 'none';
+  1029→      }
+  1030→      const npCard = $('lfm-nowplaying'); if (npCard) npCard.classList.toggle('live', !!isLive);
+  1031→      const npLabel = $('lfm-np-label'); if (npLabel) npLabel.textContent = isLive ? 'NOW PLAYING' : 'LAST PLAYED';
+  1032→      renderActivityChart(tracks);
+  1033→      const recentWrap = $('lfm-recent');
+  1034→      if (recentWrap) {
+  1035→        const tickerTracks = isLive ? tracks.slice(1, 9) : tracks.slice(0, 9);
+  1036→        recentWrap.innerHTML = tickerTracks.map(tr => {
+  1037→          const name = esc(tr.name || '—');
+  1038→          const artistName = (tr.artist && (tr.artist['#text'] || tr.artist.name)) || '';
+  1039→          const lovedHtml = isLovedTrack(tr.name, artistName) ? ' <span class="lfm-loved">♥</span>' : '';
+  1040→          const trackUrl = artistName ? 'https://www.last.fm/music/' + encodeURIComponent(artistName) + '/_/' + encodeURIComponent(tr.name || '') : '';
+  1041→          const nameHtml = trackUrl ? '<a href="' + trackUrl + '" target="_blank" rel="noopener">' + name + lovedHtml + '</a>' : name + lovedHtml;
+  1042→          const uts = (tr.date && tr.date.uts) || '';
+  1043→          const ago = timeAgo(uts);
+  1044→          const timeHtml = ago ? '<div class="lfm-recent-time">' + ago + '</div>' : '';
+  1045→          return '<div class="lfm-recent-item">' + artDiv('lfm-recent-img', recentTrackArt(tr), '♪') + '<div class="lfm-recent-info"><div class="lfm-recent-name">' + nameHtml + '</div><div class="lfm-recent-artist">' + esc(artistName) + '</div>' + timeHtml + '</div></div>';
+  1046→        }).join('');
+  1047→      }
+  1048→    }
+  1049→
+  1050→
+  1051→    function cachedBundle() {
+  1052→      try {
+  1053→        const cached = JSON.parse(localStorage.getItem('lastfm_bundle_cache') || 'null');
+  1054→        if (cached && cached.data && Date.now() - cached.ts < 10 * 60 * 1000) return cached.data;
+  1055→      } catch (e) {}
+  1056→      return null;
+  1057→    }
+  1058→
+  1059→    function saveBundleCache(data) {
+  1060→      try { if (data && (data.user || data.toptracks || data.topartists || data.recenttracks)) localStorage.setItem('lastfm_bundle_cache', JSON.stringify({ ts: Date.now(), data })); } catch (e) {}
+  1061→    }
+  1062→
+  1063→    function fetchWithTimeout(url, timeoutMs) {
+  1064→      timeoutMs = timeoutMs || 4500;
+  1065→      const controller = new AbortController();
+  1066→      const timer = setTimeout(() => controller.abort(), timeoutMs);
+  1067→      return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
+  1068→    }
+  1069→
+  1070→    function loadBundle() {
+  1071→      const cached = cachedBundle();
+  1072→      if (cached) renderBundle(cached);
+  1073→      return fetchWithTimeout(`${lfmAPI}?bundle=1&user=${encodeURIComponent(u)}`, 5000)
+  1074→        .then(r => r.json())
+  1075→        .then(d => { saveBundleCache(d); renderBundle(d); })
+  1076→        .then(() => { fetchLovedTracks(); setupPeriodTabs(); })
+  1077→        .catch(err => {
+  1078→          console.warn('Last.fm bundle failed:', err);
+  1079→          if (!cached) {
+  1080→            const tracksWrap = $('lfm-tracks'); if (tracksWrap) tracksWrap.innerHTML = '<div class="lfm-track">Last.fm is waking up. Music stats will appear shortly.</div>';
+  1081→          }
+  1082→        });
+  1083→    }
+  1084→
+  1085→    function updateNowPlaying() {
+  1086→      fetchWithTimeout(`${lfmAPI}?method=user.getrecenttracks&user=${encodeURIComponent(u)}&limit=10&_=${Date.now()}`, 4500)
+  1087→        .then(r => r.json())
+  1088→        .then(d => renderRecent(d.recenttracks))
+  1089→        .catch(() => {});
+  1090→    }
+  1091→
+  1092→    if (nowPlayingTimer) clearInterval(nowPlayingTimer);
+  1093→    return loadBundle().then(() => {
+  1094→      updateNowPlaying();
+  1095→      window.__lastfmTimer = setInterval(updateNowPlaying, 12000);
+  1096→    }).finally(() => { window.__lastfmLoading = false; });
+  1097→  }
+  1098→
+  1099→
+  1100→  // Start Last.fm after initial page load too, not only after intro dismiss.
+  1101→  window.addEventListener('load', () => {
+  1102→    setTimeout(() => { try { fetchLastfm(); } catch (e) {} }, 1200);
+  1103→  }, { once: true });
+  1104→
+  1105→  /* ============================================================
+  1106→     9. ANILIST (summary + pagination)
+  1107→     ============================================================ */
+  1108→  (function anilist() {
+  1109→    const list = $('al-list'), tabs = $('al-tabs'); if (!list) return;
+  1110→    // 36. MANGA TAB — two datasets keyed by media type; manga lazy-loaded on first switch.
+  1111→    const datasets = { ANIME: [], MANGA: [] };
+  1112→    const loaded = { ANIME: false, MANGA: false };
+  1113→    const loading = { ANIME: false, MANGA: false };
+  1114→    let activeMedia = 'ANIME';
+  1115→    let allEntries = [], activeStatus = 'ALL', page = 1;
+  1116→    let activeSort = 'updated', activeGenre = '', activeSearch = '';
+  1117→    const favSets = { ANIME: new Set(), MANGA: new Set() };
+  1118→    const statsByMedia = { ANIME: null, MANGA: null };
+  1119→    let favSet = favSets.ANIME, statsData = null;
+  1120→    const PER_PAGE = 6;
+  1121→    const card = list.parentElement;
+  1122→    let statsPanel = null, controlsBar = null, genreBar = null, pagerEl = null, mediaBar = null;
+  1123→    let bannerTimer = null, bannerIdx = 0;
+  1124→
+  1125→    // Per-media label maps (anime uses episodes/watching, manga uses chapters/reading).
+  1126→    const STATUS_TABS = [
+  1127→      { status: 'ALL',       ANIME: 'ALL',           MANGA: 'ALL' },
+  1128→      { status: 'CURRENT',   ANIME: 'WATCHING',      MANGA: 'READING' },
+  1129→      { status: 'COMPLETED', ANIME: 'COMPLETED',     MANGA: 'COMPLETED' },
+  1130→      { status: 'REPEATING', ANIME: 'REWATCHING',    MANGA: 'REREADING' },
+  1131→      { status: 'PLANNING',  ANIME: 'PLAN TO WATCH', MANGA: 'PLAN TO READ' },
+  1132→      { status: 'PAUSED',    ANIME: 'ON HOLD',       MANGA: 'ON HOLD' },
+  1133→      { status: 'DROPPED',   ANIME: 'DROPPED',       MANGA: 'DROPPED' }
+  1134→    ];
+  1135→    const isManga = () => activeMedia === 'MANGA';
+  1136→    const unitLong = () => isManga() ? 'chapters' : 'episodes';
+  1137→    const unitShort = () => isManga() ? 'ch' : 'eps';
+  1138→    const verbPast = () => isManga() ? 'read' : 'watched';
+  1139→
+  1140→    function entryTitle(e) {
+  1141→      return (e.media && e.media.title && (e.media.title.romaji || e.media.title.english)) || '';
+  1142→    }
+  1143→    // Total units for an entry's media (episodes for anime, chapters for manga).
+  1144→    function totalUnits(m) { return (m && (isManga() ? m.chapters : m.episodes)) || 0; }
+  1145→    function scoreClass(mean) {
+  1146→      if (!mean) return '';
+  1147→      if (mean >= 75) return 'al-score-high';
+  1148→      if (mean >= 60) return 'al-score-mid';
+  1149→      return 'al-score-low';
+  1150→    }
+  1151→
+  1152→    // 36. Wire the Anime/Manga switcher and keep status-tab labels in sync.
+  1153→    function updateTabLabels() {
+  1154→      if (!tabs) return;
+  1155→      tabs.querySelectorAll('.al-tab').forEach(btn => {
+  1156→        const row = STATUS_TABS.find(s => s.status === btn.dataset.status);
+  1157→        if (!row) return;
+  1158→        let c = btn.querySelector('.al-tab-count');
+  1159→        btn.textContent = row[activeMedia] + ' ';
+  1160→        if (c) btn.appendChild(c);
+  1161→      });
+  1162→    }
+  1163→    function ensureMediaBar() {
+  1164→      if (mediaBar) return;
+  1165→      mediaBar = $('al-media');
+  1166→      if (!mediaBar) return;
+  1167→      mediaBar.addEventListener('click', (e) => {
+  1168→        const b = e.target.closest('.al-media-btn'); if (!b) return;
+  1169→        const m = b.dataset.media; if (m === activeMedia) return;
+  1170→        mediaBar.querySelectorAll('.al-media-btn').forEach(x => {
+  1171→          const on = x === b; x.classList.toggle('active', on); x.setAttribute('aria-selected', on ? 'true' : 'false');
+  1172→        });
+  1173→        switchMedia(m);
+  1174→      });
+  1175→    }
+  1176→
+  1177→    function ensureChrome() {
+  1178→      ensureMediaBar();
+  1179→      if (!statsPanel) {
+  1180→        statsPanel = document.createElement('div');
+  1181→        statsPanel.className = 'al-stats';
+  1182→        tabs.parentNode.insertBefore(statsPanel, tabs);
+  1183→      }
+  1184→      if (!controlsBar) {
+  1185→        controlsBar = document.createElement('div');
+  1186→        controlsBar.className = 'al-controls';
+  1187→        controlsBar.innerHTML =
+  1188→          '<div class="al-search-wrap"><span class="material-symbols-outlined al-search-icon">search</span>' +
+  1189→          '<input type="text" class="al-search-input" id="al-search" maxlength="60" placeholder="Search anime…" autocomplete="off" aria-label="Search titles">' +
+  1190→          '<button class="al-search-clear" id="al-search-clear" hidden title="Clear" aria-label="Clear search"><span class="material-symbols-outlined">close</span></button></div>' +
+  1191→          '<div class="al-sort" id="al-sort">' +
+  1192→            '<button class="al-sort-btn active" data-sort="updated">Updated</button>' +
+  1193→            '<button class="al-sort-btn" data-sort="score">Score</button>' +
+  1194→            '<button class="al-sort-btn" data-sort="title">Title</button>' +
+  1195→            '<button class="al-sort-btn" data-sort="progress">Progress</button>' +
+  1196→          '</div>';
+  1197→        list.parentNode.insertBefore(controlsBar, list);
+  1198→        const si = controlsBar.querySelector('#al-search'), sc = controlsBar.querySelector('#al-search-clear');
+  1199→        Widgets.bindSearch({ input: si, clear: sc, onChange: (v) => { activeSearch = v; page = 1; render(); } });
+  1200→        Widgets.bindPills({ container: controlsBar.querySelector('#al-sort'), selector: '.al-sort-btn', attr: 'sort', onSelect: (v) => { activeSort = v; page = 1; render(); } });
+  1201→      }
+  1202→      if (!genreBar) {
+  1203→        genreBar = document.createElement('div');
+  1204→        genreBar.className = 'al-genres';
+  1205→        list.parentNode.insertBefore(genreBar, list);
+  1206→        // Delegated so it keeps working as renderGenres() rebuilds the pills.
+  1207→        Widgets.bindPills({ container: genreBar, selector: '.al-genre-pill', attr: 'genre', onSelect: (v) => { activeGenre = v || ''; page = 1; renderGenres(); render(); } });
+  1208→      }
+  1209→      if (!pagerEl) { pagerEl = document.createElement('div'); pagerEl.className = 'al-pagination'; card.appendChild(pagerEl); }
+  1210→    }
+  1211→    function loadFallbackAnime() {
+  1212→      datasets.ANIME = [
+  1213→        { _status: 'CURRENT', progress: 52, score: 0, updatedAt: Date.now()/1000, media: { title: { romaji: 'NARUTO', english: 'Naruto' }, coverImage: { large: '' }, episodes: 220, duration: 23, genres: ['Action', 'Adventure'], format: 'TV' } },
+  1214→        { _status: 'COMPLETED', progress: 64, score: 0, updatedAt: Date.now()/1000 - 10, media: { title: { romaji: 'Hagane no Renkinjutsushi: FULLMETAL ALCHEMIST', english: 'Fullmetal Alchemist: Brotherhood' }, coverImage: { large: '' }, episodes: 64, duration: 25, genres: ['Action', 'Adventure', 'Drama'], format: 'TV' } },
+  1215→        { _status: 'COMPLETED', progress: 37, score: 0, updatedAt: Date.now()/1000 - 20, media: { title: { romaji: 'DEATH NOTE', english: 'Death Note' }, coverImage: { large: '' }, episodes: 37, duration: 23, genres: ['Mystery', 'Psychological', 'Thriller'], format: 'TV' } }
+  1216→      ];
+  1217→      loaded.ANIME = true;
+  1218→      if (activeMedia === 'ANIME') { allEntries = datasets.ANIME; refreshAll(); }
+  1219→    }
+  1220→
+  1221→    function buildListQuery(type) {
+  1222→      const progressFields = type === 'MANGA' ? 'chapters volumes' : 'episodes duration';
+  1223→      return `query{user:MediaListCollection(userName:"${CONFIG.anilistUser}",type:${type}){lists{name status entries{media{id title{romaji english}coverImage{extraLarge large medium}${progressFields} meanScore genres format description(asHtml:false)}score progress updatedAt}}}}`;
+  1224→    }
+  1225→    // Fetch a media list (anime or manga) on demand. Anime falls back to a local list on failure.
+  1226→    function loadMedia(type) {
+  1227→      if (loaded[type] || loading[type]) return;
+  1228→      loading[type] = true;
+  1229→      fetch('https://graphql.anilist.co?_=' + Date.now(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: buildListQuery(type) }) })
+  1230→        .then(r => { if (!r.ok) throw new Error('AniList HTTP ' + r.status); return r.json(); }).then(d => {
+  1231→          if (d.errors) throw new Error(d.errors[0]?.message || 'AniList GraphQL error');
+  1232→          const lists = (d.data && d.data.user && d.data.user.lists) || [];
+  1233→          const entries = [];
+  1234→          lists.forEach(l => (l.entries || []).forEach(e => { if (e && e.media) { e._status = l.status; entries.push(e); } }));
+  1235→          if (!entries.length) throw new Error('AniList list empty');
+  1236→          datasets[type] = entries; loaded[type] = true; loading[type] = false;
+  1237→          if (activeMedia === type) { allEntries = datasets[type]; refreshAll(); }
+  1238→        }).catch((err) => {
+  1239→          loading[type] = false;
+  1240→          console.warn('AniList ' + type + ' load failed:', err);
+  1241→          if (type === 'ANIME') loadFallbackAnime();
+  1242→          else if (activeMedia === 'MANGA') { list.innerHTML = '<div class="al-empty">Couldn’t load manga list right now.</div>'; }
+  1243→        });
+  1244→    }
+  1245→
+  1246→    function refreshAll() { renderStats(); renderGenres(); updateTabCounts(); render(); renderBanner(); }
+  1247→
+  1248→    // Switch between Anime and Manga: reset filters, lazy-load if needed.
+  1249→    function switchMedia(type) {
+  1250→      activeMedia = type;
+  1251→      allEntries = datasets[type];
+  1252→      favSet = favSets[type];
+  1253→      statsData = statsByMedia[type];
+  1254→      activeStatus = 'ALL'; activeGenre = ''; activeSearch = ''; page = 1;
+  1255→      if (tabs) { tabs.querySelectorAll('.al-tab').forEach(b => b.classList.toggle('active', b.dataset.status === 'ALL')); }
+  1256→      updateTabLabels();
+  1257→      const sub = $('al-sub'); if (sub) sub.textContent = 'AniList · ' + (isManga() ? 'manga list' : 'anime list');
+  1258→      const si = $('al-search'); if (si) { si.value = ''; si.placeholder = isManga() ? 'Search manga…' : 'Search anime…'; }
+  1259→      const sc = $('al-search-clear'); if (sc) sc.hidden = true;
+  1260→      stopBannerRotation();
+  1261→      if (!loaded[type]) {
+  1262→        list.innerHTML = '<div class="al-empty">Loading ' + (isManga() ? 'manga' : 'anime') + '…</div>';
+  1263→        if (statsPanel) statsPanel.innerHTML = ''; if (genreBar) genreBar.innerHTML = '';
+  1264→        const banner = $('al-banner'); if (banner) banner.style.display = 'none';
+  1265→        updateTabCounts();
+  1266→        loadMedia(type);
+  1267→      } else {
+  1268→        refreshAll();
+  1269→      }
+  1270→    }
+  1271→
+  1272→    loadMedia('ANIME');
+  1273→
+  1274→    // Fetch user avatar, favourites and statistics for both media types (separate request)
+  1275→    const userQuery = `query{User(name:"${CONFIG.anilistUser}"){avatar{large}favourites{anime{nodes{id}}manga{nodes{id}}}statistics{anime{count episodesWatched minutesWatched meanScore genres{genre count}}manga{count chaptersRead volumesRead meanScore genres{genre count}}}}}`;
+  1276→    function loadUserMeta() {
+  1277→      return fetch('https://graphql.anilist.co?_=' + Date.now(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: userQuery }) })
+  1278→        .then(r => r.json()).then(d => {
+  1279→          const u = d && d.data && d.data.User; if (!u) return;
+  1280→          const av = $('al-avatar'); if (av && u.avatar && u.avatar.large) av.src = u.avatar.large;
+  1281→          const fav = u.favourites || {};
+  1282→          favSets.ANIME = new Set(((fav.anime && fav.anime.nodes) || []).map(n => n && n.id).filter(Boolean));
+  1283→          favSets.MANGA = new Set(((fav.manga && fav.manga.nodes) || []).map(n => n && n.id).filter(Boolean));
+  1284→          statsByMedia.ANIME = (u.statistics && u.statistics.anime) || null;
+  1285→          statsByMedia.MANGA = (u.statistics && u.statistics.manga) || null;
+  1286→          favSet = favSets[activeMedia]; statsData = statsByMedia[activeMedia];
+  1287→          renderStats(); if (loaded[activeMedia]) render();
+  1288→        }).catch(() => {});
+  1289→    }
+  1290→    loadUserMeta();
+  1291→
+  1292→    // Manual refresh — re-fetch the active media list + user meta without a full page reload.
+  1293→    let refreshing = false;
+  1294→    function refresh() {
+  1295→      if (refreshing) return;
+  1296→      refreshing = true;
+  1297→      const btn = $('al-refresh');
+  1298→      if (btn) btn.classList.add('ama-refresh-spin');
+  1299→      const type = activeMedia;
+  1300→      loaded[type] = false; loading[type] = false;
+  1301→      loadMedia(type);   // re-fetches the active list; refreshAll() runs on success
+  1302→      loadUserMeta();    // refresh avatar / favourites / stats
+  1303→      setTimeout(() => { if (btn) btn.classList.remove('ama-refresh-spin'); refreshing = false; }, 700);
+  1304→    }
+  1305→    const alRefreshBtn = $('al-refresh');
+  1306→    if (alRefreshBtn) alRefreshBtn.addEventListener('click', refresh);
+  1307→    function renderStats() {
+  1308→      ensureChrome();
+  1309→      let count, mean, genres, numbers;
+  1310→      if (isManga()) {
+  1311→        let chapters, volumes;
+  1312→        if (statsData) {
+  1313→          count = statsData.count || 0; chapters = statsData.chaptersRead || 0;
+  1314→          volumes = statsData.volumesRead || 0; mean = statsData.meanScore || 0;
+  1315→          genres = (statsData.genres || []).slice();
+  1316→        } else {
+  1317→          count = allEntries.length;
+  1318→          chapters = allEntries.reduce((s, e) => s + (Number(e.progress) || 0), 0);
+  1319→          volumes = 0; mean = 0;
+  1320→          const gc = {}; allEntries.forEach(e => ((e.media && e.media.genres) || []).forEach(g => gc[g] = (gc[g] || 0) + 1));
+  1321→          genres = Object.keys(gc).map(g => ({ genre: g, count: gc[g] }));
+  1322→        }
+  1323→        if (!count) { statsPanel.innerHTML = ''; return; }
+  1324→        numbers = '<div class="al-stat-nums">' +
+  1325→          '<span><b>' + count.toLocaleString() + '</b> manga</span>' +
+  1326→          '<span><b>' + chapters.toLocaleString() + '</b> chapters</span>' +
+  1327→          (volumes ? '<span><b>' + volumes.toLocaleString() + '</b> volumes</span>' : '') +
+  1328→          (mean ? '<span><b>' + (mean / 10).toFixed(1) + '</b> mean score</span>' : '') +
+  1329→        '</div>';
+  1330→      } else {
+  1331→        let eps, mins;
+  1332→        if (statsData) {
+  1333→          count = statsData.count || 0; eps = statsData.episodesWatched || 0;
+  1334→          mins = statsData.minutesWatched || 0; mean = statsData.meanScore || 0;
+  1335→          genres = (statsData.genres || []).slice();
+  1336→        } else {
+  1337→          count = allEntries.length;
+  1338→          eps = allEntries.reduce((s, e) => s + (Number(e.progress) || 0), 0);
+  1339→          mins = allEntries.reduce((s, e) => s + (Number(e.progress) || 0) * ((e.media && e.media.duration) || 24), 0);
+  1340→          mean = 0;
+  1341→          const gc = {}; allEntries.forEach(e => ((e.media && e.media.genres) || []).forEach(g => gc[g] = (gc[g] || 0) + 1));
+  1342→          genres = Object.keys(gc).map(g => ({ genre: g, count: gc[g] }));
+  1343→        }
+  1344→        if (!count) { statsPanel.innerHTML = ''; return; }
+  1345→        const days = (mins / 1440).toFixed(1);
+  1346→        numbers = '<div class="al-stat-nums">' +
+  1347→          '<span><b>' + count.toLocaleString() + '</b> anime</span>' +
+  1348→          '<span><b>' + eps.toLocaleString() + '</b> episodes</span>' +
+  1349→          '<span><b>' + days + '</b> days watched</span>' +
+  1350→          (mean ? '<span><b>' + (mean / 10).toFixed(1) + '</b> mean score</span>' : '') +
+  1351→        '</div>';
+  1352→      }
+  1353→      const topG = genres.slice().sort((a, b) => b.count - a.count).slice(0, 5);
+  1354→      const maxC = topG.length ? topG[0].count : 1;
+  1355→      const bars = topG.length ? '<div class="al-stat-genres">' + topG.map(g =>
+  1356→        '<div class="al-stat-genre"><span class="al-sg-name">' + esc(g.genre) + '</span>' +
+  1357→        '<div class="al-sg-bar"><i style="width:' + Math.max(6, Math.round(g.count / maxC * 100)) + '%"></i></div>' +
+  1358→        '<span class="al-sg-count">' + g.count + '</span></div>').join('') + '</div>' : '';
+  1359→      statsPanel.innerHTML = numbers + bars;
+  1360→    }
+  1361→    function renderGenres() {
+  1362→      ensureChrome();
+  1363→      const counts = {};
+  1364→      allEntries.forEach(e => ((e.media && e.media.genres) || []).forEach(g => counts[g] = (counts[g] || 0) + 1));
+  1365→      const top = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 12);
+  1366→      if (!top.length) { genreBar.innerHTML = ''; return; }
+  1367→      // Click handling is delegated once in ensureChrome() via Widgets.bindPills.
+  1368→      genreBar.innerHTML =
+  1369→        '<button class="al-genre-pill ' + (activeGenre === '' ? 'active' : '') + '" data-genre="">All</button>' +
+  1370→        top.map(g => '<button class="al-genre-pill ' + (activeGenre === g ? 'active' : '') + '" data-genre="' + esc(g) + '">' + esc(g) + '</button>').join('');
+  1371→    }
+  1372→    function updateTabCounts() {
+  1373→      if (!tabs) return;
+  1374→      tabs.querySelectorAll('.al-tab').forEach(btn => {
+  1375→        const st = btn.dataset.status;
+  1376→        const n = st === 'ALL' ? allEntries.length : allEntries.filter(e => String(e._status || '').toUpperCase() === st).length;
+  1377→        let c = btn.querySelector('.al-tab-count');
+  1378→        if (!c) { c = document.createElement('span'); c.className = 'al-tab-count'; btn.appendChild(c); }
+  1379→        c.textContent = n;
+  1380→      });
+  1381→    }
+  1382→    function stopBannerRotation() { if (bannerTimer) { clearInterval(bannerTimer); bannerTimer = null; } }
+  1383→    function bannerHTML(item) {
+  1384→      const t = (item.media.title && (item.media.title.romaji || item.media.title.english)) || '\u2014';
+  1385→      const img = (item.media.coverImage && (item.media.coverImage.extraLarge || item.media.coverImage.large || item.media.coverImage.medium)) || '';
+  1386→      const statusRaw = (item._status || '').toUpperCase();
+  1387→      const manga = isManga();
+  1388→      const STATUS_LABELS = manga ? {
+  1389→        CURRENT: 'CURRENTLY READING', WATCHING: 'CURRENTLY READING',
+  1390→        COMPLETED: 'COMPLETED', REPEATING: 'REREADING', REWATCHING: 'REREADING',
+  1391→        PLANNING: 'PLAN TO READ', PAUSED: 'ON HOLD', DROPPED: 'DROPPED'
+  1392→      } : {
+  1393→        CURRENT: 'CURRENTLY WATCHING', WATCHING: 'CURRENTLY WATCHING',
+  1394→        COMPLETED: 'COMPLETED', REPEATING: 'REWATCHING', REWATCHING: 'REWATCHING',
+  1395→        PLANNING: 'PLAN TO WATCH', PAUSED: 'ON HOLD', DROPPED: 'DROPPED'
+  1396→      };
+  1397→      const label = STATUS_LABELS[statusRaw] || 'LATEST UPDATE';
+  1398→      const isOngoing = statusRaw === 'CURRENT' || statusRaw === 'WATCHING' || statusRaw === 'REPEATING' || statusRaw === 'REWATCHING';
+  1399→      const total = totalUnits(item.media);
+  1400→      const progress = item.progress ? item.progress + (total ? '/' + total : '') + ' ' + unitShort() + (isOngoing ? ' ' + verbPast() : '') : (statusRaw === 'COMPLETED' ? 'completed' : '');
+  1401→      const score = item.score ? ' · ★ ' + item.score : '';
+  1402→      return (img ? '<img class="al-banner-img" alt="' + esc(t) + '" src="' + img + '">' : '') + '<div class="al-banner-info"><div class="al-banner-label" data-status="' + statusRaw.toLowerCase() + '">' + label + '</div><div class="al-banner-title">' + esc(t) + '</div><div class="al-banner-progress">' + esc(progress + score) + '</div></div>';
+  1403→    }
+  1404→    function bannerDots(rotation, activeI) {
+  1405→      if (rotation.length <= 1) return '';
+  1406→      return '<div class="al-banner-dots">' + rotation.map((_, di) => '<span class="' + (di === activeI ? 'on' : '') + '"></span>').join('') + '</div>';
+  1407→    }
+  1408→    // 39. Banner rotation — cycle through everything currently being watched/read;
+  1409→    // fall back to the single most-recently-updated entry if nothing is ongoing.
+  1410→    function renderBanner() {
+  1411→      const banner = $('al-banner'); if (!banner) return;
+  1412→      stopBannerRotation();
+  1413→      const entries = allEntries;
+  1414→      if (!entries.length) { banner.style.display = 'none'; return; }
+  1415→      const ongoing = entries
+  1416→        .filter(e => { const s = (e._status || '').toUpperCase(); return (s === 'CURRENT' || s === 'REPEATING') && e.media; })
+  1417→        .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  1418→      let rotation = ongoing;
+  1419→      if (!rotation.length) {
+  1420→        const latest = entries.slice().filter(e => e.media).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
+  1421→        rotation = latest ? [latest] : [];
+  1422→      }
+  1423→      if (!rotation.length) { banner.style.display = 'none'; return; }
+  1424→      bannerIdx = 0;
+  1425→      const paint = (i) => {
+  1426→        const item = rotation[i % rotation.length];
+  1427→        if (!item || !item.media) return;
+  1428→        banner.innerHTML = bannerHTML(item) + bannerDots(rotation, i % rotation.length);
+  1429→      };
+  1430→      paint(0);
+  1431→      banner.style.display = 'flex';
+  1432→      if (rotation.length > 1) {
+  1433→        bannerTimer = setInterval(() => {
+  1434→          bannerIdx = (bannerIdx + 1) % rotation.length;
+  1435→          banner.classList.add('al-banner-fading');
+  1436→          setTimeout(() => { paint(bannerIdx); banner.classList.remove('al-banner-fading'); }, 200);
+  1437→        }, 5000);
+  1438→      }
+  1439→    }
+  1440→    function sortEntries(arr) {
+  1441→      const a = arr.slice();
+  1442→      if (activeSort === 'score') a.sort((x, y) => (y.score || 0) - (x.score || 0) || ((y.media && y.media.meanScore) || 0) - ((x.media && x.media.meanScore) || 0));
+  1443→      else if (activeSort === 'title') a.sort((x, y) => entryTitle(x).localeCompare(entryTitle(y)));
+  1444→      else if (activeSort === 'progress') a.sort((x, y) => (y.progress || 0) - (x.progress || 0));
+  1445→      else a.sort((x, y) => (y.updatedAt || 0) - (x.updatedAt || 0));
+  1446→      return a;
+  1447→    }
+  1448→    function render() {
+  1449→      ensureChrome();
+  1450→      let arr = allEntries.slice();
+  1451→      if (activeStatus !== 'ALL') arr = arr.filter(e => String(e._status || '').toUpperCase() === activeStatus);
+  1452→      if (activeGenre) arr = arr.filter(e => ((e.media && e.media.genres) || []).indexOf(activeGenre) >= 0);
+  1453→      if (activeSearch) {
+  1454→        const s = activeSearch.toLowerCase();
+  1455→        arr = arr.filter(e => {
+  1456→          const ti = e.media && e.media.title;
+  1457→          return (ti && ti.romaji && ti.romaji.toLowerCase().includes(s)) ||
+  1458→                 (ti && ti.english && ti.english.toLowerCase().includes(s));
+  1459→        });
+  1460→      }
+  1461→      arr = sortEntries(arr);
+  1462→      const pages = Math.max(1, Math.ceil(arr.length / PER_PAGE));
+  1463→      if (page > pages) page = pages;
+  1464→      const slice = arr.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  1465→      if (!slice.length) {
+  1466→        list.innerHTML = '<div class="al-empty">No ' + (isManga() ? 'manga' : 'anime') + ' found' + (activeSearch ? ' for “' + esc(activeSearch) + '”' : '') + '.</div>';
+  1467→        renderPager(pages);
+  1468→        return;
+  1469→      }
+  1470→      list.innerHTML = slice.map(e => {
+  1471→        const m = e.media || {};
+  1472→        const t = (m.title && (m.title.romaji || m.title.english)) || '—';
+  1473→        const img = (m.coverImage && (m.coverImage.extraLarge || m.coverImage.large || m.coverImage.medium)) || '';
+  1474→        const st = String(e._status || '').toUpperCase();
+  1475→        const eps = totalUnits(m);
+  1476→        const prog = e.progress || 0;
+  1477→        const progText = prog ? prog + (eps ? '/' + eps : '') + ' ' + unitShort() : (st === 'COMPLETED' ? 'completed' : '');
+  1478→        const userScore = e.score ? '★ ' + e.score : '';
+  1479→        const mean = m.meanScore || 0;
+  1480→        const meanText = mean ? 'avg ' + (mean / 10).toFixed(1) : '';
+  1481→        const scoreLine = [progText, userScore, meanText].filter(Boolean).join(' · ');
+  1482→        const pct = eps ? Math.min(100, Math.round(prog / eps * 100)) : (st === 'COMPLETED' ? 100 : 0);
+  1483→        const showBar = (eps && prog) || st === 'COMPLETED';
+  1484→        const isFav = favSet.has(m.id);
+  1485→        const genres = (m.genres || []).slice(0, 3);
+  1486→        const desc = m.description ? esc(String(m.description).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()).slice(0, 180) : '';
+  1487→        const fmt = m.format ? String(m.format).replace(/_/g, ' ') : '';
+  1488→        const overlay = (genres.length || desc || fmt) ?
+  1489→          '<div class="al-item-overlay">' +
+  1490→            (fmt ? '<div class="al-ov-fmt">' + esc(fmt) + '</div>' : '') +
+  1491→            (genres.length ? '<div class="al-ov-genres">' + genres.map(g => '<span>' + esc(g) + '</span>').join('') + '</div>' : '') +
+  1492→            (desc ? '<div class="al-ov-desc">' + desc + '…</div>' : '') +
+  1493→          '</div>' : '';
+  1494→        return '<div class="al-item">' +
+  1495→          '<div class="al-item-cover">' +
+  1496→            (img ? '<img src="' + img + '" alt="' + esc(t) + '" loading="lazy">' : '') +
+  1497→            (isFav ? '<span class="al-fav" title="Favourite">♥</span>' : '') +
+  1498→            overlay +
+  1499→          '</div>' +
+  1500→          '<div class="al-item-info">' +
+  1501→            '<div class="al-item-name">' + esc(t) + '</div>' +
+  1502→            '<div class="al-item-score ' + scoreClass(mean) + '">' + esc(scoreLine) + '</div>' +
+  1503→            (showBar ? '<div class="al-item-bar"><i style="width:' + pct + '%"></i></div>' : '') +
+  1504→          '</div>' +
+  1505→        '</div>';
+  1506→      }).join('');
+  1507→      renderPager(pages);
+  1508→    }
+  1509→    function renderPager(pages) {
+  1510→      if (!pagerEl) return;
+  1511→      if (pages <= 1) { pagerEl.innerHTML = ''; return; }
+  1512→      let html = `<button class="al-page-btn" ${page===1?'disabled':''} data-page="${page-1}">‹</button>`;
+  1513→      for (let p = 1; p <= pages; p++) {
+  1514→        if (p === 1 || p === pages || Math.abs(p - page) <= 1) html += `<button class="al-page-btn ${p===page?'active':''}" data-page="${p}">${p}</button>`;
+  1515→        else if (Math.abs(p - page) === 2) html += `<span class="al-page-dots">…</span>`;
+  1516→      }
+  1517→      html += `<button class="al-page-btn" ${page===pages?'disabled':''} data-page="${page+1}">›</button>`;
+  1518→      pagerEl.innerHTML = html;
+  1519→      pagerEl.querySelectorAll('.al-page-btn').forEach(b => b.addEventListener('click', () => { const p = +b.dataset.page; if (p>=1 && p<=pages) { page = p; render(); } }));
+  1520→    }
+  1521→    if (tabs) tabs.addEventListener('click', (e) => {
+  1522→      const t = e.target.closest('.al-tab'); if (!t) return;
+  1523→      tabs.querySelectorAll('.al-tab').forEach(b => b.classList.remove('active'));
+  1524→      t.classList.add('active'); activeStatus = t.dataset.status; page = 1; render();
+  1525→    });
+  1526→  })();
+  1527→
+  1528→  /* ============================================================
+  1529→     10. QUOTE SWAP
+  1530→     ============================================================ */
+  1531→  (function quotes() {
+  1532→    const QUOTES = [
+  1533→      ['Talk is cheap. Show me the code.', 'Linus Torvalds'],
+  1534→      ['First, solve the problem. Then, write the code.', 'John Johnson'],
+  1535→      ['Simplicity is the soul of efficiency.', 'Austin Freeman'],
+  1536→      ['The best error message is the one that never shows up.', 'Thomas Fuchs'],
+  1537→      ['Programs must be written for people to read.', 'Harold Abelson'],
+  1538→      ['Make it work, make it right, make it fast.', 'Kent Beck']
+  1539→    ];
+  1540→    let i = 0; const swap = $('quote-swap');
+  1541→    if (swap) swap.addEventListener('click', () => { i = (i + 1) % QUOTES.length; $('quote-text').textContent = QUOTES[i][0]; $('quote-author').textContent = '— ' + QUOTES[i][1]; });
+  1542→  })();
+  1543→
+  1544→  /* ============================================================
+  1545→     11. PRESENCE LINKS (Material Symbols icons; YatiniGPT removed)
+  1546→     ============================================================ */
+  1547→  (function presence() {
+  1548→    const grid = $('presence-grid'); if (!grid) return;
+  1549→    const LINKS = [
+  1550→      { icon: 'code', name: 'GitHub', url: 'https://github.com/YatinSharma1303' },
+  1551→      { icon: 'mail', name: 'Email', url: 'mailto:' + EMAIL },
+  1552→      { icon: 'library_music', name: 'Last.fm', url: 'https://www.last.fm/user/YATINSHARMA' },
+  1553→      { icon: 'live_tv', name: 'AniList', url: 'https://anilist.co/user/YatinSharma1303/' }
+  1554→    ];
+  1555→    grid.innerHTML = LINKS.map(l => `<a class="presence-link" href="${l.url}" target="_blank" rel="noopener"><span class="presence-icon material-symbols-outlined">${l.icon}</span><span class="presence-name">${l.name}</span></a>`).join('');
+  1556→  })();
+  1557→
+  1558→  /* ============================================================
+  1559→     12. TIME WIDGET (India vs visitor, live)
+  1560→     ============================================================ */
+  1561→  (function timeWidget() {
+  1562→    const india = $('time-india'), visitor = $('time-visitor'), sub = $('time-visitor-sub');
+  1563→    if (!india) return;
+  1564→    const opt = { hour: '2-digit', minute: '2-digit', hour12: true };
+  1565→    function tick() {
+  1566→      try { india.textContent = new Date().toLocaleTimeString('en-US', { ...opt, timeZone: CONFIG.timezone }); } catch (e) { india.textContent = '—'; }
+  1567→      try {
+  1568→        const vtz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  1569→        visitor.textContent = new Date().toLocaleTimeString('en-US', { ...opt, timeZone: vtz });
+  1570→        sub.textContent = (vtz === CONFIG.timezone) ? 'same timezone' : 'your time';
+  1571→      } catch (e) { visitor.textContent = '—'; }
+  1572→    }
+  1573→    tick(); setInterval(tick, 1000);
+  1574→  })();
+  1575→
+  1576→  /* ============================================================
+  1577→     13. SCROLL: parallax + progress bar + back-to-top
+  1578→     ============================================================ */
+  1579→  (function scrollFX() {
+  1580→    const orb = document.querySelector('.hero-gradient-orb');
+  1581→    const hero = $('hero');
+  1582→    const prog = $('scroll-progress');
+  1583→    const btt = $('back-to-top');
+  1584→    let ticking = false;
+  1585→    function update() {
+  1586→      const y = window.scrollY;
+  1587→      const docH = document.documentElement.scrollHeight - window.innerHeight;
+  1588→      if (orb) orb.style.transform = `translate(0, ${y * 0.15}px)`;
+  1589→      if (hero) hero.style.transform = `translateY(${y * 0.25}px)`;
+  1590→      if (prog) prog.style.width = (docH > 0 ? (y / docH * 100) : 0) + '%';
+  1591→      if (btt) btt.classList.toggle('visible', y > 600);
+  1592→      ticking = false;
+  1593→    }
+  1594→    window.addEventListener('scroll', () => { if (!ticking) { requestAnimationFrame(update); ticking = true; } }, { passive: true });
+  1595→    if (btt) btt.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  1596→  })();
+  1597→
+  1598→  /* ============================================================
+  1599→     14. ANIMATED COUNTERS
+  1600→     ============================================================ */
+  1601→  function animateCounter(id, target) {
+  1602→    const el = $(id); if (!el) return;
+  1603→    const num = Number(target) || 0;
+  1604→    if (el.dataset.counted) { el.textContent = num.toLocaleString(); return; }
+  1605→    const obs = new IntersectionObserver((entries) => {
+  1606→      entries.forEach(e => {
+  1607→        if (!e.isIntersecting) return;
+  1608→        el.dataset.counted = '1'; obs.disconnect();
+  1609→        const dur = 900, start = performance.now();
+  1610→        (function step(t) {
+  1611→          const p = Math.min(1, (t - start) / dur);
+  1612→          const eased = 1 - Math.pow(1 - p, 3);
+  1613→          el.textContent = Math.round(num * eased).toLocaleString();
+  1614→          if (p < 1) requestAnimationFrame(step);
+  1615→        })(start);
+  1616→      });
+  1617→    }, { threshold: 0.4 });
+  1618→    obs.observe(el);
+  1619→  }
+  1620→
+  1621→  /* ============================================================
+  1622→     15. (Removed Changelogs)
+  1623→     ============================================================ */
+  1624→
+  1625→  /* ============================================================
+  1626→     16. HERO TERMINAL (typing effect)
+  1627→     ============================================================ */
+  1628→  (function terminal() {
+  1629→    const el = $('term-line'); if (!el) return;
+  1630→    const LINES = [
+  1631→      { cmd: 'whoami', out: 'yatin - full-stack developer' },
+  1632→      { cmd: 'cat stack.txt', out: 'react . python . firebase . ai/ml' },
+  1633→      { cmd: 'status --current', out: 'building cool stuff' }
+  1634→    ];
+  1635→    let li = 0, phase = 'cmd', ci = 0;
+  1636→    let isVisible = false;
+  1637→    let typingTimer = null;
+  1638→
+  1639→    function typeClick() {}
+  1640→    
+  1641→    function tick() {
+  1642→      // If the terminal is scrolled out of view, stop looping and wait until it's visible again
+  1643→      if (!isVisible) { typingTimer = null; return; }
+  1644→      
+  1645→      const item = LINES[li];
+  1646→      if (phase === 'cmd') {
+  1647→        ci++;
+  1648→        typeClick();
+  1649→        el.innerHTML = '<span class="term-cmd">$ ' + esc(item.cmd.slice(0, ci)) + '</span>';
+  1650→        if (ci >= item.cmd.length) { phase = 'pause1'; typingTimer = setTimeout(tick, 400); return; }
+  1651→        typingTimer = setTimeout(tick, 70);
+  1652→      } else if (phase === 'pause1') {
+  1653→        phase = 'out'; ci = 0; typingTimer = setTimeout(tick, 200);
+  1654→      } else if (phase === 'out') {
+  1655→        ci++;
+  1656→        typeClick();
+  1657→        el.innerHTML = '<span class="term-cmd">$ ' + item.cmd + '</span><br>' + esc('> ' + item.out.slice(0, ci));
+  1658→        if (ci >= item.out.length) { phase = 'pause2'; typingTimer = setTimeout(tick, 1800); return; }
+  1659→        typingTimer = setTimeout(tick, 35);
+  1660→      } else {
+  1661→        li = (li + 1) % LINES.length; phase = 'cmd'; ci = 0; typingTimer = setTimeout(tick, 300);
+  1662→      }
+  1663→    }
+  1664→
+  1665→    // Start/Stop typing based on scroll visibility
+  1666→    const obs = new IntersectionObserver((entries) => {
+  1667→      entries.forEach(entry => {
+  1668→        const wasVisible = isVisible;
+  1669→        isVisible = entry.isIntersecting;
+  1670→        
+  1671→        // If it just became visible and the loop isn't running, start it
+  1672→        if (isVisible && !wasVisible && !typingTimer) {
+  1673→          typingTimer = setTimeout(tick, 0);
+  1674→        } 
+  1675→        // If it just scrolled out of view, clear the timer to pause sound/typing
+  1676→        else if (!isVisible && wasVisible && typingTimer) {
+  1677→          clearTimeout(typingTimer);
+  1678→          typingTimer = null;
+  1679→        }
+  1680→      });
+  1681→    }, { threshold: 0.2 }); // Trigger when 20% visible
+  1682→
+  1683→    // Observe the parent terminal container
+  1684→    const termBox = el.closest('.hero-terminal');
+  1685→    if (termBox) obs.observe(termBox);
+  1686→  })();
+  1687→
+  1688→  /* ============================================================
+  1689→     16b. HERO PARTICLES (neural-network style)
+  1690→     ============================================================ */
+  1691→  (function particles() {
+  1692→    const canvas = $('hero-particles'); if (!canvas) return;
+  1693→    const ctx = canvas.getContext('2d');
+  1694→    let dots = [], w, h;
+  1695→    function init() {
+  1696→      w = canvas.width = window.innerWidth;
+  1697→      h = canvas.height = window.innerHeight;
+  1698→      const count = Math.min(80, Math.floor(w * h / 18000));
+  1699→      dots = [];
+  1700→      for (let i = 0; i < count; i++) dots.push({ x: Math.random()*w, y: Math.random()*h, vx: (Math.random()-0.5)*0.3, vy: (Math.random()-0.5)*0.3 });
+  1701→    }
+  1702→    // Resize WITHOUT recreating dots — keeps them smooth across viewport changes.
+  1703→    function resize() {
+  1704→      const newW = window.innerWidth, newH = window.innerHeight;
+  1705→      w = canvas.width = newW;
+  1706→      h = canvas.height = newH;
+  1707→      // keep existing dots, just nudge any that are now off-screen back into bounds
+  1708→      dots.forEach(d => {
+  1709→        if (d.x > newW) d.x = Math.random() * newW;
+  1710→        if (d.y > newH) d.y = Math.random() * newH;
+  1711→      });
+  1712→    }
+  1713→    // Debounce resize so mobile URL-bar toggling doesn't thrash.
+  1714→    let resizeTimer = null;
+  1715→    window.addEventListener('resize', () => {
+  1716→      if (resizeTimer) clearTimeout(resizeTimer);
+  1717→      resizeTimer = setTimeout(resize, 200);
+  1718→    });
+  1719→    // Particle colour follows the palette accent (--accent-solid), parsed + cached.
+  1720→    let pAccent = { hex: '', rgb: '0,200,255' };
+  1721→    function accentRGB() {
+  1722→      const hex = (getComputedStyle(document.documentElement).getPropertyValue('--accent-solid') || '').trim();
+  1723→      if (hex && hex !== pAccent.hex) {
+  1724→        const m = hex.replace('#', '');
+  1725→        if (m.length === 6) pAccent = { hex: hex, rgb: parseInt(m.slice(0,2),16) + ',' + parseInt(m.slice(2,4),16) + ',' + parseInt(m.slice(4,6),16) };
+  1726→        else if (m.length === 3) pAccent = { hex: hex, rgb: parseInt(m[0]+m[0],16) + ',' + parseInt(m[1]+m[1],16) + ',' + parseInt(m[2]+m[2],16) };
+  1727→      }
+  1728→      return pAccent.rgb;
+  1729→    }
+  1730→    function draw() {
+  1731→      ctx.clearRect(0, 0, w, h);
+  1732→      dots.forEach(d => { d.x += d.vx; d.y += d.vy; if (d.x<0||d.x>w) d.vx*=-1; if (d.y<0||d.y>h) d.vy*=-1; });
+  1733→      // Light mode keeps a higher opacity so the accent particles stay visible on the light bg.
+  1734→      const isLight = document.documentElement.classList.contains('light');
+  1735→      const rgb = accentRGB();
+  1736→      const lineOpacity = isLight ? 0.3 : 0.15;
+  1737→      const dotColor = 'rgba(' + rgb + ',' + (isLight ? 0.75 : 0.6) + ')';
+  1738→      for (let i = 0; i < dots.length; i++) {
+  1739→        for (let j = i+1; j < dots.length; j++) {
+  1740→          const dx = dots[i].x - dots[j].x, dy = dots[i].y - dots[j].y;
+  1741→          const dist = Math.sqrt(dx*dx + dy*dy);
+  1742→          if (dist < 120) { ctx.strokeStyle = 'rgba(' + rgb + ',' + (lineOpacity * (1 - dist/120)) + ')'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(dots[i].x, dots[i].y); ctx.lineTo(dots[j].x, dots[j].y); ctx.stroke(); }
+  1743→        }
+  1744→      }
+  1745→      ctx.fillStyle = dotColor;
+  1746→      dots.forEach(d => { ctx.beginPath(); ctx.arc(d.x, d.y, 1.5, 0, 7); ctx.fill(); });
+  1747→      requestAnimationFrame(draw);
+  1748→    }
+  1749→    init(); draw();
+  1750→  })();
+  1751→
+  1752→  /* ============================================================
+  1753→     16c. TECH ORBIT (populate ring with icons)
+  1754→     ============================================================ */
+  1755→  (function orbit() {
+  1756→    const ring = $('orbit-ring'); if (!ring) return;
+  1757→    const TECH = ['R','Py','FB','AI','JS','TS','Git','ML'];
+  1758→    const radius = 115;
+  1759→    TECH.forEach((label, i) => {
+  1760→      const angle = (i / TECH.length) * Math.PI * 2;
+  1761→      const x = Math.cos(angle) * radius;
+  1762→      const y = Math.sin(angle) * radius;
+  1763→      const item = document.createElement('div');
+  1764→      item.className = 'orbit-item';
+  1765→      item.textContent = label;
+  1766→      // Position using top/left so it doesn't conflict with the CSS transform animation
+  1767→      item.style.left = `calc(50% + ${x}px)`;
+  1768→      item.style.top = `calc(50% + ${y}px)`;
+  1769→      ring.appendChild(item);
+  1770→    });
+  1771→  })();
+  1772→
+  1773→  /* ============================================================
+  1774→     16d. 3D CARD TILT (project + interest cards)
+  1775→     ============================================================ */
+  1776→  (function tilt() {
+  1777→    if (window.matchMedia('(hover: none)').matches) return;
+  1778→    document.querySelectorAll('.project-card, .interest-card').forEach(card => {
+  1779→      card.addEventListener('mousemove', (e) => {
+  1780→        const r = card.getBoundingClientRect();
+  1781→        const cx = e.clientX - r.left, cy = e.clientY - r.top;
+  1782→        const rx = ((cy / r.height) - 0.5) * -10;
+  1783→        const ry = ((cx / r.width) - 0.5) * 10;
+  1784→        card.style.transform = 'perspective(800px) rotateX(' + rx + 'deg) rotateY(' + ry + 'deg)';
+  1785→      });
+  1786→      card.addEventListener('mouseleave', () => { card.style.transform = ''; });
+  1787→    });
+  1788→  })();
+  1789→  /* ============================================================
+  1790→     17. ACTIVE NAV HIGHLIGHT (sync with scroll position)
+  1791→     ============================================================ */
+  1792→  (function activeNav() {
+  1793→    const navLinks = document.querySelectorAll('.topbar-nav-icons .tb-icon-btn');
+  1794→    if (!navLinks.length) return;
+  1795→    const sections = [];
+  1796→    navLinks.forEach(a => { const id = a.getAttribute('href').slice(1); const sec = document.getElementById(id); if (sec) sections.push({ sec, a }); });
+  1797→    if (!sections.length) return;
+  1798→    const obs = new IntersectionObserver((entries) => {
+  1799→      entries.forEach(e => {
+  1800→        if (e.isIntersecting) {
+  1801→          navLinks.forEach(a => a.classList.remove('active'));
+  1802→          const match = sections.find(s => s.sec === e.target);
+  1803→          if (match) match.a.classList.add('active');
+  1804→        }
+  1805→      });
+  1806→    }, { rootMargin: '-45% 0px -50% 0px' });
+  1807→    sections.forEach(s => obs.observe(s.sec));
+  1808→  })();
+  1809→
+  1810→  /* ============================================================
+  1811→     18. EMAIL — inject into DOM (not in HTML to dodge Cloudflare obfuscation)
+  1812→     ============================================================ */
+  1813→  (function setupEmail() {
+  1814→    // Populate bio card email text
+  1815→    const emailDisplay = $('email-display');
+  1816→    if (emailDisplay) emailDisplay.textContent = EMAIL;
+  1817→
+  1818→    // Wire footer mailto link
+  1819→    const footerLink = $('footer-email-link');
+  1820→    if (footerLink) footerLink.href = 'mailto:' + EMAIL;
+  1821→
+  1822→    // Copy button
+  1823→    function wireCopyButton(btn) {
+  1824→      if (!btn) return;
+  1825→      btn.addEventListener('click', async () => {
+  1826→        try {
+  1827→          await navigator.clipboard.writeText(EMAIL);
+  1828→          btn.classList.add('copied');
+  1829→          const orig = btn.textContent;
+  1830→          btn.textContent = 'check';
+  1831→          setTimeout(() => { btn.classList.remove('copied'); btn.textContent = orig; }, 1800);
+  1832→        } catch (e) {
+  1833→          // Fallback
+  1834→          const t = document.createElement('textarea'); t.value = EMAIL;
+  1835→          document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (er) {} document.body.removeChild(t);
+  1836→          btn.classList.add('copied'); setTimeout(() => btn.classList.remove('copied'), 1800);
+  1837→        }
+  1838→      });
+  1839→    }
+  1840→    wireCopyButton($('copy-email'));
+  1841→  })();
+  1842→
+  1843→
+  1844→  /* ============================================================
+  1845→     19. AMA — Firestore + Telegram + voting + sort + pagination
+  1846→     ============================================================ */
+  1847→  (function ama() {
+  1848→    const input = $('ama-input'), send = $('ama-send'), status = $('ama-status'),
+  1849→          countEl = $('ama-count'), listWrap = $('ama-list-wrap'),
+  1850→          list = $('ama-list'), sortWrap = $('ama-sort'), pager = $('ama-pager'), featured = $('ama-featured'),
+  1851→          searchInput = $('ama-search'), searchClear = $('ama-search-clear');
+  1852→    if (!input) return;
+  1853→
+  1854→    const nameInput = $('ama-name-input');
+  1855→    let nameTouched = false;
+  1856→    try { localStorage.removeItem('yatin_ama_name'); } catch (e) {}
+  1857→    if (nameInput) {
+  1858→      nameInput.value = '';
+  1859→      nameInput.setAttribute('autocomplete', 'off');
+  1860→      nameInput.addEventListener('input', () => { nameTouched = true; });
+  1861→    }
+  1862→
+  1863→    const fb = CONFIG.firebase;
+  1864→    const FIREBASE_READY = fb && fb.apiKey && fb.projectId &&
+  1865→      fb.apiKey !== 'YOUR_FIREBASE_WEB_API_KEY' && fb.projectId !== 'YOUR_FIREBASE_PROJECT_ID';
+  1866→    const COL = CONFIG.amaCollection;
+  1867→    const base = () => `https://firestore.googleapis.com/v1/projects/${fb.projectId}/databases/(default)/documents`;
+  1868→    const queryUrl = () => `${base()}:runQuery?key=${encodeURIComponent(fb.apiKey)}`;
+  1869→    const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : ('q_' + Date.now() + '_' + Math.random().toString(16).slice(2)));
+  1870→    const PER_PAGE = 4;
+  1871→
+  1872→    const LIMIT_KEY = 'yatin_ama_submits';
+  1873→    const today = new Date().toDateString();
+  1874→    let todayCount = 0;
+  1875→    try { const stored = JSON.parse(localStorage.getItem(LIMIT_KEY) || '{}'); todayCount = stored.date === today ? stored.count : 0; } catch (e) {}
+  1876→    countEl.textContent = todayCount;
+  1877→
+  1878→    let votedSet = new Set();
+  1879→    try { votedSet = new Set(JSON.parse(localStorage.getItem('yatin_ama_votes') || '[]')); } catch (e) {}
+  1880→    let reactedSet = new Set();
+  1881→    try { reactedSet = new Set(JSON.parse(localStorage.getItem('yatin_ama_reactions') || '[]')); } catch (e) {}
+  1882→
+  1883→    let answeredDocs = [], activeSort = 'top', page = 1, activeSearch = '';
+  1884→
+  1885→    function matchesSearch(q) {
+  1886→      if (!activeSearch) return true;
+  1887→      const s = activeSearch.toLowerCase();
+  1888→      return (q.question || '').toLowerCase().includes(s)
+  1889→        || (q.answer || '').toLowerCase().includes(s)
+  1890→        || (q.topic || '').toLowerCase().includes(s)
+  1891→        || (q.name || '').toLowerCase().includes(s);
+  1892→    }
+  1893→
+  1894→    function formatAmaTime(iso) {
+  1895→      if (!iso) return '';
+  1896→      try {
+  1897→        return new Date(iso).toLocaleString('en-IN', {
+  1898→          timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short',
+  1899→          hour: '2-digit', minute: '2-digit', hour12: true
+  1900→        });
+  1901→      } catch (e) { return ''; }
+  1902→    }
+  1903→    function titleTopicClient(value) {
+  1904→      const keep = { ai:'AI', ml:'ML', rag:'RAG', llm:'LLM', api:'API', css:'CSS', html:'HTML', js:'JS', ui:'UI', ux:'UX' };
+  1905→      return String(value || '').trim().split(/\s+/).filter(Boolean).map(w => {
+  1906→        const l = w.toLowerCase();
+  1907→        if (keep[l]) return keep[l];
+  1908→        if (l === 'react') return 'React';
+  1909→        if (l === 'firebase') return 'Firebase';
+  1910→        if (l === 'firestore') return 'Firestore';
+  1911→        if (l === 'github') return 'GitHub';
+  1912→        return l.charAt(0).toUpperCase() + l.slice(1);
+  1913→      }).join(' ').slice(0, 40) || 'General';
+  1914→    }
+  1915→    function autoTopicForQuestionClient(question, answer) {
+  1916→      const text = ((question || '') + ' ' + (answer || '')).toLowerCase();
+  1917→      const phrases = [
+  1918→        ['smarthealthcare', 'SmartHealthCare'], ['smart healthcare', 'SmartHealthCare'],
+  1919→        ['disease prediction', 'Disease Prediction'], ['drug recommendation', 'Drug Recommendation'], ['heart risk', 'Heart Risk'],
+  1920→        ['machine learning', 'Machine Learning'], ['deep learning', 'Deep Learning'], ['data science', 'Data Science'], ['random forest', 'Random Forest'],
+  1921→        ['rag chatbot', 'RAG Chatbot'], ['telegram bot', 'Telegram Bot'], ['firebase firestore', 'Firestore'], ['firestore rules', 'Firestore Rules'],
+  1922→        ['react hooks', 'React Hooks'], ['portfolio website', 'Portfolio'], ['full stack', 'Full Stack'], ['resume tips', 'Resume'],
+  1923→        ['career roadmap', 'Career Roadmap'], ['anime list', 'Anime List'], ['last fm', 'Last.fm'], ['last.fm', 'Last.fm']
+  1924→      ];
+  1925→      for (const [phrase, topic] of phrases) if (text.includes(phrase)) return topic;
+  1926→      const important = ['smarthealthcare','yatini','react','firebase','firestore','telegram','wakatime','lastfm','anilist','github','portfolio','resume','internship','roadmap','career','anime','naruto','gaara','bleach','pokemon','healthcare','prediction','medicine','disease','model','rag','llm','api','database','frontend','backend','python','javascript','typescript','tailwind','vercel','streamlit','faiss','groq'];
+  1927→      for (const w of important) if (new RegExp('(^|[^a-z0-9])' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^a-z0-9]|$)', 'i').test(text)) return titleTopicClient(w);
+  1928→      const stop = new Set(['what','why','how','can','you','your','the','and','for','with','about','please','tell','this','that','from','have','want','need','question','answer','anything','best','good','like','using','make','made','build','built','start','learn','explain']);
+  1929→      const counts = {};
+  1930→      text.replace(/[^a-z0-9+#.\s-]/g, ' ').split(/\s+/).filter(w => w.length >= 4 && !stop.has(w)).forEach(w => counts[w] = (counts[w] || 0) + 1);
+  1931→      const best = Object.keys(counts).sort((a,b) => (counts[b] * 10 + b.length) - (counts[a] * 10 + a.length))[0];
+  1932→      return best ? titleTopicClient(best) : 'General';
+  1933→    }
+  1934→
+  1935→    function fromDoc(doc) {
+  1936→      const f = doc.fields || {};
+  1937→      const reactions = {};
+  1938→      if (f.reactions && f.reactions.mapValue && f.reactions.mapValue.fields) {
+  1939→        Object.keys(f.reactions.mapValue.fields).forEach(emoji => {
+  1940→          reactions[emoji] = Number(f.reactions.mapValue.fields[emoji].integerValue || f.reactions.mapValue.fields[emoji].doubleValue || 0);
+  1941→        });
+  1942→      }
+  1943→      return {
+  1944→        id: f.id?.stringValue || (doc.name ? doc.name.split('/').pop() : ''),
+  1945→        name: f.name?.stringValue || 'Anonymous',
+  1946→        question: f.question?.stringValue || '',
+  1947→        answer: f.answer?.stringValue || '',
+  1948→        createdAt: f.createdAt?.stringValue || '',
+  1949→        answeredAt: f.answeredAt?.stringValue || '',
+  1950→        editedAt: f.editedAt?.stringValue || '',
+  1951→        votes: Number(f.votes?.integerValue || f.votes?.doubleValue || 0),
+  1952→        reactions: reactions,
+  1953→        pinned: !!f.pinned?.booleanValue,
+  1954→        spotlight: !!f.spotlight?.booleanValue,
+  1955→        spotlightAt: f.spotlightAt?.stringValue || '',
+  1956→        topic: f.topic?.stringValue || autoTopicForQuestionClient(f.question?.stringValue || '', f.answer?.stringValue || ''),
+  1957→        topicManual: !!f.topicManual?.booleanValue,
+  1958→        topicAt: f.topicAt?.stringValue || '',
+  1959→        dismissed: !!(f.dismissed && f.dismissed.booleanValue)
+  1960→      };
+  1961→    }
+  1962→    function sorted() {
+  1963→      const arr = answeredDocs.slice();
+  1964→      // Pinned questions always float to the top
+  1965→      if (activeSort === 'top') arr.sort((a, b) => {
+  1966→        if (a.pinned && !b.pinned) return -1;
+  1967→        if (!a.pinned && b.pinned) return 1;
+  1968→        return (b.votes - a.votes) || (new Date(b.answeredAt||0) - new Date(a.answeredAt||0));
+  1969→      });
+  1970→      else if (activeSort === 'recent') arr.sort((a, b) => {
+  1971→        if (a.pinned && !b.pinned) return -1;
+  1972→        if (!a.pinned && b.pinned) return 1;
+  1973→        return new Date(b.answeredAt||0) - new Date(a.answeredAt||0);
+  1974→      });
+  1975→      else arr.sort((a, b) => {
+  1976→        if (a.pinned && !b.pinned) return -1;
+  1977→        if (!a.pinned && b.pinned) return 1;
+  1978→        return new Date(a.answeredAt||0) - new Date(b.answeredAt||0);
+  1979→      });
+  1980→      return arr;
+  1981→    }
+  1982→    function amaQuestionCard(q, opts = {}) {
+  1983→      const up = votedSet.has(q.id);
+  1984→      const REACTION_EMOJIS = ['👍', '🔥', '👏', '🤩'];
+  1985→      const reactionHTML = REACTION_EMOJIS.map(emoji => {
+  1986→        const count = (q.reactions && q.reactions[emoji]) || 0;
+  1987→        const reacted = reactedSet.has(q.id + ':' + emoji);
+  1988→        return '<button class="ama-react-btn ' + (reacted ? 'react-active' : '') + '" data-id="' + q.id + '" data-emoji="' + emoji + '">' + emoji + '<span>' + count + '</span></button>';
+  1989→      }).join('');
+  1990→      const activeSpotlight = !!opts.activeSpotlight;
+  1991→      const spotlightBadge = activeSpotlight ? '<span class="ama-spotlight-badge"><span class="material-symbols-outlined ama-spotlight-icon">hotel_class</span>Featured</span>' : '';
+  1992→      const pinBadge = q.pinned ? '<span class="ama-pin-badge"><span class="material-symbols-outlined ama-pin-icon">push_pin</span>Pinned</span>' : '';
+  1993→      const topicBadge = q.topic ? '<span class="ama-topic-badge" title="' + (q.topicManual ? 'Manual topic' : 'Auto topic') + '"><span class="material-symbols-outlined ama-topic-icon">sell</span>' + esc(q.topic) + '</span>' : '';
+  1994→      const badgeRow = (activeSpotlight || q.pinned || q.topic) ? '<div class="ama-badge-row">' + (activeSpotlight ? spotlightBadge : (q.pinned ? pinBadge : '')) + (activeSpotlight && q.pinned ? pinBadge : '') + topicBadge + '</div>' : '';
+  1995→      const reactionEntries = Object.entries(q.reactions || {}).filter(([, v]) => v > 0);
+  1996→      const reactionSummary = reactionEntries.length ? '<div class="ama-reaction-summary">' + reactionEntries.map(([e, c]) => '<span>' + e + ' ' + c + '</span>').join(' ') + '</div>' : '';
+  1997→      return '<div class="ama-q' + (q.pinned ? ' ama-q-pinned' : '') + (activeSpotlight ? ' ama-q-spotlight' : '') + (opts.featured ? ' ama-q-featured-card' : '') + '">' +
+  1998→        badgeRow +
+  1999→        '<div class="ama-q-text">' + esc(q.question) + '</div>' +
+  2000→        '<div class="ama-q-ans">' + esc(q.answer) + '</div>' +
+  2001→        '<div class="ama-q-meta">' +
+  2002→          '<span class="ama-q-meta-name"><span class="material-symbols-outlined ama-q-meta-icon">person</span>' + esc(q.name || 'Anonymous') + '</span>' +
+  2003→          '<span class="ama-q-meta-time"><span class="material-symbols-outlined ama-q-meta-icon">schedule</span>Asked ' + esc(formatAmaTime(q.createdAt)) + '</span>' +
+  2004→          '<span class="ama-q-meta-time ama-q-meta-answered"><span class="material-symbols-outlined ama-q-meta-icon">check_circle</span>Answered ' + esc(formatAmaTime(q.answeredAt)) + '</span>' +
+  2005→          (activeSpotlight && q.spotlightAt ? '<span class="ama-q-meta-time ama-q-meta-spotlight"><span class="material-symbols-outlined ama-q-meta-icon">hotel_class</span>Featured ' + esc(formatAmaTime(q.spotlightAt)) + '</span>' : '') +
+  2006→          (q.editedAt ? '<span class="ama-q-meta-time ama-q-meta-edited"><span class="material-symbols-outlined ama-q-meta-icon">edit</span>Edited ' + esc(formatAmaTime(q.editedAt)) + '</span>' : '') +
+  2007→        '</div>' +
+  2008→        '<div class="ama-q-vote">' +
+  2009→        '<button class="ama-vote-btn ' + (up ? 'voted' : '') + '" data-id="' + q.id + '" data-dir="1" title="Helpful">\u25B2</button>' +
+  2010→        '<span class="ama-vote-count" data-count="' + q.id + '">' + q.votes + '</span>' +
+  2011→        '<button class="ama-vote-btn ' + (up ? 'voted' : '') + '" data-id="' + q.id + '" data-dir="-1" title="Undo">\u25BC</button>' +
+  2012→        '</div>' +
+  2013→        '<div class="ama-q-reactions">' + reactionHTML +
+  2014→          '<button class="ama-share-btn" data-share="' + q.id + '" title="Share this answer" aria-label="Share this answer"><span class="material-symbols-outlined">ios_share</span></button>' +
+  2015→        '</div>' +
+  2016→        reactionSummary +
+  2017→        '</div>';
+  2018→    }
+  2019→
+  2020→    function findAmaDoc(id) {
+  2021→      return answeredDocs.find(d => d.id === id) || null;
+  2022→    }
+  2023→
+  2024→    function wireAmaActions(root) {
+  2025→      if (!root) return;
+  2026→      root.querySelectorAll('.ama-vote-btn').forEach(b => b.addEventListener('click', () => vote(b.dataset.id, +b.dataset.dir)));
+  2027→      root.querySelectorAll('.ama-react-btn').forEach(b => b.addEventListener('click', () => toggleReaction(b.dataset.id, b.dataset.emoji)));
+  2028→      root.querySelectorAll('.ama-share-btn').forEach(b => b.addEventListener('click', () => { const d = findAmaDoc(b.dataset.share); if (d) openShareCard(d); }));
+  2029→    }
+  2030→
+  2031→    /* ── 33. SHAREABLE AMA ANSWER CARDS (canvas-generated OG image) ── */
+  2032→    // Accent hex mirrors the accent picker so shared cards match the site theme.
+  2033→    const SHARE_ACCENTS = { cyan: '#00c8ff', violet: '#8b5cf6', emerald: '#10b981', rose: '#f43f5e', amber: '#f59e0b', blue: '#3b82f6' };
+  2034→    let shareModal = null;
+  2035→
+  2036→    function wrapCanvasText(ctx, text, maxWidth, maxLines) {
+  2037→      const words = String(text || '').split(/\s+/);
+  2038→      const lines = [];
+  2039→      let line = '';
+  2040→      for (let i = 0; i < words.length; i++) {
+  2041→        const test = line ? line + ' ' + words[i] : words[i];
+  2042→        if (ctx.measureText(test).width > maxWidth && line) {
+  2043→          lines.push(line); line = words[i];
+  2044→          if (lines.length === maxLines - 1) break;
+  2045→        } else { line = test; }
+  2046→      }
+  2047→      if (lines.length < maxLines) lines.push(line);
+  2048→      // Ellipsis if truncated.
+  2049→      const used = lines.join(' ').split(/\s+/).length;
+  2050→      if (used < words.length) lines[lines.length - 1] = (lines[lines.length - 1] || '').replace(/\s*\S*$/, '') + '…';
+  2051→      return lines.filter(Boolean);
+  2052→    }
+  2053→
+  2054→    function drawShareCanvas(q) {
+  2055→      const W = 1200, H = 630, dpr = 2;
+  2056→      const canvas = document.createElement('canvas');
+  2057→      canvas.width = W * dpr; canvas.height = H * dpr;
+  2058→      const ctx = canvas.getContext('2d');
+  2059→      ctx.scale(dpr, dpr);
+  2060→      const accentId = localStorage.getItem('accent') || 'cyan';
+  2061→      const accent = SHARE_ACCENTS[accentId] || SHARE_ACCENTS.cyan;
+  2062→
+  2063→      // Background
+  2064→      ctx.fillStyle = '#05050a'; ctx.fillRect(0, 0, W, H);
+  2065→      const grad = ctx.createLinearGradient(0, 0, W, H);
+  2066→      grad.addColorStop(0, 'rgba(0,200,255,0.10)'); grad.addColorStop(1, 'rgba(120,90,255,0.06)');
+  2067→      ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+  2068→      // Accent bar
+  2069→      ctx.fillStyle = accent; ctx.fillRect(0, 0, 12, H);
+  2070→      // Border
+  2071→      ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, W - 2, H - 2);
+  2072→
+  2073→      const PAD = 70;
+  2074→      // Label
+  2075→      ctx.fillStyle = accent;
+  2076→      ctx.font = '600 22px "JetBrains Mono", monospace';
+  2077→      ctx.fillText('ASK  ME  ANYTHING', PAD, 84);
+  2078→
+  2079→      // Question
+  2080→      ctx.fillStyle = '#ffffff';
+  2081→      ctx.font = '800 46px Inter, sans-serif';
+  2082→      const qLines = wrapCanvasText(ctx, q.question, W - PAD * 2, 3);
+  2083→      let y = 150;
+  2084→      qLines.forEach(l => { ctx.fillText(l, PAD, y); y += 58; });
+  2085→
+  2086→      // Divider
+  2087→      y += 6;
+  2088→      ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+  2089→      ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - PAD, y); ctx.stroke();
+  2090→      y += 46;
+  2091→
+  2092→      // Answer
+  2093→      ctx.fillStyle = 'rgba(255,255,255,0.86)';
+  2094→      ctx.font = '400 30px Inter, sans-serif';
+  2095→      const aLines = wrapCanvasText(ctx, q.answer, W - PAD * 2, 6);
+  2096→      aLines.forEach(l => { ctx.fillText(l, PAD, y); y += 42; });
+  2097→
+  2098→      // Footer
+  2099→      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  2100→      ctx.font = '500 24px Inter, sans-serif';
+  2101→      ctx.fillText('— Yatin Sharma', PAD, H - 54);
+  2102→      ctx.textAlign = 'right';
+  2103→      ctx.fillStyle = accent;
+  2104→      ctx.font = '600 22px "JetBrains Mono", monospace';
+  2105→      ctx.fillText('portfolio.yatinsharma.me', W - PAD, H - 54);
+  2106→      ctx.textAlign = 'left';
+  2107→      return canvas;
+  2108→    }
+  2109→
+  2110→    function ensureShareModal() {
+  2111→      if (shareModal) return shareModal;
+  2112→      shareModal = document.createElement('div');
+  2113→      shareModal.className = 'ama-share-modal';
+  2114→      shareModal.hidden = true;
+  2115→      shareModal.innerHTML =
+  2116→        '<div class="ama-share-backdrop"></div>' +
+  2117→        '<div class="ama-share-dialog" role="dialog" aria-modal="true" aria-label="Share answer">' +
+  2118→          '<button class="ama-share-x" aria-label="Close">✕</button>' +
+  2119→          '<div class="ama-share-preview" id="ama-share-preview"></div>' +
+  2120→          '<div class="ama-share-actions">' +
+  2121→            '<button class="ama-share-action" data-act="download"><span class="material-symbols-outlined">download</span>Download</button>' +
+  2122→            '<button class="ama-share-action" data-act="share" hidden><span class="material-symbols-outlined">share</span>Share</button>' +
+  2123→            '<button class="ama-share-action" data-act="copylink"><span class="material-symbols-outlined">link</span>Copy link</button>' +
+  2124→          '</div>' +
+  2125→        '</div>';
+  2126→      document.body.appendChild(shareModal);
+  2127→      const close = () => { shareModal.hidden = true; document.body.style.overflow = ''; };
+  2128→      shareModal.querySelector('.ama-share-x').addEventListener('click', close);
+  2129→      shareModal.querySelector('.ama-share-backdrop').addEventListener('click', close);
+  2130→      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !shareModal.hidden) close(); });
+  2131→      return shareModal;
+  2132→    }
+  2133→
+  2134→    function openShareCard(q) {
+  2135→      const modal = ensureShareModal();
+  2136→      const canvas = drawShareCanvas(q);
+  2137→      const preview = modal.querySelector('#ama-share-preview');
+  2138→      preview.innerHTML = '';
+  2139→      canvas.className = 'ama-share-canvas';
+  2140→      canvas.style.width = '100%'; canvas.style.height = 'auto';
+  2141→      preview.appendChild(canvas);
+  2142→
+  2143→      const link = 'https://portfolio.yatinsharma.me/#ama';
+  2144→      const fileName = 'ama-' + (q.id || 'answer') + '.png';
+  2145→      const shareBtn = modal.querySelector('[data-act="share"]');
+  2146→      const dlBtn = modal.querySelector('[data-act="download"]');
+  2147→      const copyBtn = modal.querySelector('[data-act="copylink"]');
+  2148→
+  2149→      const toBlob = () => new Promise(res => canvas.toBlob(res, 'image/png'));
+  2150→
+  2151→      dlBtn.onclick = async () => {
+  2152→        const blob = await toBlob(); if (!blob) return;
+  2153→        const url = URL.createObjectURL(blob);
+  2154→        const a = document.createElement('a'); a.href = url; a.download = fileName; a.click();
+  2155→        setTimeout(() => URL.revokeObjectURL(url), 1000);
+  2156→      };
+  2157→
+  2158→      // Web Share API (with image file) where supported.
+  2159→      const canShareFiles = !!(navigator.canShare && navigator.share);
+  2160→      shareBtn.hidden = !canShareFiles;
+  2161→      if (canShareFiles) shareBtn.onclick = async () => {
+  2162→        const blob = await toBlob(); if (!blob) return;
+  2163→        const file = new File([blob], fileName, { type: 'image/png' });
+  2164→        try {
+  2165→          if (navigator.canShare({ files: [file] })) {
+  2166→            await navigator.share({ files: [file], title: 'AMA — Yatin Sharma', text: q.question, url: link });
+  2167→          } else {
+  2168→            await navigator.share({ title: 'AMA — Yatin Sharma', text: q.question, url: link });
+  2169→          }
+  2170→        } catch (e) {}
+  2171→      };
+  2172→
+  2173→      copyBtn.onclick = async () => {
+  2174→        try { await navigator.clipboard.writeText(link); copyBtn.classList.add('copied'); const span = copyBtn.querySelector('span:last-child') || copyBtn; setTimeout(() => copyBtn.classList.remove('copied'), 1500); }
+  2175→        catch (e) {}
+  2176→      };
+  2177→
+  2178→      modal.hidden = false;
+  2179→      document.body.style.overflow = 'hidden';
+  2180→    }
+  2181→
+  2182→    function render() {
+  2183→      if (!answeredDocs.length) {
+  2184→        if (listWrap) listWrap.hidden = true;
+  2185→        if (featured) { featured.hidden = true; featured.innerHTML = ''; }
+  2186→        return;
+  2187→      }
+  2188→      if (listWrap) listWrap.hidden = false;
+  2189→      const spotlightCandidates = answeredDocs
+  2190→        .filter(q => q.spotlight && !q.dismissed)
+  2191→        .sort((a, b) => new Date(b.spotlightAt || b.answeredAt || 0) - new Date(a.spotlightAt || a.answeredAt || 0));
+  2192→      const spotlightDoc = spotlightCandidates[0] || null;
+  2193→      const activeSpotlightId = spotlightDoc ? spotlightDoc.id : '';
+  2194→      const searching = !!activeSearch;
+  2195→      if (featured) {
+  2196→        // While searching, fold the featured card into the searchable list so
+  2197→        // matches aren't hidden above the results.
+  2198→        if (spotlightDoc && !searching) {
+  2199→          featured.hidden = false;
+  2200→          featured.innerHTML = amaQuestionCard(spotlightDoc, { featured: true, activeSpotlight: true });
+  2201→          wireAmaActions(featured);
+  2202→        } else {
+  2203→          featured.hidden = true;
+  2204→          featured.innerHTML = '';
+  2205→        }
+  2206→      }
+  2207→      const arr = sorted().filter(q =>
+  2208→        searching ? matchesSearch(q) : !(featured && q.id === activeSpotlightId)
+  2209→      );
+  2210→      const pages = Math.max(1, Math.ceil(arr.length / PER_PAGE));
+  2211→      if (page > pages) page = pages;
+  2212→      const slice = arr.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  2213→      list.innerHTML = slice.length
+  2214→        ? slice.map(q => amaQuestionCard(q, { activeSpotlight: q.id === activeSpotlightId && (searching || !featured) })).join('')
+  2215→        : (searching
+  2216→            ? '<div class="ama-empty-note">No answered questions match “' + esc(activeSearch) + '”.</div>'
+  2217→            : (spotlightDoc ? '<div class="ama-empty-note">No more answered questions yet.</div>' : ''));
+  2218→      renderPager(arr.length ? pages : 1);
+  2219→      wireAmaActions(list);
+  2220→    }
+  2221→    function renderPager(pages) {
+  2222→      if (pages <= 1) { pager.innerHTML = ''; return; }
+  2223→      let html = '';
+  2224→      for (let p = 1; p <= pages; p++) html += `<button class="ama-page ${p===page?'active':''}" data-page="${p}">${p}</button>`;
+  2225→      pager.innerHTML = html;
+  2226→      pager.querySelectorAll('.ama-page').forEach(b => b.addEventListener('click', () => { page = +b.dataset.page; render(); }));
+  2227→    }
+  2228→    function vote(id, dir) {
+  2229→      const up = votedSet.has(id);
+  2230→      let delta;
+  2231→      if (dir === 1) { if (up) return; delta = 1; votedSet.add(id); }
+  2232→      else { if (!up) return; delta = -1; votedSet.delete(id); }
+  2233→      localStorage.setItem('yatin_ama_votes', JSON.stringify([...votedSet]));
+  2234→      const doc = answeredDocs.find(q => q.id === id); if (doc) doc.votes = Math.max(0, doc.votes + delta);
+  2235→      render();
+  2236→      fetch('/api/ama-vote', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, delta }) }).catch(() => {});
+  2237→    }
+  2238→    function toggleReaction(id, emoji) {
+  2239→      const key = id + ':' + emoji;
+  2240→      // Check if already reacted (via Set or UI state as fallback)
+  2241→      const btn = document.querySelector('.ama-react-btn[data-id="' + id + '"][data-emoji="' + emoji + '"]');
+  2242→      const isReacted = reactedSet.has(key) || (btn && btn.classList.contains('react-active'));
+  2243→      
+  2244→      const delta = isReacted ? -1 : 1;
+  2245→      
+  2246→      if (isReacted) {
+  2247→        reactedSet.delete(key);
+  2248→      } else {
+  2249→        reactedSet.add(key);
+  2250→      }
+  2251→      
+  2252→      // Safely save to localStorage
+  2253→      try { localStorage.setItem('yatin_ama_reactions', JSON.stringify([...reactedSet])); } catch (e) {}
+  2254→      
+  2255→      // Update local state
+  2256→      const doc = answeredDocs.find(q => q.id === id);
+  2257→      if (doc) { 
+  2258→        if (!doc.reactions) doc.reactions = {}; 
+  2259→        doc.reactions[emoji] = Math.max(0, (doc.reactions[emoji] || 0) + delta); 
+  2260→      }
+  2261→      
+  2262→      render(); // Re-render to update UI
+  2263→      fetch('/api/reactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, emoji, delta }) }).catch(() => {});
+  2264→    }
+  2265→    function loadAnswered() {
+  2266→      if (!FIREBASE_READY) return;
+  2267→      fetch(queryUrl(), {
+  2268→        method: 'POST', headers: { 'Content-Type': 'application/json' },
+  2269→        body: JSON.stringify({ structuredQuery: {
+  2270→          from: [{ collectionId: COL }],
+  2271→          where: { fieldFilter: { field: { fieldPath: 'answered' }, op: 'EQUAL', value: { booleanValue: true } } },
+  2272→          limit: 200
+  2273→        } })
+  2274→      }).then(r => r.json()).then(data => {
+  2275→        if (data && data.length && data[0].error) {
+  2276→          console.error('Firestore query error:', data[0].error.message);
+  2277→          if (listWrap) { listWrap.hidden = false; list.innerHTML = '<div style="color:#ff6b6b;padding:12px;font-family:monospace;font-size:12px;">Error: ' + esc(data[0].error.message) + '</div>'; }
+  2278→          return;
+  2279→        }
+  2280→        /* Parse docs and filter out dismissed questions.
+  2281→           Dismissed questions have answered=false (bot sets it on dismiss)
+  2282→           but the Firestore query returns answered==true docs only,
+  2283→           so dismissed answered Qs are already excluded by the query.
+  2284→           This .filter is an extra safety net for any edge case. */
+  2285→        answeredDocs = (data || []).filter(d => d.document).map(d => fromDoc(d.document)).filter(q => !q.dismissed);
+  2286→        answeredDocs.sort((a, b) => new Date(b.answeredAt || 0) - new Date(a.answeredAt || 0));
+  2287→        // Publish trimmed answered Q&A so the "Ask my portfolio" chatbot (57) can ground its replies.
+  2288→        window.__amaContext = answeredDocs.filter(q => q.answer).map(q => ({ question: q.question, answer: q.answer }));
+  2289→        render();
+  2290→      }).catch((err) => { console.warn('AMA load failed:', err); });
+  2291→    }
+  2292→    function submit() {
+  2293→      const text = input.value.trim();
+  2294→      if (!text) { status.textContent = 'Please type a question first.'; status.className = 'ama-status err'; return; }
+  2295→      if (todayCount >= CONFIG.amaLimit) { status.textContent = 'Daily limit reached.'; status.className = 'ama-status err'; return; }
+  2296→      const typedName = (nameTouched && nameInput) ? nameInput.value.trim() : '';
+  2297→      // Empty/untouched name should always be anonymous. We intentionally do
+  2298→      // not reuse localStorage or browser-autofilled values here.
+  2299→      const name = (typedName || 'Anonymous').slice(0, 60);
+  2300→      const id = uuid(), createdAt = new Date().toISOString();
+  2301→      const autoTopic = autoTopicForQuestionClient(text, '');
+  2302→      const question = {
+  2303→        id: { stringValue: id }, name: { stringValue: name }, question: { stringValue: text },
+  2304→        answer: { stringValue: '' }, answered: { booleanValue: false },
+  2305→        createdAt: { stringValue: createdAt }, answeredAt: { nullValue: null }, votes: { integerValue: 0 },
+  2306→        pinned: { booleanValue: false }, dismissed: { booleanValue: false },
+  2307→        topic: { stringValue: autoTopic }, topicManual: { booleanValue: false }, topicAt: { stringValue: createdAt }
+  2308→      };
+  2309→      status.textContent = 'Sending…'; status.className = 'ama-status';
+  2310→      const notify = () => fetch('/api/telegram', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, question: text, id, createdAt, topic: autoTopic }) }).catch(() => {});
+  2311→      const afterSubmit = (ok) => {
+  2312→        todayCount++; localStorage.setItem(LIMIT_KEY, JSON.stringify({ date: today, count: todayCount })); countEl.textContent = todayCount; input.value = '';
+  2313→        if (nameInput) nameInput.value = '';
+  2314→        nameTouched = false;
+  2315→        try { localStorage.removeItem('yatin_ama_name'); } catch (e) {}
+  2316→        if (ok) {
+  2317→          status.textContent = '✅ Sent! Yatin will reply soon — check back here.';
+  2318→          if (window.unlockAchievement) window.unlockAchievement('asked', 'Inquisitive Mind', 'Asked a question!');
+  2319→        } else {
+  2320→          status.textContent = 'Could not send. Try again later.';
+  2321→        }
+  2322→        status.className = ok ? 'ama-status ok' : 'ama-status err';
+  2323→        setTimeout(() => { status.textContent = ''; status.className = 'ama-status'; }, 4500);
+  2324→      };
+  2325→      if (FIREBASE_READY) {
+  2326→        const createUrl = `${base()}/${COL}?documentId=${encodeURIComponent(id)}&key=${encodeURIComponent(fb.apiKey)}`;
+  2327→        fetch(createUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: question }) })
+  2328→          .then(r => r.ok).then(ok => { notify(); afterSubmit(ok); }).catch(() => afterSubmit(false));
+  2329→      } else { notify().then(() => afterSubmit(true)).catch(() => afterSubmit(false)); }
+  2330→    }
+  2331→    if (send) send.addEventListener('click', submit);
+  2332→    input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submit(); });
+  2333→    // Sort pills + search box share the same widgets as the AniList section (see Widgets, item 62).
+  2334→    Widgets.bindPills({ container: sortWrap, selector: '.ama-sort-btn', attr: 'sort', onSelect: (v) => { activeSort = v; page = 1; render(); } });
+  2335→    /* Search box — filter answered questions by question, answer, topic or name */
+  2336→    Widgets.bindSearch({ input: searchInput, clear: searchClear, onChange: (v) => { activeSearch = v; page = 1; render(); } });
+  2337→
+  2338→    /* Refresh button — manual reload of answered questions */
+  2339→    const refreshBtn = $('ama-refresh');
+  2340→    if (refreshBtn) refreshBtn.addEventListener('click', () => {
+  2341→      refreshBtn.classList.add('ama-refresh-spin');
+  2342→      loadAnswered();
+  2343→      setTimeout(() => refreshBtn.classList.remove('ama-refresh-spin'), 600);
+  2344→    });
+  2345→
+  2346→    /* Auto-refresh every 60s when AMA section is visible.
+  2347→       Uses IntersectionObserver to pause when off-screen (saves API calls). */
+  2348→    let amaVisible = false;
+  2349→    const amaSection = document.getElementById('ama');
+  2350→    if (amaSection) {
+  2351→      const amaObs = new IntersectionObserver((entries) => {
+  2352→        amaVisible = entries[0].isIntersecting;
+  2353→      }, { threshold: 0 });
+  2354→      amaObs.observe(amaSection);
+  2355→    }
+  2356→    setInterval(() => {
+  2357→      if (amaVisible) loadAnswered();
+  2358→    }, 60000);
+  2359→
+  2360→    loadAnswered();
+  2361→  })();
+  2362→
+  2363→  /* ============================================================
+  2364→     20. FADE-IN OBSERVER + YEAR
+  2365→     ============================================================ */
+  2366→  (function reveal() {
+  2367→    const obs = new IntersectionObserver((entries) => {
+  2368→      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
+  2369→    }, { threshold: 0.1 });
+  2370→    document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
+  2371→    const y = $('year'); if (y) y.textContent = new Date().getFullYear();
+  2372→  })();
+  2373→
+  2374→  /* ============================================================
+  2375→     21. HERO STAGGERED ENTRANCE
+  2376→     Fires once the intro overlay dismisses.
+  2377→     ============================================================ */
+  2378→  (function heroEntrance() {
+  2379→    const hero = document.querySelector('.hero');
+  2380→    if (!hero) return;
+  2381→    function fire() { hero.classList.add('revealed'); }
+  2382→    setTimeout(fire, 400);
+  2383→    if (!document.getElementById('intro-overlay')) fire();
+  2384→  })();
+  2385→
+  2386→  /* ============================================================
+  2387→     22. MAGNETIC BUTTONS
+  2388→     Desktop-only: buttons drift toward the cursor on hover.
+  2389→     ============================================================ */
+  2390→  (function magnetic() {
+  2391→    if (window.matchMedia('(hover: none)').matches) return;
+  2392→    document.querySelectorAll('.magnetic').forEach(btn => {
+  2393→      const strength = 0.3;
+  2394→      btn.addEventListener('mousemove', (e) => {
+  2395→        const r = btn.getBoundingClientRect();
+  2396→        const x = e.clientX - r.left - r.width / 2;
+  2397→        const y = e.clientY - r.top - r.height / 2;
+  2398→        btn.style.transform = 'translate(' + (x * strength) + 'px, ' + (y * strength) + 'px)';
+  2399→      });
+  2400→      btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
+  2401→    });
+  2402→  })();
+  2403→
+  2404→  /* ============================================================
+  2405→     23. HAPTIC FEEDBACK + BLUR-UP IMAGES + SOUND FX
+  2406→     ============================================================ */
+  2407→  window.haptic = function (ms) { try { if (navigator.vibrate) navigator.vibrate(ms || 12); } catch (e) {} };
+  2408→  
+  2409→  // Sound effects
+  2410→  window.sfx = (function () {
+  2411→    let ctx = null, muted = false;
+  2412→    try { muted = localStorage.getItem('pg_muted') === '1'; } catch (e) {}
+  2413→    function play(freq, dur, type) {
+  2414→      if (muted) return;
+  2415→      try {
+  2416→        if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+  2417→        const osc = ctx.createOscillator(); const gain = ctx.createGain();
+  2418→        osc.connect(gain); gain.connect(ctx.destination);
+  2419→        osc.type = type || 'square'; osc.frequency.value = freq;
+  2420→        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+  2421→        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (dur || 0.1));
+  2422→        osc.start(); osc.stop(ctx.currentTime + (dur || 0.1));
+  2423→      } catch (e) {}
+  2424→    }
+  2425→    return { play: play, blip: function () { play(660, 0.05, 'square'); }, crash: function () { play(120, 0.3, 'sawtooth'); }, win: function () { play(523, 0.1); setTimeout(() => play(659, 0.1), 100); setTimeout(() => play(784, 0.2), 200); }, toggle: function () { muted = !muted; try { localStorage.setItem('pg_muted', muted ? '1' : '0'); } catch (e) {} return muted; }, isMuted: function () { return muted; } };
+  2426→  })();
+  2427→
+  2428→  // N. Touch Ripple Effect
+  2429→  (function rippleEffect() {
+  2430→    document.querySelectorAll('a, button, .project-card, .interest-card, .pg-card').forEach(el => {
+  2431→      el.addEventListener('pointerdown', function(e) {
+  2432→        if (e.pointerType === 'mouse') return; // Only for touch
+  2433→        const rect = el.getBoundingClientRect();
+  2434→        const ripple = document.createElement('span');
+  2435→        ripple.className = 'ripple';
+  2436→        const size = Math.max(rect.width, rect.height);
+  2437→        ripple.style.width = ripple.style.height = size + 'px';
+  2438→        ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+  2439→        ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+  2440→        el.style.overflow = 'hidden'; // ensure ripple stays inside
+  2441→        el.appendChild(ripple);
+  2442→        setTimeout(() => ripple.remove(), 600);
+  2443→      });
+  2444→    });
+  2445→  })();
+  2446→
+  2447→  // E. Card Cursor Tracking Glow
+  2448→  (function cardGlow() {
+  2449→    document.querySelectorAll('.glass-card').forEach(card => {
+  2450→      card.addEventListener('mousemove', (e) => {
+  2451→        const rect = card.getBoundingClientRect();
+  2452→        const x = e.clientX - rect.left;
+  2453→        const y = e.clientY - rect.top;
+  2454→        card.style.setProperty('--card-glow', 'color-mix(in srgb, var(--accent-solid) 10%, transparent)');
+  2455→        card.style.setProperty('--mouse-x', x + 'px');
+  2456→        card.style.setProperty('--mouse-y', y + 'px');
+  2457→        // Update the radial gradient position dynamically
+  2458→        card.querySelector('::before'); // force style recalc
+  2459→      });
+  2460→    });
+  2461→  })();
+  2462→
+  2463→  (function blurUp() {
+  2464→    document.querySelectorAll('img.blur-up').forEach(img => {
+  2465→      if (img.complete) img.classList.add('loaded');
+  2466→      else img.addEventListener('load', () => img.classList.add('loaded'), { once: true });
+  2467→    });
+  2468→  })();
+  2469→
+  2470→  /* ============================================================
+  2471→     M. KEYBOARD SHORTCUTS OVERLAY
+  2472→     ============================================================ */
+  2473→  (function shortcuts() {
+  2474→    const overlay = $('shortcut-overlay');
+  2475→    const closeBtn = $('shortcut-close');
+  2476→    if (!overlay || !closeBtn) return;
+  2477→    const toggle = () => overlay.classList.toggle('open');
+  2478→    closeBtn.addEventListener('click', toggle);
+  2479→    overlay.addEventListener('click', (e) => { if (e.target === overlay) toggle(); });
+  2480→    window.addEventListener('keydown', (e) => {
+  2481→      if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+  2482→      const key = e.key.toLowerCase();
+  2483→      if (key === '?') { e.preventDefault(); toggle(); }
+  2484→      else if (key === 't') { document.getElementById('theme-toggle-btn')?.click(); }
+  2485→      else if (key === 'm') { document.getElementById('topbar-music-icon')?.click(); }
+  2486→      else if (key === 'g') { document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' }); }
+  2487→      else if (key === 'p') { document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' }); }
+  2488→      else if (key === 'a') { document.getElementById('ama')?.scrollIntoView({ behavior: 'smooth' }); }
+  2489→      else if (key === 'escape' && overlay.classList.contains('open')) { toggle(); }
+  2490→    });
+  2491→  })();
+  2492→
+  2493→  /* ============================================================
+  2494→     23b. L. ACHIEVEMENTS & Q. AMBIENT SOUNDS
+  2495→     ============================================================ */
+  2496→  const achievementSystem = {
+  2497→    unlocked: new Set(JSON.parse(localStorage.getItem('yatin_achievements') || '[]')),
+  2498→    toastTimeout: null,
+  2499→    unlock: function(id, title, desc) {
+  2500→      if (this.unlocked.has(id)) return;
+  2501→      this.unlocked.add(id);
+  2502→      localStorage.setItem('yatin_achievements', JSON.stringify([...this.unlocked]));
+  2503→      
+  2504→      const toast = document.getElementById('achievement-toast');
+  2505→      const titleEl = document.getElementById('toast-title');
+  2506→      const descEl = document.getElementById('toast-desc');
+  2507→      if (!toast || !titleEl || !descEl) return;
+  2508→      
+  2509→      titleEl.textContent = title;
+  2510→      descEl.textContent = desc;
+  2511→      toast.classList.add('show');
+  2512→      
+  2513→      if (this.toastTimeout) clearTimeout(this.toastTimeout);
+  2514→      this.toastTimeout = setTimeout(() => toast.classList.remove('show'), 4000);
+  2515→    }
+  2516→  };
+  2517→  // Q. Ambient hover sounds (very subtle)
+  2518→  (function ambientSounds() {
+  2519→    let hoverEnabled = false;
+  2520→    // Enable only after first interaction (browser autoplay policy)
+  2521→    document.addEventListener('click', () => { hoverEnabled = true; }, { once: true });
+  2522→    document.querySelectorAll('.tb-icon-btn, .pg-card, .presence-link').forEach(el => {
+  2523→      el.addEventListener('mouseenter', () => {
+  2524→        if (hoverEnabled && window.sfx && !window.sfx.isMuted()) {
+  2525→          window.sfx.play(800, 0.03, 'sine'); // High, quiet blip
+  2526→        }
+  2527→      });
+  2528→    });
+  2529→  })();
+  2530→  window.unlockAchievement = achievementSystem.unlock.bind(achievementSystem);
+  2531→  // Unlock intro achievement
+  2532→  setTimeout(() => { window.unlockAchievement('visitor', 'Welcome!', 'You explored the portfolio.'); }, 5000);
+  2533→
+  2534→  /* ============================================================
+  2535→     57. "ASK MY PORTFOLIO" AI CHATBOT (RAG over profile + AMA)
+  2536→     ============================================================ */
+  2537→  (function portfolioChat() {
+  2538→    const fab = $('pchat-fab'), panel = $('pchat-panel'), closeBtn = $('pchat-close');
+  2539→    const log = $('pchat-log'), form = $('pchat-form'), inputEl = $('pchat-input'), sendBtn = $('pchat-send');
+  2540→    if (!fab || !panel || !form) return;
+  2541→    const history = [];
+  2542→    let busy = false, greeted = false;
+  2543→
+  2544→    function bubble(role, text) {
+  2545→      const el = document.createElement('div');
+  2546→      el.className = 'pchat-msg pchat-' + role;
+  2547→      el.textContent = text;
+  2548→      log.appendChild(el);
+  2549→      log.scrollTop = log.scrollHeight;
+  2550→      return el;
+  2551→    }
+  2552→    function typingBubble() {
+  2553→      const el = document.createElement('div');
+  2554→      el.className = 'pchat-msg pchat-bot pchat-typing';
+  2555→      el.innerHTML = '<span></span><span></span><span></span>';
+  2556→      log.appendChild(el); log.scrollTop = log.scrollHeight;
+  2557→      return el;
+  2558→    }
+  2559→    function open() {
+  2560→      panel.hidden = false;
+  2561→      requestAnimationFrame(() => panel.classList.add('open'));
+  2562→      fab.classList.add('hidden');
+  2563→      if (!greeted) {
+  2564→        greeted = true;
+  2565→        bubble('bot', 'Hi! I can answer questions about Yatin — his projects, skills, and background. What would you like to know?');
+  2566→      }
+  2567→      setTimeout(() => inputEl.focus(), 120);
+  2568→    }
+  2569→    function close() {
+  2570→      panel.classList.remove('open');
+  2571→      fab.classList.remove('hidden');
+  2572→      setTimeout(() => { panel.hidden = true; }, 220);
+  2573→    }
+  2574→    fab.addEventListener('click', open);
+  2575→    closeBtn.addEventListener('click', close);
+  2576→    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !panel.hidden) close(); });
+  2577→
+  2578→    async function ask(message) {
+  2579→      if (busy) return;
+  2580→      busy = true; sendBtn.disabled = true;
+  2581→      bubble('user', message);
+  2582→      history.push({ role: 'user', content: message });
+  2583→      const typing = typingBubble();
+  2584→      try {
+  2585→        const res = await fetch('/api/chat', {
+  2586→          method: 'POST',
+  2587→          headers: { 'Content-Type': 'application/json' },
+  2588→          body: JSON.stringify({ message, history: history.slice(0, -1), ama: window.__amaContext || [] })
+  2589→        });
+  2590→        const data = await res.json().catch(() => ({}));
+  2591→        typing.remove();
+  2592→        const reply = (data && data.reply) || 'Sorry, I couldn’t answer that right now.';
+  2593→        bubble('bot', reply);
+  2594→        history.push({ role: 'assistant', content: reply });
+  2595→      } catch (e) {
+  2596→        typing.remove();
+  2597→        bubble('bot', 'Couldn’t reach the assistant. Please try again in a moment.');
+  2598→      } finally {
+  2599→        busy = false; sendBtn.disabled = false; inputEl.focus();
+  2600→      }
+  2601→    }
+  2602→    form.addEventListener('submit', (e) => {
+  2603→      e.preventDefault();
+  2604→      const msg = inputEl.value.trim();
+  2605→      if (!msg || busy) return;
+  2606→      inputEl.value = '';
+  2607→      ask(msg);
+  2608→    });
+  2609→    if (window.unlockAchievement) fab.addEventListener('click', () => window.unlockAchievement('askbot', 'Curious', 'Opened the portfolio assistant.'), { once: true });
+  2610→  })();
+  2611→
+  2612→  /* ============================================================
+  2613→     61. KONAMI CODE EASTER EGG (↑↑↓↓←→←→ B A → confetti + party mode)
+  2614→     ============================================================ */
+  2615→  (function konami() {
+  2616→    const SEQ = ['arrowup','arrowup','arrowdown','arrowdown','arrowleft','arrowright','arrowleft','arrowright','b','a'];
+  2617→    let pos = 0;
+  2618→    document.addEventListener('keydown', (e) => {
+  2619→      // Ignore while typing in inputs/textareas.
+  2620→      const tag = (e.target && e.target.tagName) || '';
+  2621→      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
+  2622→      const k = e.key.length === 1 ? e.key.toLowerCase() : e.key.toLowerCase();
+  2623→      if (k === SEQ[pos]) {
+  2624→        pos++;
+  2625→        if (pos === SEQ.length) { pos = 0; trigger(); }
+  2626→      } else {
+  2627→        pos = (k === SEQ[0]) ? 1 : 0;
+  2628→      }
+  2629→    });
+  2630→    function trigger() {
+  2631→      window.unlockAchievement('konami', 'Konami Code!', 'You found the secret. Party mode engaged.');
+  2632→      try { if (window.sfx && !window.sfx.isMuted() && window.sfx.win) window.sfx.win(); } catch (e) {}
+  2633→      confetti();
+  2634→      const root = document.documentElement;
+  2635→      root.classList.add('konami-party');
+  2636→      setTimeout(() => root.classList.remove('konami-party'), 6000);
+  2637→    }
+  2638→    function confetti() {
+  2639→      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  2640→      const colors = ['#00c8ff', '#8b5cf6', '#f43f5e', '#f59e0b', '#10b981', '#3b82f6', '#ec4899'];
+  2641→      const layer = document.createElement('div'); layer.className = 'konami-confetti';
+  2642→      document.body.appendChild(layer);
+  2643→      for (let i = 0; i < 120; i++) {
+  2644→        const p = document.createElement('i');
+  2645→        p.style.left = (Math.random() * 100) + 'vw';
+  2646→        p.style.background = colors[i % colors.length];
+  2647→        p.style.animationDelay = (Math.random() * 0.6) + 's';
+  2648→        p.style.animationDuration = (2.4 + Math.random() * 1.8) + 's';
+  2649→        p.style.setProperty('--rot', (Math.random() * 720 - 360) + 'deg');
+  2650→        p.style.setProperty('--drift', (Math.random() * 220 - 110) + 'px');
+  2651→        if (Math.random() > 0.5) p.style.borderRadius = '50%';
+  2652→        layer.appendChild(p);
+  2653→      }
+  2654→      setTimeout(() => layer.remove(), 5400);
+  2655→    }
+  2656→  })();
+  2657→
+  2658→  /* ============================================================
+  2659→     24. CURSOR GLOW + TRAIL
+  2660→     ============================================================ */
+  2661→  (function cursorFX() {
+  2662→    if (window.matchMedia('(hover: none)').matches) return;
+  2663→    const glow = $('cursor-glow');
+  2664→    const canvas = $('cursor-trail'); if (!canvas) return;
+  2665→    const ctx = canvas.getContext('2d');
+  2666→    let dots = [], mx = 0, my = 0;
+  2667→    // Trail colour follows the palette accent (--accent-solid), parsed + cached.
+  2668→    let accentCache = { hex: '', rgb: '0,200,255' };
+  2669→    function accentRGB() {
+  2670→      const hex = (getComputedStyle(document.documentElement).getPropertyValue('--accent-solid') || '').trim();
+  2671→      if (hex && hex !== accentCache.hex) {
+  2672→        const m = hex.replace('#', '');
+  2673→        if (m.length === 6) accentCache = { hex: hex, rgb: parseInt(m.slice(0, 2), 16) + ',' + parseInt(m.slice(2, 4), 16) + ',' + parseInt(m.slice(4, 6), 16) };
+  2674→        else if (m.length === 3) accentCache = { hex: hex, rgb: parseInt(m[0] + m[0], 16) + ',' + parseInt(m[1] + m[1], 16) + ',' + parseInt(m[2] + m[2], 16) };
+  2675→      }
+  2676→      return accentCache.rgb;
+  2677→    }
+  2678→    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  2679→    resize(); window.addEventListener('resize', resize);
+  2680→    window.addEventListener('mousemove', (e) => {
+  2681→      mx = e.clientX; my = e.clientY;
+  2682→      if (glow) { glow.style.left = mx + 'px'; glow.style.top = my + 'px'; }
+  2683→      dots.push({ x: mx, y: my, life: 1 });
+  2684→      if (dots.length > 25) dots.shift();
+  2685→    });
+  2686→    function draw() {
+  2687→      ctx.clearRect(0, 0, canvas.width, canvas.height);
+  2688→      const rgb = accentRGB();
+  2689→      for (let i = 0; i < dots.length; i++) {
+  2690→        const d = dots[i]; d.life -= 0.04;
+  2691→        if (d.life <= 0) continue;
+  2692→        ctx.fillStyle = 'rgba(' + rgb + ',' + (d.life * 0.5) + ')';
+  2693→        ctx.beginPath(); ctx.arc(d.x, d.y, d.life * 4, 0, 7); ctx.fill();
+  2694→      }
+  2695→      dots = dots.filter(d => d.life > 0);
+  2696→      requestAnimationFrame(draw);
+  2697→    }
+  2698→    draw();
+  2699→  })();
+  2700→
+  2701→  /* ============================================================
+  2702→     25. SECTION DIVIDERS
+  2703→     ============================================================ */
+  2704→  (function sectionDividers() {
+  2705→    const sections = document.querySelectorAll('.section, .hero');
+  2706→    const labels = { hero: '00', about: '01', skills: '02', contributions: '03', coding: '04', projects: '05', music: '06', anime: '07', interests: '08', ama: '09', playground: '10', presence: '11' };
+  2707→    for (let i = 1; i < sections.length; i++) {
+  2708→      const prev = sections[i - 1]; const cur = sections[i];
+  2709→      const lbl = labels[cur.id];
+  2710→      if (!lbl) continue;
+  2711→      const div = document.createElement('div');
+  2712→      div.className = 'section-divider fade-in';
+  2713→      div.innerHTML = '<div class="section-divider-line"></div><span class="section-divider-label">' + lbl + ' / ' + (cur.querySelector('.section-title')?.textContent || cur.id) + '</span><div class="section-divider-line"></div>';
+  2714→      cur.parentNode.insertBefore(div, cur);
+  2715→    }
+  2716→    const obs = new IntersectionObserver((entries) => {
+  2717→      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
+  2718→    }, { threshold: 0.3 });
+  2719→    document.querySelectorAll('.section-divider').forEach(d => obs.observe(d));
+  2720→  })();
+  2721→
+  2722→  /* ============================================================
+  2723→     26. GITHUB CONTRIBUTION GRAPH
+  2724→     ============================================================ */
+  2725→  (function contributions() {
+  2726→    const grid = $('contrib-grid'); if (!grid) return;
+  2727→    const totalEl = $('contrib-total');
+  2728→    const streakEl = $('contrib-streak');
+  2729→    const summaryEl = $('contrib-summary');
+  2730→    const monthsEl = $('contrib-months');
+  2731→    const tip = $('contrib-tip');
+  2732→    const scrollEl = $('contrib-scroll');
+  2733→    const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  2734→    const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  2735→
+  2736→    // Build skeleton grid (14 weeks x 7 days)
+  2737→    const sk = $('contrib-skeleton');
+  2738→    if (sk) sk.innerHTML = Array.from({length:14}, () => '<div class="sk-week">' + Array.from({length:7}, () => '<div class="sk-day skeleton"></div>').join('') + '</div>').join('');
+  2739→
+  2740→    function showTip(e) {
+  2741→      const day = e.target.closest('.contrib-day');
+  2742→      if (!day || !tip) return;
+  2743→      const date = day.dataset.date;
+  2744→      const count = parseInt(day.dataset.count || '0');
+  2745→      const dt = new Date(date + 'T00:00:00');
+  2746→      const dayName = DAY_NAMES[dt.getDay()];
+  2747→      const formatted = MONTH_NAMES[dt.getMonth()] + ' ' + dt.getDate() + ', ' + dt.getFullYear();
+  2748→      const countText = count === 0 ? 'No contributions' : count + ' contribution' + (count === 1 ? '' : 's');
+  2749→      tip.innerHTML = '<span class="contrib-tip-date">' + formatted + '  <span class="contrib-tip-day">' + dayName + '</span></span><span class="contrib-tip-count">' + countText + '</span>';
+  2750→      tip.classList.add('visible');
+  2751→      positionTip(e);
+  2752→    }
+  2753→    function moveTip(e) { positionTip(e); }
+  2754→    function hideTip() { if (tip) tip.classList.remove('visible'); }
+  2755→    function positionTip(e) {
+  2756→      if (!tip) return;
+  2757→      const x = e.clientX, y = e.clientY;
+  2758→      const tw = tip.offsetWidth, th = tip.offsetHeight;
+  2759→      const gap = 10;
+  2760→      const below = y + gap + th < window.innerHeight;
+  2761→      const tipX = Math.min(Math.max(gap, x - tw / 2), window.innerWidth - tw - gap);
+  2762→      const tipY = below ? y + gap + 14 : Math.max(gap, y - th - gap);
+  2763→      tip.style.left = tipX + 'px';
+  2764→      tip.style.top = tipY + 'px';
+  2765→    }
+  2766→
+  2767→    fetch('/api/contributions?user=' + CONFIG.githubUser)
+  2768→      .then(r => r.json())
+  2769→      .then(d => {
+  2770→        if (d.error || !d.days) { grid.innerHTML = '<div class="contrib-loading">Could not load (GitHub may be rate-limited).</div>'; return; }
+  2771→
+  2772→        // Total
+  2773→        if (totalEl) totalEl.textContent = (d.total || 0).toLocaleString();
+  2774→
+  2775→        // Streak badge
+  2776→        if (streakEl && d.streaks) {
+  2777→          const s = d.streaks;
+  2778→          streakEl.innerHTML = '<span class="material-symbols-outlined contrib-streak-fire" style="font-size:14px;color:var(--accent)">local_fire_department</span> <span class="contrib-streak-num">' + s.current + '</span><span class="contrib-streak-slash">/</span>' + s.longest + ' day streak';
+  2779→        }
+  2780→
+  2781→        // Summary stats
+  2782→        if (summaryEl) {
+  2783→          const bestDayText = d.bestDay ? esc(d.bestDay.text) + ' · ' + d.bestDay.count : '—';
+  2784→          summaryEl.innerHTML =
+  2785→            '<div class="contrib-stat"><span class="contrib-stat-value">' + (d.thisMonth || 0).toLocaleString() + '</span><span class="contrib-stat-label">this month</span></div>' +
+  2786→            '<div class="contrib-stat"><span class="contrib-stat-value">' + (d.thisWeek || 0).toLocaleString() + '</span><span class="contrib-stat-label">this week</span></div>' +
+  2787→            '<div class="contrib-stat"><span class="contrib-stat-value" style="font-size:13px">' + bestDayText + '</span><span class="contrib-stat-label">best day</span></div>' +
+  2788→            '<div class="contrib-stat"><span class="contrib-stat-value" style="font-size:13px">' + esc(d.busiestMonth || '—') + '</span><span class="contrib-stat-label">busiest month</span></div>';
+  2789→        }
+  2790→
+  2791→        // Find best day date for highlight
+  2792→        const bestDayDate = d.bestDay ? d.bestDay.date : null;
+  2793→
+  2794→        // Group days into weeks (columns)
+  2795→        const weeks = [];
+  2796→        let week = [];
+  2797→        d.days.forEach(day => { week.push(day); if (week.length === 7) { weeks.push(week); week = []; } });
+  2798→        if (week.length) weeks.push(week);
+  2799→
+  2800→        grid.innerHTML = weeks.map(w => '<div class="contrib-week">' + w.map(day => {
+  2801→          const cls = 'contrib-day' + (day.date === bestDayDate ? ' busiest' : '');
+  2802→          return '<div class="' + cls + '" data-level="' + day.level + '" data-date="' + day.date + '" data-count="' + (day.count || 0) + '"></div>';
+  2803→        }).join('') + '</div>').join('');
+  2804→
+  2805→        // Month labels + set widths on scroll container
+  2806→        if (monthsEl && d.monthLabels) {
+  2807→          const colW = 14;
+  2808→          monthsEl.innerHTML = d.monthLabels.map(ml => {
+  2809→            const weekIdx = Math.floor(ml.index / 7);
+  2810→            const left = weekIdx * colW;
+  2811→            return '<span class="contrib-month-label" style="left:' + left + 'px">' + esc(ml.month) + '</span>';
+  2812→          }).join('');
+  2813→          const totalWeeks = weeks.length;
+  2814→          const totalW = totalWeeks * colW;
+  2815→          grid.style.minWidth = totalW + 'px';
+  2816→          monthsEl.style.minWidth = totalW + 'px';
+  2817→        }
+  2818→
+  2819→        // Wire custom tooltip
+  2820→        grid.querySelectorAll('.contrib-day').forEach(day => {
+  2821→          day.addEventListener('mouseenter', showTip);
+  2822→          day.addEventListener('mousemove', moveTip);
+  2823→          day.addEventListener('mouseleave', hideTip);
+  2824→        });
+  2825→      })
+  2826→      .catch(() => { grid.innerHTML = '<div class="contrib-loading">Contribution data unavailable.</div>'; });
+  2827→  })();
+  2828→
+  2829→  /* ============================================================
+  2830→     27. VISITOR COUNTER
+  2831→     ============================================================ */
+  2832→  (function visitorCount() {
+  2833→    const alreadyVisited = localStorage.getItem('yatin_visited');
+  2834→    const method = alreadyVisited ? 'GET' : 'POST';
+  2835→    fetch('/api/visitor', { method })
+  2836→      .then(r => r.json())
+  2837→      .then(d => {
+  2838→        if (!alreadyVisited) localStorage.setItem('yatin_visited', '1');
+  2839→        let badge = document.querySelector('.visitor-badge');
+  2840→        if (!badge) { badge = document.createElement('div'); badge.className = 'visitor-badge'; document.body.appendChild(badge); }
+  2841→        badge.textContent = (d.total || 0).toLocaleString() + ' visits';
+  2842→      })
+  2843→      .catch(() => {});
+  2844→  })();
+  2845→
+  2846→  /* ============================================================
+  2847→     27b. WAKATIME CODING STATS
+  2848→     ============================================================ */
+  2849→  (function wakatime() {
+  2850→    const langsEl = $('wt-languages'); if (!langsEl) return;
+  2851→    const totalEl = $('wt-total');
+  2852→    const dailyEl = $('wt-daily');
+  2853→    const editorsEl = $('wt-editors');
+  2854→    const projectsEl = $('wt-projects');
+  2855→    const heatmapEl = $('wt-heatmap');
+  2856→    const heatmapDaysEl = $('wt-heatmap-days');
+  2857→    const streakEl = $('wt-streak');
+  2858→    const rangeLabelEl = $('wt-range-label');
+  2859→    const rangeSelector = $('wt-range-selector');
+  2860→    const FALLBACK = ['#00c8ff','#7850ff','#00f0b4','#f59e0b','#ef4444','#a855f7','#ec4899','#06b6d4'];
+  2861→    let currentRange = '7d';
+  2862→
+  2863→    const RANGE_LABELS = { '7d': 'last 7 days', '30d': 'last 30 days', '1y': 'last year' };
+  2864→    const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  2865→
+  2866→    function loadWakaTime(range) {
+  2867→      currentRange = range || '7d';
+  2868→      const url = '/api/wakatime' + (currentRange !== '7d' ? '?range=' + currentRange : '');
+  2869→
+  2870→      // Reset to skeleton states
+  2871→      if (totalEl) totalEl.innerHTML = '<span class="skeleton" style="width:80px;height:22px;display:inline-block;border-radius:4px"></span>';
+  2872→      if (dailyEl) dailyEl.innerHTML = '<span class="skeleton" style="width:60px;height:12px;display:inline-block;border-radius:4px"></span>';
+  2873→      if (streakEl) streakEl.innerHTML = '<span class="skeleton" style="width:120px;height:14px;display:inline-block;border-radius:4px"></span>';
+  2874→      if (heatmapEl) heatmapEl.innerHTML = Array.from({length:7}, () => '<div class="wt-heatmap-bar"><div class="skeleton" style="width:100%;height:100%;border-radius:4px"></div></div>').join('');
+  2875→      if (langsEl) langsEl.innerHTML = Array.from({length:4}, () => '<div class="wt-lang"><div class="skeleton" style="width:90px;height:13px;border-radius:4px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="width:80%;height:8px;border-radius:4px;margin-bottom:6px"></div></div><div class="skeleton" style="width:50px;height:11px;border-radius:4px;flex-shrink:0"></div></div>').join('');
+  2876→      if (editorsEl) editorsEl.innerHTML = Array.from({length:2}, () => '<div class="wt-editor"><div class="skeleton" style="width:70px;height:12px;border-radius:4px;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:6px;border-radius:3px"></div><div class="skeleton" style="width:40px;height:12px;border-radius:4px;flex-shrink:0"></div></div>').join('');
+  2877→      if (projectsEl) projectsEl.innerHTML = Array.from({length:3}, () => '<div class="wt-project"><div class="skeleton" style="width:120px;height:12px;border-radius:4px;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:6px;border-radius:3px"></div><div class="skeleton" style="width:50px;height:11px;border-radius:4px;flex-shrink:0"></div></div>').join('');
+  2878→
+  2879→      fetch(url).then(r => r.json()).then(d => {
+  2880→        if (d.error) {
+  2881→          langsEl.innerHTML = '<div class="wt-loading">' + esc(d.error) + '</div>';
+  2882→          return;
+  2883→        }
+  2884→
+  2885→        // Header
+  2886→        if (totalEl) totalEl.textContent = d.total || '—';
+  2887→        if (dailyEl) dailyEl.textContent = 'avg ' + (d.daily || '') + '/day';
+  2888→        if (rangeLabelEl) rangeLabelEl.textContent = RANGE_LABELS[d.range] || RANGE_LABELS['7d'];
+  2889→
+  2890→        // Streak / days active
+  2891→        if (streakEl && d.daysActive) {
+  2892→          streakEl.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px;color:var(--accent)">local_fire_department</span> <span class="wt-streak-count">' + d.daysActive.active + '</span><span class="wt-streak-slash">/</span>' + d.daysActive.total + ' days active';
+  2893→        }
+  2894→
+  2895→        // Daily heatmap
+  2896→        if (heatmapEl && d.dailyData && d.dailyData.length) {
+  2897→          const maxSec = Math.max(...d.dailyData.map(x => x.seconds), 1);
+  2898→          let dayLabels = '';
+  2899→          heatmapEl.innerHTML = d.dailyData.map((day, i) => {
+  2900→            const pct = Math.max(Math.round((day.seconds / maxSec) * 100), 3);
+  2901→            let label = '---';
+  2902→            if (day.date) {
+  2903→              const dt = new Date(day.date);
+  2904→              const dayNum = dt.getDay();
+  2905→              label = (dayNum >= 0 && dayNum <= 6) ? DAY_NAMES[dayNum] : '---';
+  2906→            }
+  2907→            dayLabels += '<span>' + label + '</span>';
+  2908→            return '<div class="wt-heatmap-bar"><div class="wt-heatmap-fill" style="height:' + pct + '%"></div><div class="wt-heatmap-tooltip">' + esc(day.text || label) + ' &middot; ' + esc(day.label || '0m') + '</div></div>';
+  2909→          }).join('');
+  2910→          if (heatmapDaysEl) heatmapDaysEl.innerHTML = dayLabels;
+  2911→        }
+  2912→
+  2913→        // Languages with dots, % labels, official colors
+  2914→        if (d.languages && d.languages.length) {
+  2915→          const maxPct = d.languages[0].percent || 100;
+  2916→          langsEl.innerHTML = d.languages.map((l, i) => {
+  2917→            const w = (l.percent / maxPct * 100);
+  2918→            const c = l.color || FALLBACK[i % FALLBACK.length];
+  2919→            return '<div class="wt-lang"><span class="wt-lang-name"><span class="wt-lang-dot" style="background:' + c + '"></span>' + esc(l.name) + '</span><div class="wt-lang-bar"><div class="wt-lang-fill" style="width:' + w + '%;background:' + c + '"></div></div><span class="wt-lang-pct">' + l.percent + '%</span><span class="wt-lang-time">' + esc(l.time) + '</span></div>';
+  2920→          }).join('');
+  2921→        } else {
+  2922→          langsEl.innerHTML = '<div class="wt-loading">No coding activity in this period.</div>';
+  2923→        }
+  2924→
+  2925→        // Editors with progress bars
+  2926→        if (editorsEl && d.editors && d.editors.length) {
+  2927→          const maxEPct = d.editors[0].percent || 100;
+
+[showing lines 928-2927 of 3137; use offset=2928 with limit to continue reading]
