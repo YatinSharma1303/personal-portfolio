@@ -1212,6 +1212,30 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .skill-panel-title { font-weight: 700; font-size: 16px; }
 .skill-panel-sub { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); }
 .skill-count { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--gray); }
+
+/* Skill toggle button */
+.skill-toggle {
+  display: flex; align-items: center; gap: 6px;
+  margin: 0 auto 0 0; padding: 9px 18px; border-radius: 10px;
+  border: 1px solid var(--border); background: rgba(255,255,255,0.03);
+  color: var(--white); font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s ease;
+}
+.skill-toggle:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent-solid) 8%, transparent); }
+.skill-toggle-text { font-family: var(--mono); letter-spacing: 0.02em; }
+.skill-toggle-icon { font-size: 20px; transition: transform 0.25s ease; }
+.skill-toggle[aria-expanded="true"] .skill-toggle-icon { transform: rotate(180deg); }
+
+/* Collapsible skill body */
+.skill-body {
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease, margin 0.3s ease;
+  opacity: 0; margin-top: 0;
+}
+.skill-body.open {
+  max-height: 2000px; opacity: 1; margin-top: 20px;
+}
+
 .skill-tabs { display: flex; gap: 8px; margin-bottom: 22px; flex-wrap: wrap; }
 .skill-tab {
   font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em;

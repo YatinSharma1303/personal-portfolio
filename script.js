@@ -655,6 +655,7 @@
   ];
   (function skills() {
     const list = $('skill-list'), tabs = $('skill-tabs'); if (!list) return;
+    const toggleBtn = $('skill-toggle'), skillBody = $('skill-body');
     function render(cat) {
       const items = cat === 'ALL' ? SKILLS : SKILLS.filter(s => s.cat === cat);
       $('skill-count').textContent = items.length + ' skills';
@@ -662,6 +663,14 @@
     }
     render('ALL');
     if (tabs) tabs.addEventListener('click', (e) => { const t = e.target.closest('.skill-tab'); if (!t) return; tabs.querySelectorAll('.skill-tab').forEach(b => b.classList.remove('active')); t.classList.add('active'); render(t.dataset.cat); });
+    if (toggleBtn && skillBody) {
+      toggleBtn.addEventListener('click', function () {
+        var expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+        toggleBtn.setAttribute('aria-expanded', String(!expanded));
+        toggleBtn.querySelector('.skill-toggle-text').textContent = expanded ? 'Show Skills' : 'Hide Skills';
+        skillBody.classList.toggle('open', !expanded);
+      });
+    }
   })();
 
   /* ============================================================
