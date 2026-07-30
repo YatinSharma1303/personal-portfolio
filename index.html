@@ -772,15 +772,28 @@
   <!-- ============ ASK-MY-PORTFOLIO AI CHATBOT (57) ============ -->
   <button class="pchat-fab" id="pchat-fab" aria-label="Ask my portfolio" title="Ask my portfolio">
     <span class="material-symbols-outlined">forum</span>
+    <span class="pchat-fab-badge" id="pchat-fab-badge" hidden></span>
   </button>
   <div class="pchat-panel" id="pchat-panel" role="dialog" aria-label="Ask my portfolio" aria-modal="false" hidden>
     <div class="pchat-head">
-      <div class="pchat-title"><span class="pchat-dot"></span> Ask my portfolio</div>
-      <button class="pchat-close" id="pchat-close" aria-label="Close chat">✕</button>
+      <div class="pchat-title"><span class="pchat-dot"></span> Ask my portfolio <span class="pchat-status">AI Powered</span></div>
+      <div class="pchat-head-actions">
+        <button class="pchat-clear" id="pchat-clear" title="Clear chat" aria-label="Clear chat"><span class="material-symbols-outlined">delete_sweep</span></button>
+        <button class="pchat-close" id="pchat-close" aria-label="Close chat">✕</button>
+      </div>
     </div>
-    <div class="pchat-log" id="pchat-log"></div>
+    <div class="pchat-log" id="pchat-log">
+      <div class="pchat-suggestions" id="pchat-suggestions">
+        <button class="pchat-suggest-chip" data-q="What are Yatin's main skills?">What are Yatin's skills?</button>
+        <button class="pchat-suggest-chip" data-q="Tell me about his projects">His projects</button>
+        <button class="pchat-suggest-chip" data-q="What tech stack does he use?">Tech stack</button>
+        <button class="pchat-suggest-chip" data-q="How can I contact Yatin?">Contact info</button>
+      </div>
+    </div>
+    <button class="pchat-scroll-btn" id="pchat-scroll-btn" hidden title="Scroll to bottom" aria-label="Scroll to bottom"><span class="material-symbols-outlined">keyboard_arrow_down</span></button>
     <form class="pchat-form" id="pchat-form">
       <input type="text" class="pchat-input" id="pchat-input" maxlength="1000" placeholder="Ask about Yatin's projects, skills…" autocomplete="off" aria-label="Your question"/>
+      <span class="pchat-char-count" id="pchat-char-count">0/1000</span>
       <button type="submit" class="pchat-send" id="pchat-send" aria-label="Send"><span class="material-symbols-outlined">send</span></button>
     </form>
     <div class="pchat-foot">AI answers may be imperfect — for anything specific, use <a href="#ama">Ask Me Anything</a>.</div>
