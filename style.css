@@ -1459,6 +1459,145 @@ html.light .lastfm-card .skeleton { background: linear-gradient(90deg, rgba(0,0,
 .al-tab.active .al-tab-count { opacity: 0.85; }
 .al-empty { grid-column: 1/-1; text-align: center; color: var(--gray-dim); font-family: var(--mono); font-size: 13px; padding: 20px; }
 
+/* ====== AniList Improvements ====== */
+
+/* #1 Card hover glow */
+.al-item { transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.2s ease; }
+.al-item:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.4), 0 0 20px color-mix(in srgb, var(--accent-solid) 12%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 30%, transparent); }
+
+/* #2 Score badge on cover */
+.al-cover-score {
+  position: absolute; top: 6px; left: 6px; z-index: 3;
+  padding: 2px 7px; border-radius: 6px;
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.al-cover-score.high { color: #34d399; }
+.al-cover-score.mid { color: #f59e0b; }
+.al-cover-score.low { color: #f87171; }
+
+/* #3 Format chip on cover */
+.al-cover-fmt {
+  position: absolute; bottom: 6px; right: 6px; z-index: 3;
+  padding: 2px 7px; border-radius: 5px;
+  font-family: var(--mono); font-size: 9px; font-weight: 600;
+  background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);
+  color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 0.04em;
+}
+
+/* #4 Status indicator strip */
+.al-item[data-status="CURRENT"] { border-left: 3px solid #34d399; }
+.al-item[data-status="REPEATING"] { border-left: 3px solid #a78bfa; }
+.al-item[data-status="COMPLETED"] { border-left: 3px solid #3b82f6; }
+.al-item[data-status="PLANNING"] { border-left: 3px solid #f59e0b; }
+.al-item[data-status="PAUSED"] { border-left: 3px solid #fb923c; }
+.al-item[data-status="DROPPED"] { border-left: 3px solid #f87171; }
+
+/* #5 Skeleton shimmer (reuse Last.fm pattern) */
+.anilist-card .skeleton { background: linear-gradient(90deg, var(--border) 25%, rgba(255,255,255,0.06) 50%, var(--border) 75%) !important; background-size: 200px 100% !important; animation: lfmShimmer 1.5s ease-in-out infinite !important; }
+html.light .anilist-card .skeleton { background: linear-gradient(90deg, rgba(0,0,0,0.06) 25%, rgba(0,0,0,0.02) 50%, rgba(0,0,0,0.06) 75%) !important; background-size: 200px 100% !important; animation: lfmShimmer 1.5s ease-in-out infinite !important; }
+
+/* #15 Card entrance stagger animation */
+@keyframes alCardIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.al-item { animation: alCardIn 0.35s ease both; }
+
+/* #16 Banner progress bar */
+.al-banner-progress-bar {
+  height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px;
+  margin-top: 6px; overflow: hidden;
+}
+.al-banner-progress-fill {
+  height: 100%; border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* #17 Empty state with icon */
+.al-empty-icon { font-size: 32px; margin-bottom: 8px; opacity: 0.4; display: block; }
+.al-empty-text { color: var(--gray-dim); font-family: var(--mono); font-size: 13px; }
+
+/* #19 Refresh spinner (reuses ama-refresh-spin already in handler) */
+
+/* #20 Online status dot */
+.al-online-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  background: #34d399; box-shadow: 0 0 8px #34d399;
+  animation: alDotPulse 2s ease-in-out infinite;
+}
+@keyframes alDotPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(0.85); } }
+
+/* #12 Score toggle button */
+.al-score-toggle {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 10px; border-radius: var(--radius-btn);
+  border: 1px solid var(--border); background: rgba(255,255,255,0.03);
+  color: var(--gray-dim); font-family: var(--mono); font-size: 10px;
+  cursor: pointer; transition: border-color 0.15s ease, color 0.15s ease;
+}
+.al-score-toggle:hover { border-color: var(--accent); color: var(--white); }
+.al-score-toggle .material-symbols-outlined { font-size: 14px; }
+
+/* #13 View mode toggle */
+.al-view-toggle {
+  display: inline-flex; gap: 2px; padding: 2px; border-radius: 8px;
+  border: 1px solid var(--border); background: rgba(255,255,255,0.02);
+}
+.al-view-btn {
+  width: 28px; height: 28px; border-radius: 6px; border: none;
+  background: transparent; color: var(--gray-dim); cursor: pointer;
+  display: grid; place-items: center; transition: all 0.15s ease;
+}
+.al-view-btn .material-symbols-outlined { font-size: 16px; }
+.al-view-btn:hover { color: var(--white); }
+.al-view-btn.active { background: var(--white); color: #000; }
+
+/* #13 Compact list view */
+.al-list.list-view { grid-template-columns: 1fr; gap: 6px; }
+.al-list.list-view .al-item {
+  display: flex; gap: 12px; padding: 8px 12px; border-radius: 12px;
+  border-left: 3px solid transparent;
+}
+.al-list.list-view .al-item-cover { width: 40px; height: 54px; border-radius: 6px; flex-shrink: 0; }
+.al-list.list-view .al-item-cover img { aspect-ratio: auto; height: 100%; width: 100%; object-fit: cover; }
+.al-list.list-view .al-item-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.al-list.list-view .al-item-name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.al-list.list-view .al-item-overlay,
+.al-list.list-view .al-fav,
+.al-list.list-view .al-cover-score,
+.al-list.list-view .al-cover-fmt { display: none !important; }
+
+/* #14 Per-page control */
+.al-perpage {
+  display: flex; align-items: center; gap: 4px;
+  font-family: var(--mono); font-size: 10px; color: var(--gray-dim);
+}
+.al-perpage-btn {
+  padding: 4px 8px; border-radius: 6px;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--gray-dim); font-family: var(--mono); font-size: 10px;
+  cursor: pointer; transition: all 0.15s ease;
+}
+.al-perpage-btn:hover { border-color: var(--border-hover); }
+.al-perpage-btn.active { background: var(--white); color: #000; border-color: var(--white); }
+
+/* #18 Search highlight */
+mark.al-hl { background: color-mix(in srgb, var(--accent-solid) 25%, transparent); color: var(--white); border-radius: 2px; padding: 0 1px; }
+
+/* Light-mode additions for new elements */
+html.light .al-cover-score, html.light .al-cover-fmt { background: rgba(255,255,255,0.85); color: var(--gray); border-color: rgba(0,0,0,0.1); }
+html.light .al-cover-score.high { color: #059669; }
+html.light .al-cover-score.mid { color: #d97706; }
+html.light .al-cover-score.low { color: #dc2626; }
+html.light .al-score-toggle { border-color: var(--border); color: var(--gray-dim); }
+html.light .al-score-toggle:hover { border-color: var(--accent); }
+html.light .al-view-btn.active { background: var(--white); color: #fff; }
+html.light .al-perpage-btn.active { background: var(--white); color: #fff; border-color: var(--white); }
+mark.al-hl { background: rgba(0,120,255,0.2); }
+
 /* ============ INTERESTS ============ */
 .interests-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
 .interest-card {

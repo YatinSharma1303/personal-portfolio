@@ -1111,10 +1111,12 @@
     let activeMedia = 'ANIME';
     let allEntries = [], activeStatus = 'ALL', page = 1;
     let activeSort = 'updated', activeGenre = '', activeSearch = '';
+    let showMeanScore = false;
+    let listView = false;
+    let PER_PAGE = 12;
     const favSets = { ANIME: new Set(), MANGA: new Set() };
     const statsByMedia = { ANIME: null, MANGA: null };
     let favSet = favSets.ANIME, statsData = null;
-    const PER_PAGE = 6;
     const card = list.parentElement;
     let statsPanel = null, controlsBar = null, genreBar = null, pagerEl = null, mediaBar = null;
     let bannerTimer = null, bannerIdx = 0;
@@ -1145,6 +1147,12 @@
       if (mean >= 60) return 'al-score-mid';
       return 'al-score-low';
     }
+    function highlightMatch(text, query) {
+      if (!query) return text;
+      var i = text.toLowerCase().indexOf(query.toLowerCase());
+      if (i === -1) return text;
+      return text.slice(0, i) + '<mark class="al-hl">' + text.slice(i, i + query.length) + '</mark>' + text.slice(i + query.length);
+    }
 
     // 36. Wire the Anime/Manga switcher and keep status-tab labels in sync.
     function updateTabLabels() {
@@ -1169,6 +1177,7 @@
         });
         switchMedia(m);
       });
+      mediaBar.addEventListener('keydown', function (e) { var bs = Array.from(mediaBar.querySelectorAll('.al-media-btn')); var i = bs.indexOf(document.activeElement); if (i === -1) return; if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); var n = e.key === 'ArrowRight' ? (i+1)%bs.length : (i-1+bs.length)%bs.length; bs[n].focus(); bs[n].click(); } });
     }
 
     function ensureChrome() {
@@ -1190,11 +1199,17 @@
             '<button class="al-sort-btn" data-sort="score">Score</button>' +
             '<button class="al-sort-btn" data-sort="title">Title</button>' +
             '<button class="al-sort-btn" data-sort="progress">Progress</button>' +
-          '</div>';
+          '</div>' +
+          '<button class="al-score-toggle" id="al-score-toggle" title="Toggle score"><span class="material-symbols-outlined">swap_horiz</span>Score</button>' +
+          '<div class="al-view-toggle" id="al-view-toggle"><button class="al-view-btn active" data-view="grid" title="Grid"><span class="material-symbols-outlined">grid_view</span></button><button class="al-view-btn" data-view="list" title="List"><span class="material-symbols-outlined">view_list</span></button></div>' +
+          '<div class="al-perpage" id="al-perpage">Per page:<button class="al-perpage-btn" data-pp="6">6</button><button class="al-perpage-btn active" data-pp="12">12</button><button class="al-perpage-btn" data-pp="24">24</button><button class="al-perpage-btn" data-pp="48">48</button></div>';
         list.parentNode.insertBefore(controlsBar, list);
         const si = controlsBar.querySelector('#al-search'), sc = controlsBar.querySelector('#al-search-clear');
         Widgets.bindSearch({ input: si, clear: sc, onChange: (v) => { activeSearch = v; page = 1; render(); } });
         Widgets.bindPills({ container: controlsBar.querySelector('#al-sort'), selector: '.al-sort-btn', attr: 'sort', onSelect: (v) => { activeSort = v; page = 1; render(); } });
+        var scoreTgl = controlsBar.querySelector('#al-score-toggle'); if (scoreTgl) scoreTgl.addEventListener('click', function () { showMeanScore = !showMeanScore; this.classList.toggle('active', showMeanScore); render(); });
+        var viewTgl = controlsBar.querySelector('#al-view-toggle'); if (viewTgl) viewTgl.addEventListener('click', function (ev) { var b = ev.target.closest('.al-view-btn'); if (!b) return; listView = b.dataset.view === 'list'; list.classList.toggle('list-view', listView); viewTgl.querySelectorAll('.al-view-btn').forEach(function(x){x.classList.toggle('active',x===b);}); });
+        var ppC = controlsBar.querySelector('#al-perpage'); if (ppC) ppC.addEventListener('click', function (ev) { var b = ev.target.closest('.al-perpage-btn'); if (!b) return; PER_PAGE = parseInt(b.dataset.pp) || 12; page = 1; ppC.querySelectorAll('.al-perpage-btn').forEach(function(x){x.classList.toggle('active',x===b);}); render(); });
       }
       if (!genreBar) {
         genreBar = document.createElement('div');
@@ -1396,7 +1411,9 @@
       const total = totalUnits(item.media);
       const progress = item.progress ? item.progress + (total ? '/' + total : '') + ' ' + unitShort() + (isOngoing ? ' ' + verbPast() : '') : (statusRaw === 'COMPLETED' ? 'completed' : '');
       const score = item.score ? ' · ★ ' + item.score : '';
-      return (img ? '<img class="al-banner-img" alt="' + esc(t) + '" src="' + img + '">' : '') + '<div class="al-banner-info"><div class="al-banner-label" data-status="' + statusRaw.toLowerCase() + '">' + label + '</div><div class="al-banner-title">' + esc(t) + '</div><div class="al-banner-progress">' + esc(progress + score) + '</div></div>';
+      var bPct = (total && prog) ? Math.min(100, Math.round(prog / total * 100)) : (statusRaw === 'COMPLETED' ? 100 : 0);
+      var bBar = (bPct > 0 && bPct < 100) ? '<div class="al-banner-progress-bar"><div class="al-banner-progress-fill" style="width:' + bPct + '%"></div></div>' : '';
+      return (img ? '<img class="al-banner-img" alt="' + esc(t) + '" src="' + img + '">' : '') + '<div class="al-banner-info"><div class="al-banner-label" data-status="' + statusRaw.toLowerCase() + '">' + label + '</div><div class="al-banner-title">' + esc(t) + '</div><div class="al-banner-progress">' + esc(progress + score) + '</div>' + bBar + '</div>';
     }
     function bannerDots(rotation, activeI) {
       if (rotation.length <= 1) return '';
@@ -1444,6 +1461,7 @@
     }
     function render() {
       ensureChrome();
+      list.classList.toggle('list-view', listView);
       let arr = allEntries.slice();
       if (activeStatus !== 'ALL') arr = arr.filter(e => String(e._status || '').toUpperCase() === activeStatus);
       if (activeGenre) arr = arr.filter(e => ((e.media && e.media.genres) || []).indexOf(activeGenre) >= 0);
@@ -1460,11 +1478,11 @@
       if (page > pages) page = pages;
       const slice = arr.slice((page - 1) * PER_PAGE, page * PER_PAGE);
       if (!slice.length) {
-        list.innerHTML = '<div class="al-empty">No ' + (isManga() ? 'manga' : 'anime') + ' found' + (activeSearch ? ' for “' + esc(activeSearch) + '”' : '') + '.</div>';
+        list.innerHTML = '<div class="al-empty"><span class="al-empty-icon material-symbols-outlined">' + (activeSearch ? 'search' : activeStatus === 'DROPPED' ? 'sentiment_satisfied' : 'movie') + '</span><div class="al-empty-text">' + (activeSearch ? 'No results found' : activeStatus === 'DROPPED' ? 'Nothing dropped yet!' : 'Nothing here yet') + '</div></div>';
         renderPager(pages);
         return;
       }
-      list.innerHTML = slice.map(e => {
+      list.innerHTML = slice.map((e, idx) => {
         const m = e.media || {};
         const t = (m.title && (m.title.romaji || m.title.english)) || '—';
         const img = (m.coverImage && (m.coverImage.extraLarge || m.coverImage.large || m.coverImage.medium)) || '';
@@ -1475,7 +1493,8 @@
         const userScore = e.score ? '★ ' + e.score : '';
         const mean = m.meanScore || 0;
         const meanText = mean ? 'avg ' + (mean / 10).toFixed(1) : '';
-        const scoreLine = [progText, userScore, meanText].filter(Boolean).join(' · ');
+        var displayScore = showMeanScore ? (mean ? 'avg ★ ' + (mean / 10).toFixed(1) : '') : userScore;
+        const scoreLine = [progText, displayScore, showMeanScore ? '' : meanText].filter(Boolean).join(' · ');
         const pct = eps ? Math.min(100, Math.round(prog / eps * 100)) : (st === 'COMPLETED' ? 100 : 0);
         const showBar = (eps && prog) || st === 'COMPLETED';
         const isFav = favSet.has(m.id);
@@ -1488,14 +1507,21 @@
             (genres.length ? '<div class="al-ov-genres">' + genres.map(g => '<span>' + esc(g) + '</span>').join('') + '</div>' : '') +
             (desc ? '<div class="al-ov-desc">' + desc + '…</div>' : '') +
           '</div>' : '';
-        return '<div class="al-item">' +
+        var scoreBadge = '';
+        if (mean) { var sc = mean >= 75 ? 'high' : mean >= 60 ? 'mid' : 'low'; var sv = showMeanScore ? (mean / 10).toFixed(1) : (e.score || (mean / 10).toFixed(1)); scoreBadge = '<span class="al-cover-score ' + sc + '">★ ' + sv + '</span>'; }
+        var fmtChip = fmt ? '<span class="al-cover-fmt">' + esc(fmt) + '</span>' : '';
+        var stAttr = ' data-status="' + st + '"';
+        var nameHtml = activeSearch ? highlightMatch(esc(t), activeSearch) : esc(t);
+        var delay = idx * 0.04;
+        return '<div class="al-item"' + stAttr + ' style="animation-delay:' + delay + 's">' +
           '<div class="al-item-cover">' +
             (img ? '<img src="' + img + '" alt="' + esc(t) + '" loading="lazy">' : '') +
+            scoreBadge + fmtChip +
             (isFav ? '<span class="al-fav" title="Favourite">♥</span>' : '') +
             overlay +
           '</div>' +
           '<div class="al-item-info">' +
-            '<div class="al-item-name">' + esc(t) + '</div>' +
+            '<div class="al-item-name">' + nameHtml + '</div>' +
             '<div class="al-item-score ' + scoreClass(mean) + '">' + esc(scoreLine) + '</div>' +
             (showBar ? '<div class="al-item-bar"><i style="width:' + pct + '%"></i></div>' : '') +
           '</div>' +
@@ -1520,6 +1546,7 @@
       tabs.querySelectorAll('.al-tab').forEach(b => b.classList.remove('active'));
       t.classList.add('active'); activeStatus = t.dataset.status; page = 1; render();
     });
+    if (tabs) tabs.addEventListener('keydown', function (e) { var bs = Array.from(tabs.querySelectorAll('.al-tab')); var i = bs.indexOf(document.activeElement); if (i === -1) return; if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); var n = e.key === 'ArrowRight' ? (i+1)%bs.length : (i-1+bs.length)%bs.length; bs[n].focus(); bs[n].click(); } });
   })();
 
   /* ============================================================
