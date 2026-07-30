@@ -1836,9 +1836,15 @@
     const input = $('ama-input'), send = $('ama-send'), status = $('ama-status'),
           countEl = $('ama-count'), listWrap = $('ama-list-wrap'),
           list = $('ama-list'), sortWrap = $('ama-sort'), pager = $('ama-pager'), featured = $('ama-featured'),
-          searchInput = $('ama-search'), searchClear = $('ama-search-clear'),
-          charCountEl = $('ama-char-count'), counterFill = $('ama-counter-fill');
+          searchInput = $('ama-search'), searchClear = $('ama-search-clear');
     if (!input) return;
+    if (send) send.disabled = true;
+
+    const LIMIT_KEY = 'yatin_ama_submits';
+    const today = new Date().toDateString();
+    let todayCount = 0;
+    try { const stored = JSON.parse(localStorage.getItem(LIMIT_KEY) || '{}'); todayCount = stored.date === today ? stored.count : 0; } catch (e) {}
+    countEl.textContent = todayCount;
 
     const nameInput = $('ama-name-input');
     let nameTouched = false;
@@ -1849,6 +1855,31 @@
       nameInput.addEventListener('input', () => { nameTouched = true; });
     }
 
+    const counterFill = $('ama-counter-fill');
+
+    // Character counter & send button state — set up immediately
+    const MAX_CHARS = 280;
+    function updateCharCount() {
+      const len = input.value.length;
+      const charSpan = document.querySelector('#ama .ama-char-count');
+      if (charSpan) {
+        charSpan.classList.remove('warn', 'limit');
+        if (len > 250) charSpan.classList.add(len >= MAX_CHARS ? 'limit' : 'warn');
+      }
+      const numSpan = document.getElementById('ama-char-count');
+      if (numSpan) numSpan.textContent = len;
+      if (send) send.disabled = len === 0;
+      // Update counter bar
+      if (counterFill) {
+        const pct = Math.min(100, (todayCount / 20) * 100);
+        counterFill.style.width = pct + '%';
+        counterFill.classList.toggle('warn', pct >= 75);
+      }
+    }
+    input.addEventListener('input', updateCharCount);
+    input.addEventListener('keydown', updateCharCount);
+    updateCharCount();
+
     const fb = CONFIG.firebase;
     const FIREBASE_READY = fb && fb.apiKey && fb.projectId &&
       fb.apiKey !== 'YOUR_FIREBASE_WEB_API_KEY' && fb.projectId !== 'YOUR_FIREBASE_PROJECT_ID';
@@ -1857,36 +1888,6 @@
     const queryUrl = () => `${base()}:runQuery?key=${encodeURIComponent(fb.apiKey)}`;
     const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : ('q_' + Date.now() + '_' + Math.random().toString(16).slice(2)));
     const PER_PAGE = 4;
-
-    const LIMIT_KEY = 'yatin_ama_submits';
-    const today = new Date().toDateString();
-    let todayCount = 0;
-    try { const stored = JSON.parse(localStorage.getItem(LIMIT_KEY) || '{}'); todayCount = stored.date === today ? stored.count : 0; } catch (e) {}
-    countEl.textContent = todayCount;
-    function updateCounterBar() {
-      if (counterFill) {
-        const pct = Math.min(100, (todayCount / 20) * 100);
-        counterFill.style.width = pct + '%';
-        counterFill.classList.toggle('warn', pct >= 75);
-      }
-    }
-    updateCounterBar();
-
-    // Character counter & send button state
-    const MAX_CHARS = 280;
-    function updateCharCount() {
-      const len = input.value.length;
-      if (charCountEl) charCountEl.textContent = len;
-      const charWrap = input.closest('.ama-textarea-wrap');
-      const charSpan = charWrap ? charWrap.querySelector('.ama-char-count') : null;
-      if (charSpan) {
-        charSpan.classList.remove('warn', 'limit');
-        if (len > 250) charSpan.classList.add(len >= MAX_CHARS ? 'limit' : 'warn');
-      }
-      if (send) send.disabled = len === 0;
-    }
-    input.addEventListener('input', updateCharCount);
-    updateCharCount();
 
     let votedSet = new Set();
     try { votedSet = new Set(JSON.parse(localStorage.getItem('yatin_ama_votes') || '[]')); } catch (e) {}
@@ -2324,7 +2325,7 @@
       const notify = () => fetch('/api/telegram', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, question: text, id, createdAt, topic: autoTopic }) }).catch(() => {});
       const afterSubmit = (ok) => {
         todayCount++; localStorage.setItem(LIMIT_KEY, JSON.stringify({ date: today, count: todayCount })); countEl.textContent = todayCount; input.value = '';
-        updateCounterBar();
+        updateCharCount();
         if (nameInput) nameInput.value = '';
         nameTouched = false;
         try { localStorage.removeItem('yatin_ama_name'); } catch (e) {}
