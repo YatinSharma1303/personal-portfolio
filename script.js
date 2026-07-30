@@ -1325,7 +1325,7 @@
       let count, mean, genres, numbers;
       if (isManga()) {
         let chapters, volumes;
-        if (statsData) {
+        if (statsData && (statsData.count || statsData.chaptersRead)) {
           count = statsData.count || 0; chapters = statsData.chaptersRead || 0;
           volumes = statsData.volumesRead || 0; mean = statsData.meanScore || 0;
           genres = (statsData.genres || []).slice();
@@ -1349,7 +1349,7 @@
         '</div>';
       } else {
         let eps, mins;
-        if (statsData) {
+        if (statsData && (statsData.count || statsData.episodesWatched)) {
           count = statsData.count || 0; eps = statsData.episodesWatched || 0;
           mins = statsData.minutesWatched || 0; mean = statsData.meanScore || 0;
           genres = (statsData.genres || []).slice();
