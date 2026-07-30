@@ -1,0 +1,1757 @@
+  1420→@media (max-width: 820px) { .lfm-columns { grid-template-columns: 1fr; } }
+  1421→
+  1422→/* ============ ANILIST ============ */
+  1423→.anilist-card { padding: 32px; }
+  1424→.al-head { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+  1425→.al-avatar { width: 52px; height: 52px; border-radius: 50%; border: 2px solid var(--border); }
+  1426→.al-title { font-weight: 800; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+  1427→.al-sub { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); }
+  1428→.al-link { font-size: 12px; color: var(--accent); margin-left: auto; }
+  1429→.al-refresh-btn { margin-left: 8px; }
+  1430→.al-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  1431→.al-tab { font-family: var(--mono); font-size: 11px; padding: 7px 14px; border-radius: var(--radius-btn); border: 1px solid var(--border); color: var(--gray-dim); }
+  1432→.al-tab.active { background: var(--white); color: #000; border-color: var(--white); }
+  1433→.al-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
+  1434→.al-item { border-radius: 14px; overflow: hidden; border: 1px solid var(--border); transition: transform 0.2s ease; }
+  1435→.al-item:hover { transform: translateY(-3px); }
+  1436→.al-item img { width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block; }
+  1437→.al-item-cover { position: relative; overflow: hidden; }
+  1438→.al-fav { position: absolute; top: 6px; right: 6px; z-index: 2; color: #ff5c8a; font-size: 13px; background: rgba(0,0,0,0.55); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  1439→.al-item-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(6,8,14,0.97) 28%, rgba(6,8,14,0.55)); opacity: 0; transition: opacity 0.2s ease; padding: 10px; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; }
+  1440→.al-item:hover .al-item-overlay, .al-item:focus-within .al-item-overlay { opacity: 1; }
+  1441→.al-ov-fmt { font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em; color: var(--accent); }
+  1442→.al-ov-genres { display: flex; flex-wrap: wrap; gap: 4px; }
+  1443→.al-ov-genres span { font-family: var(--mono); font-size: 9px; padding: 2px 6px; border-radius: 6px; background: rgba(255,255,255,0.14); color: #fff; }
+  1444→.al-ov-desc { font-size: 10px; line-height: 1.4; color: rgba(255,255,255,0.85); }
+  1445→.al-item-info { padding: 8px 10px; }
+  1446→.al-item-name { font-size: 12px; font-weight: 600; line-height: 1.3; }
+  1447→.al-item-score { font-family: var(--mono); font-size: 10px; color: var(--gray-dim); }
+  1448→.al-item-score.al-score-high { color: #34d399; }
+  1449→.al-item-score.al-score-mid { color: #f59e0b; }
+  1450→.al-item-score.al-score-low { color: #f87171; }
+  1451→.al-item-bar { position: relative; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.07); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04); margin-top: 8px; }
+  1452→.al-item-bar i { position: relative; display: block; height: 100%; min-width: 5px; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent2)); box-shadow: 0 0 8px color-mix(in srgb, var(--accent-solid) 45%, transparent); transition: width 0.5s cubic-bezier(.22,1,.36,1); }
+  1453→/* Glowing playhead dot with a gentle, GPU-composited pulse (transform only,
+  1454→   so it stays perfectly smooth). No traveling shimmer — that repainted every
+  1455→   frame across the whole list and looked choppy. */
+  1456→.al-item-bar i::after { content: ''; position: absolute; right: 0; top: 50%; width: 8px; height: 8px; border-radius: 50%; background: #fff; box-shadow: 0 0 7px var(--accent-solid), 0 0 2px #fff; transform: translate(50%, -50%); animation: al-dot-pulse 1.8s ease-in-out infinite; }
+  1457→@keyframes al-dot-pulse { 0%, 100% { transform: translate(50%, -50%) scale(1); } 50% { transform: translate(50%, -50%) scale(1.32); } }
+  1458→.al-tab-count { margin-left: 6px; opacity: 0.6; font-size: 10px; }
+  1459→.al-tab.active .al-tab-count { opacity: 0.85; }
+  1460→.al-empty { grid-column: 1/-1; text-align: center; color: var(--gray-dim); font-family: var(--mono); font-size: 13px; padding: 20px; }
+  1461→
+  1462→/* ====== AniList Improvements ====== */
+  1463→
+  1464→/* #1 Card hover glow */
+  1465→.al-item { transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.2s ease; }
+  1466→.al-item:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.4), 0 0 20px color-mix(in srgb, var(--accent-solid) 12%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 30%, transparent); }
+  1467→
+  1468→/* #2 Score badge on cover */
+  1469→.al-cover-score {
+  1470→  position: absolute; top: 6px; left: 6px; z-index: 3;
+  1471→  padding: 2px 7px; border-radius: 6px;
+  1472→  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  1473→  background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+  1474→  border: 1px solid rgba(255,255,255,0.1);
+  1475→}
+  1476→.al-cover-score.high { color: #34d399; }
+  1477→.al-cover-score.mid { color: #f59e0b; }
+  1478→.al-cover-score.low { color: #f87171; }
+  1479→
+  1480→/* #3 Format chip on cover */
+  1481→.al-cover-fmt {
+  1482→  position: absolute; bottom: 6px; right: 6px; z-index: 3;
+  1483→  padding: 2px 7px; border-radius: 5px;
+  1484→  font-family: var(--mono); font-size: 9px; font-weight: 600;
+  1485→  background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);
+  1486→  color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 0.04em;
+  1487→}
+  1488→
+  1489→/* #4 Status indicator strip */
+  1490→.al-item[data-status="CURRENT"] { border-left: 3px solid #34d399; }
+  1491→.al-item[data-status="REPEATING"] { border-left: 3px solid #a78bfa; }
+  1492→.al-item[data-status="COMPLETED"] { border-left: 3px solid #3b82f6; }
+  1493→.al-item[data-status="PLANNING"] { border-left: 3px solid #f59e0b; }
+  1494→.al-item[data-status="PAUSED"] { border-left: 3px solid #fb923c; }
+  1495→.al-item[data-status="DROPPED"] { border-left: 3px solid #f87171; }
+  1496→
+  1497→/* #5 Skeleton shimmer (reuse Last.fm pattern) */
+  1498→.anilist-card .skeleton { background: linear-gradient(90deg, var(--border) 25%, rgba(255,255,255,0.06) 50%, var(--border) 75%) !important; background-size: 200px 100% !important; animation: lfmShimmer 1.5s ease-in-out infinite !important; }
+  1499→html.light .anilist-card .skeleton { background: linear-gradient(90deg, rgba(0,0,0,0.06) 25%, rgba(0,0,0,0.02) 50%, rgba(0,0,0,0.06) 75%) !important; background-size: 200px 100% !important; animation: lfmShimmer 1.5s ease-in-out infinite !important; }
+  1500→
+  1501→/* #15 Card entrance stagger animation */
+  1502→@keyframes alCardIn {
+  1503→  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  1504→  to { opacity: 1; transform: translateY(0) scale(1); }
+  1505→}
+  1506→.al-item { animation: alCardIn 0.35s ease both; }
+  1507→
+  1508→/* #16 Banner progress bar */
+  1509→.al-banner-progress-bar {
+  1510→  height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px;
+  1511→  margin-top: 6px; overflow: hidden;
+  1512→}
+  1513→.al-banner-progress-fill {
+  1514→  height: 100%; border-radius: 2px;
+  1515→  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  1516→  transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  1517→}
+  1518→
+  1519→/* #17 Empty state with icon */
+  1520→.al-empty-icon { font-size: 32px; margin-bottom: 8px; opacity: 0.4; display: block; }
+  1521→.al-empty-text { color: var(--gray-dim); font-family: var(--mono); font-size: 13px; }
+  1522→
+  1523→/* #19 Refresh spinner (reuses ama-refresh-spin already in handler) */
+  1524→
+  1525→/* #20 Online status dot */
+  1526→.al-online-dot {
+  1527→  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  1528→  background: #34d399; box-shadow: 0 0 8px #34d399;
+  1529→  animation: alDotPulse 2s ease-in-out infinite;
+  1530→}
+  1531→@keyframes alDotPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(0.85); } }
+  1532→
+  1533→/* #12 Score toggle button */
+  1534→.al-score-toggle {
+  1535→  display: inline-flex; align-items: center; gap: 4px;
+  1536→  padding: 5px 10px; border-radius: var(--radius-btn);
+  1537→  border: 1px solid var(--border); background: rgba(255,255,255,0.03);
+  1538→  color: var(--gray-dim); font-family: var(--mono); font-size: 10px;
+  1539→  cursor: pointer; transition: border-color 0.15s ease, color 0.15s ease;
+  1540→}
+  1541→.al-score-toggle:hover { border-color: var(--accent); color: var(--white); }
+  1542→.al-score-toggle .material-symbols-outlined { font-size: 14px; }
+  1543→
+  1544→/* #13 View mode toggle */
+  1545→.al-view-toggle {
+  1546→  display: inline-flex; gap: 2px; padding: 2px; border-radius: 8px;
+  1547→  border: 1px solid var(--border); background: rgba(255,255,255,0.02);
+  1548→}
+  1549→.al-view-btn {
+  1550→  width: 28px; height: 28px; border-radius: 6px; border: none;
+  1551→  background: transparent; color: var(--gray-dim); cursor: pointer;
+  1552→  display: grid; place-items: center; transition: all 0.15s ease;
+  1553→}
+  1554→.al-view-btn .material-symbols-outlined { font-size: 16px; }
+  1555→.al-view-btn:hover { color: var(--white); }
+  1556→.al-view-btn.active { background: var(--white); color: #000; }
+  1557→
+  1558→/* #13 Compact list view */
+  1559→.al-list.list-view { grid-template-columns: 1fr; gap: 6px; }
+  1560→.al-list.list-view .al-item {
+  1561→  display: flex; gap: 12px; padding: 8px 12px; border-radius: 12px;
+  1562→  border-left: 3px solid transparent;
+  1563→}
+  1564→.al-list.list-view .al-item-cover { width: 40px; height: 54px; border-radius: 6px; flex-shrink: 0; }
+  1565→.al-list.list-view .al-item-cover img { aspect-ratio: auto; height: 100%; width: 100%; object-fit: cover; }
+  1566→.al-list.list-view .al-item-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+  1567→.al-list.list-view .al-item-name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  1568→.al-list.list-view .al-item-overlay,
+  1569→.al-list.list-view .al-fav,
+  1570→.al-list.list-view .al-cover-score,
+  1571→.al-list.list-view .al-cover-fmt { display: none !important; }
+  1572→
+  1573→/* #14 Per-page control */
+  1574→.al-perpage {
+  1575→  display: flex; align-items: center; gap: 4px;
+  1576→  font-family: var(--mono); font-size: 10px; color: var(--gray-dim);
+  1577→}
+  1578→.al-perpage-btn {
+  1579→  padding: 4px 8px; border-radius: 6px;
+  1580→  border: 1px solid var(--border); background: transparent;
+  1581→  color: var(--gray-dim); font-family: var(--mono); font-size: 10px;
+  1582→  cursor: pointer; transition: all 0.15s ease;
+  1583→}
+  1584→.al-perpage-btn:hover { border-color: var(--border-hover); }
+  1585→.al-perpage-btn.active { background: var(--white); color: #000; border-color: var(--white); }
+  1586→
+  1587→/* #18 Search highlight */
+  1588→mark.al-hl { background: color-mix(in srgb, var(--accent-solid) 25%, transparent); color: var(--white); border-radius: 2px; padding: 0 1px; }
+  1589→
+  1590→/* Light-mode additions for new elements */
+  1591→html.light .al-cover-score, html.light .al-cover-fmt { background: rgba(255,255,255,0.85); color: var(--gray); border-color: rgba(0,0,0,0.1); }
+  1592→html.light .al-cover-score.high { color: #059669; }
+  1593→html.light .al-cover-score.mid { color: #d97706; }
+  1594→html.light .al-cover-score.low { color: #dc2626; }
+  1595→html.light .al-score-toggle { border-color: var(--border); color: var(--gray-dim); }
+  1596→html.light .al-score-toggle:hover { border-color: var(--accent); }
+  1597→html.light .al-view-btn.active { background: var(--white); color: #fff; }
+  1598→html.light .al-perpage-btn.active { background: var(--white); color: #fff; border-color: var(--white); }
+  1599→mark.al-hl { background: rgba(0,120,255,0.2); }
+  1600→
+  1601→/* ============ INTERESTS ============ */
+  1602→.interests-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+  1603→.interest-card {
+  1604→  padding: 28px; border-radius: var(--radius-card); border: 1px solid var(--border);
+  1605→  background: rgba(12,12,12,0.5); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  1606→}
+  1607→html.light .interest-card { background: rgba(255,255,255,0.5); }
+  1608→html.light .interest-icon { background: color-mix(in srgb, var(--accent-solid) 8%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 15%, transparent); }
+  1609→.interest-icon {
+  1610→  font-family: 'Material Symbols Outlined'; font-size: 38px; margin-bottom: 16px; color: var(--accent); font-variation-settings: 'FILL' 1;
+  1611→  display: inline-flex; align-items: center; justify-content: center;
+  1612→  width: 64px; height: 64px; border-radius: 16px;
+  1613→  background: color-mix(in srgb, var(--accent-solid) 8%, transparent); border: 1px solid color-mix(in srgb, var(--accent-solid) 15%, transparent);
+  1614→}
+  1615→.interest-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+  1616→.interest-card p { font-size: 13px; color: var(--gray); line-height: 1.6; }
+  1617→
+  1618→/* ============ AMA ============ */
+  1619→.ama-card { padding: 32px; max-width: 680px; }
+  1620→
+  1621→/* Decorative icon */
+  1622→.ama-deco {
+  1623→  display: flex; justify-content: center; margin-top: -12px; margin-bottom: 8px;
+  1624→}
+  1625→.ama-deco .material-symbols-outlined {
+  1626→  font-size: 32px; color: var(--accent); font-variation-settings: 'FILL' 1, 'wght' 300, 'opsz' 24;
+  1627→  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent-solid) 40%, transparent));
+  1628→  animation: amaDecoFloat 4s ease-in-out infinite;
+  1629→}
+  1630→@keyframes amaDecoFloat {
+  1631→  0%, 100% { transform: translateY(0); }
+  1632→  50% { transform: translateY(-4px); }
+  1633→}
+  1634→
+  1635→/* Counter — pill badge with progress bar */
+  1636→.ama-counter {
+  1637→  font-family: var(--mono); font-size: 12px; color: var(--gray-dim);
+  1638→  margin-bottom: 6px; display: inline-flex; align-items: center;
+  1639→  background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  1640→  padding: 6px 14px; border-radius: 20px;
+  1641→}
+  1642→.ama-counter #ama-count { color: var(--white); font-weight: 700; }
+  1643→.ama-counter-bar {
+  1644→  width: 100%; max-width: 160px; height: 3px;
+  1645→  background: rgba(255,255,255,0.06); border-radius: 4px;
+  1646→  margin-bottom: 16px; overflow: hidden;
+  1647→}
+  1648→.ama-counter-fill {
+  1649→  height: 100%; width: 0%; border-radius: 4px;
+  1650→  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  1651→  transition: width 0.4s cubic-bezier(0.22,1,0.36,1);
+  1652→}
+  1653→.ama-counter-fill.warn { background: linear-gradient(90deg, #f59e0b, #ef4444); }
+  1654→
+  1655→/* Input wrappers with icon prefix */
+  1656→.ama-input-wrap {
+  1657→  position: relative; margin-bottom: 12px;
+  1658→}
+  1659→.ama-textarea-wrap {
+  1660→  position: relative; margin-bottom: 14px;
+  1661→}
+  1662→.ama-input-icon {
+  1663→  position: absolute; top: 50%; left: 14px; transform: translateY(-50%);
+  1664→  font-size: 18px; color: var(--gray-dim); pointer-events: none;
+  1665→  transition: color 0.2s ease; z-index: 1;
+  1666→}
+  1667→.ama-textarea-wrap .ama-input-icon {
+  1668→  top: 18px; transform: none;
+  1669→}
+  1670→.ama-input-wrap:focus-within .ama-input-icon,
+  1671→.ama-textarea-wrap:focus-within .ama-input-icon {
+  1672→  color: var(--accent);
+  1673→}
+  1674→.ama-name-input {
+  1675→  width: 100%;
+  1676→  background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px;
+  1677→  padding: 12px 16px 12px 44px; color: var(--white); font-family: inherit; font-size: 14px;
+  1678→  outline: none;
+  1679→}
+  1680→.ama-name-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-solid) 10%, transparent), 0 0 16px color-mix(in srgb, var(--accent-solid) 8%, transparent); }
+  1681→.ama-input {
+  1682→  width: 100%; min-height: 90px; resize: vertical;
+  1683→  background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 16px;
+  1684→  padding: 16px 16px 32px 44px; color: var(--white); font-family: inherit; font-size: 15px; line-height: 1.5;
+  1685→  outline: none;
+  1686→}
+  1687→.ama-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-solid) 10%, transparent), 0 0 16px color-mix(in srgb, var(--accent-solid) 8%, transparent); }
+  1688→
+  1689→/* Character counter */
+  1690→.ama-char-count {
+  1691→  position: absolute; bottom: 10px; right: 14px;
+  1692→  font-family: var(--mono); font-size: 11px; color: var(--gray-dim);
+  1693→  pointer-events: none; transition: color 0.2s ease;
+  1694→}
+  1695→.ama-char-count.warn { color: #f59e0b; }
+  1696→.ama-char-count.limit { color: #ef4444; font-weight: 700; }
+  1697→
+  1698→/* Send button — icon + spinner + disabled */
+  1699→.ama-send {
+  1700→  margin-bottom: 8px; position: relative; min-width: 100px; justify-content: center;
+  1701→  transition: all 0.22s cubic-bezier(0.22,1,0.36,1);
+  1702→}
+  1703→.ama-send:disabled {
+  1704→  opacity: 0.4; cursor: not-allowed; transform: none !important;
+  1705→  box-shadow: none !important;
+  1706→}
+  1707→.ama-send:not(:disabled):hover {
+  1708→  box-shadow: 0 0 28px rgba(255,255,255,0.2); transform: translateY(-2px);
+  1709→}
+  1710→.ama-send-icon {
+  1711→  font-size: 16px; transition: transform 0.2s ease;
+  1712→}
+  1713→.ama-send:not(:disabled):hover .ama-send-icon { transform: translateX(2px) translateY(-1px); }
+  1714→.ama-send-spinner {
+  1715→  display: inline-block; width: 16px; height: 16px;
+  1716→  border: 2px solid rgba(0,0,0,0.2); border-top-color: #000;
+  1717→  border-radius: 50%; animation: amaSpin 0.6s linear infinite;
+  1718→}
+  1719→@keyframes amaSpin { to { transform: rotate(360deg); } }
+  1720→
+  1721→/* Status with icon */
+  1722→.ama-status {
+  1723→  font-size: 13px; min-height: 20px; display: flex; align-items: center; gap: 6px;
+  1724→}
+  1725→.ama-status.ok { color: #34d399; }
+  1726→.ama-status.err { color: #ff6b6b; }
+  1727→
+  1728→/* Divider between form and list */
+  1729→.ama-divider {
+  1730→  height: 1px; margin: 24px 0 0;
+  1731→  background: linear-gradient(90deg, transparent, var(--border-hover), transparent);
+  1732→}
+  1733→
+  1734→/* Question cards — hover lift + glow */
+  1735→.ama-list { margin-top: 24px; display: flex; flex-direction: column; gap: 12px; }
+  1736→.ama-q {
+  1737→  padding: 16px; border-radius: 14px; border: 1px solid var(--border);
+  1738→  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  1739→  animation: amaFadeIn 0.4s ease both;
+  1740→}
+  1741→.ama-q:hover {
+  1742→  transform: translateY(-2px);
+  1743→  border-color: color-mix(in srgb, var(--accent-solid) 30%, var(--border));
+  1744→  box-shadow: 0 4px 20px rgba(0,0,0,0.2), 0 0 0 1px color-mix(in srgb, var(--accent-solid) 10%, transparent);
+  1745→}
+  1746→@keyframes amaFadeIn {
+  1747→  from { opacity: 0; transform: translateY(8px); }
+  1748→  to { opacity: 1; transform: translateY(0); }
+  1749→}
+  1750→.ama-q-text { font-size: 14px; margin-bottom: 8px; }
+  1751→.ama-q-ans { font-size: 13px; color: var(--gray); padding-left: 12px; border-left: 2px solid var(--accent); }
+  1752→.ama-q-meta { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+  1753→.ama-q-meta-name { color: var(--white); font-weight: 600; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+  1754→.ama-q-meta-time { opacity: 0.7; display: flex; align-items: center; gap: 6px; }
+  1755→.ama-q-meta-answered { color: #34d399; opacity: 1; }
+  1756→.ama-q-meta-icon { font-size: 15px !important; font-variation-settings: 'FILL' 1, 'wght' 500, 'opsz' 20; flex-shrink: 0; }
+  1757→.ama-q-meta-answered .ama-q-meta-icon { color: #34d399; }
+  1758→.ama-q-meta-edited { color: #fbbf24; opacity: 0.9; }
+  1759→.ama-q-meta-edited .ama-q-meta-icon { color: #fbbf24; }
+  1760→.ama-q-meta-time:not(.ama-q-meta-answered):not(.ama-q-meta-edited) { color: var(--accent); opacity: 0.85; }
+  1761→.ama-q-meta-time:not(.ama-q-meta-answered):not(.ama-q-meta-edited) .ama-q-meta-icon { color: var(--accent); }
+  1762→
+  1763→/* ============ PRESENCE ============ */
+  1764→.presence-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  1765→.presence-link {
+  1766→  display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px 12px;
+  1767→  border-radius: 18px; border: 1px solid var(--border); transition: all 0.22s ease;
+  1768→}
+  1769→.presence-link:hover { border-color: var(--border-hover); transform: translateY(-4px); background: rgba(255,255,255,0.05); }
+  1770→.presence-icon { font-family: 'Material Symbols Outlined'; font-size: 30px; color: var(--accent); font-variation-settings: 'FILL' 1; transition: all 0.22s ease; }
+  1771→.presence-link:hover .presence-icon { color: var(--white); transform: scale(1.15); }
+  1772→.presence-name { font-size: 12px; font-weight: 600; color: var(--gray); }
+  1773→/* ============ FOOTER BAR ============ */
+  1774→.footer-bar {
+  1775→  margin-top: 48px;
+  1776→  padding: 0 24px;
+  1777→}
+  1778→.footer-line {
+  1779→  height: 1px;
+  1780→  background: linear-gradient(90deg, transparent, var(--border-hover), transparent);
+  1781→  margin-bottom: 24px;
+  1782→}
+  1783→.footer-content {
+  1784→  display: flex;
+  1785→  align-items: center;
+  1786→  justify-content: space-between;
+  1787→  gap: 16px;
+  1788→  padding: 0 8px 16px;
+  1789→  flex-wrap: wrap;
+  1790→}
+  1791→.footer-left {
+  1792→  display: flex;
+  1793→  align-items: center;
+  1794→  gap: 10px;
+  1795→}
+  1796→.footer-logo {
+  1797→  width: 32px; height: 32px;
+  1798→  border-radius: 10px;
+  1799→  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  1800→  display: flex; align-items: center; justify-content: center;
+  1801→  font-family: var(--sans); font-weight: 900; font-size: 16px;
+  1802→  color: #000; flex-shrink: 0;
+  1803→}
+  1804→.footer-brand {
+  1805→  font-weight: 700; font-size: 14px; color: var(--white);
+  1806→  letter-spacing: -0.01em;
+  1807→}
+  1808→.footer-center {
+  1809→  flex: 1; text-align: center;
+  1810→  min-width: 0;
+  1811→}
+  1812→.footer-copy {
+  1813→  font-family: var(--mono); font-size: 11px;
+  1814→  color: var(--gray-dim); letter-spacing: 0.03em;
+  1815→}
+  1816→.footer-nav {
+  1817→  display: flex; gap: 4px; justify-content: center; flex-wrap: wrap;
+  1818→}
+  1819→.footer-nav a {
+  1820→  font-family: var(--mono); font-size: 11px; color: var(--gray-dim);
+  1821→  letter-spacing: 0.05em; padding: 4px 10px; border-radius: 6px;
+  1822→  transition: color 0.2s ease, background 0.2s ease;
+  1823→}
+  1824→.footer-nav a:hover {
+  1825→  color: var(--accent); background: color-mix(in srgb, var(--accent-solid) 6%, transparent);
+  1826→}
+  1827→.footer-right {
+  1828→  display: flex; align-items: center; gap: 8px;
+  1829→}
+  1830→.footer-link {
+  1831→  width: 36px; height: 36px;
+  1832→  border-radius: 10px; border: 1px solid var(--border);
+  1833→  display: flex; align-items: center; justify-content: center;
+  1834→  color: var(--gray-dim);
+  1835→  transition: all 0.22s ease;
+  1836→}
+  1837→.footer-link:hover {
+  1838→  border-color: var(--accent);
+  1839→  color: var(--accent);
+  1840→  background: color-mix(in srgb, var(--accent-solid) 6%, transparent);
+  1841→  transform: translateY(-2px);
+  1842→  box-shadow: 0 4px 16px color-mix(in srgb, var(--accent-solid) 12%, transparent);
+  1843→}
+  1844→.footer-link svg {
+  1845→  width: 17px; height: 17px;
+  1846→  fill: none; stroke: currentColor;
+  1847→  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+  1848→}
+  1849→.footer-link[href*="github"] svg { fill: currentColor; stroke: none; }
+  1850→/* Envelope icon: body filled, flap stroked */
+  1851→.footer-mailto .envelope-body { fill: none; stroke: currentColor; }
+  1852→.footer-mailto .envelope-flap { fill: none; stroke: currentColor; }
+  1853→
+  1854→@media (max-width: 600px) {
+  1855→  .footer-content {
+  1856→    flex-direction: column;
+  1857→    text-align: center;
+  1858→    gap: 12px;
+  1859→  }
+  1860→  .footer-left { justify-content: center; }
+  1861→  .footer-right { justify-content: center; }
+  1862→}
+  1863→
+  1864→/* ============ ANIMATIONS ============ */
+  1865→.fade-in { opacity: 0; transform: translateY(24px); transition: opacity 0.7s ease, transform 0.7s ease; }
+  1866→.fade-in.visible { opacity: 1; transform: translateY(0); }
+  1867→
+  1868→/* Staggered card entrance — children slide up one by one */
+  1869→.stagger-children.visible > * {
+  1870→  animation: staggerUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  1871→}
+  1872→.stagger-children.visible > *:nth-child(1) { animation-delay: 0s; }
+  1873→.stagger-children.visible > *:nth-child(2) { animation-delay: 0.06s; }
+  1874→.stagger-children.visible > *:nth-child(3) { animation-delay: 0.12s; }
+  1875→.stagger-children.visible > *:nth-child(4) { animation-delay: 0.18s; }
+  1876→.stagger-children.visible > *:nth-child(5) { animation-delay: 0.24s; }
+  1877→.stagger-children.visible > *:nth-child(6) { animation-delay: 0.30s; }
+  1878→@keyframes staggerUp {
+  1879→  from { opacity: 0; transform: translateY(20px); }
+  1880→  to   { opacity: 1; transform: translateY(0); }
+  1881→}
+  1882→
+  1883→/* ============ SCROLL PROGRESS BAR ============ */
+  1884→.scroll-progress {
+  1885→  position: fixed; top: 0; left: 0; height: 2px; width: 0%; z-index: 5000;
+  1886→  background: linear-gradient(90deg, #00c8ff, #7850ff, #00f0b4);
+  1887→  box-shadow: 0 0 8px color-mix(in srgb, var(--accent-solid) 50%, transparent); transition: width 0.08s linear;
+  1888→}
+  1889→
+  1890→
+  1891→
+  1892→/* ============ BACK TO TOP ============ */
+  1893→.back-to-top {
+  1894→  position: fixed; bottom: 20px; left: 20px; z-index: 800;
+  1895→  width: 44px; height: 44px; border-radius: 50%;
+  1896→  background: rgba(18,18,24,0.55); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  1897→  border: 1px solid var(--border); color: var(--gray);
+  1898→  display: flex; align-items: center; justify-content: center;
+  1899→  opacity: 0; pointer-events: none; transform: translateY(10px);
+  1900→  transition: all 0.3s cubic-bezier(0.22,1,0.36,1);
+  1901→}
+  1902→html.light .back-to-top { background: rgba(255,255,255,0.6); }
+  1903→.back-to-top.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+  1904→.back-to-top:hover { color: var(--white); border-color: color-mix(in srgb, var(--accent-solid) 30%, transparent); transform: translateY(-2px); box-shadow: 0 0 20px color-mix(in srgb, var(--accent-solid) 12%, transparent), 0 6px 20px rgba(0,0,0,0.3); }
+  1905→html.light .back-to-top:hover { border-color: color-mix(in srgb, var(--accent-solid) 30%, transparent); box-shadow: 0 0 20px color-mix(in srgb, var(--accent-solid) 8%, transparent), 0 6px 20px rgba(0,0,0,0.06); }
+  1906→.back-to-top svg { width: 20px; height: 20px; fill: currentColor; }
+  1907→
+  1908→/* ============ ACTIVE NAV HIGHLIGHT ============ */
+  1909→.tb-icon-btn.active { color: var(--accent); }
+  1910→.tb-icon-btn.active svg { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent-solid) 60%, transparent)); }
+  1911→
+  1912→/* ============ SECTION SCROLL OFFSET ============ */
+  1913→.section, .hero { scroll-margin-top: 90px; }
+  1914→
+  1915→/* ============ MUSIC TOOLTIP ============ */
+  1916→.tb-music-tooltip {
+  1917→  position: absolute; top: calc(100% + 10px); left: 50%; transform: translateX(-50%) translateY(4px);
+  1918→  background: rgba(12,12,16,0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  1919→  border: 1px solid var(--border); border-radius: 10px;
+  1920→  padding: 8px 14px; font-family: var(--mono); font-size: 11px; color: var(--gray); white-space: nowrap;
+  1921→  opacity: 0; pointer-events: none; transition: all 0.2s ease; z-index: 1100;
+  1922→}
+  1923→.tb-music-tooltip::before {
+  1924→  content: ''; position: absolute; top: -5px; left: 50%; transform: translateX(-50%) rotate(45deg);
+  1925→  width: 8px; height: 8px; background: rgba(12,12,16,0.95);
+  1926→  border-left: 1px solid var(--border); border-top: 1px solid var(--border);
+  1927→}
+  1928→.topbar-music-widget:hover .tb-music-tooltip { opacity: 1; transform: translateX(-50%) translateY(0); }
+  1929→
+  1930→/* ============ COPY EMAIL BUTTON ============ */
+  1931→.email-wrap { display: flex; align-items: center; gap: 6px; }
+  1932→.copy-btn { font-size: 14px; color: var(--gray-dim); padding: 2px; border-radius: 6px; transition: all 0.15s ease; font-family: 'Material Symbols Outlined'; }
+  1933→.copy-btn:hover { color: var(--accent); background: color-mix(in srgb, var(--accent-solid) 10%, transparent); }
+  1934→.copy-btn.copied { color: #34d399; }
+  1935→
+  1936→/* ============ HERO TYPEWRITER ============ */
+  1937→.hero-caret { color: var(--accent); animation: caretBlink 1s step-end infinite; font-weight: 300; }
+  1938→@keyframes caretBlink { 0%,50% { opacity: 1; } 50.01%,100% { opacity: 0; } }
+  1939→
+  1940→/* ============ PROJECT THUMBNAIL IMAGE ============ */
+  1941→.project-thumb-img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; border-bottom: 1px solid var(--border); }
+  1942→
+  1943→/* ============ TIME WIDGET ============ */
+  1944→.time-card { padding: 22px; }
+  1945→.time-label { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); margin-bottom: 14px; letter-spacing: 0.05em; }
+  1946→.time-grid { display: flex; align-items: center; gap: 16px; }
+  1947→.time-col { flex: 1; text-align: center; }
+  1948→.time-zone { font-family: var(--mono); font-size: 11px; color: var(--gray); margin-bottom: 6px; }
+  1949→.time-value { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  1950→.time-sub { font-family: var(--mono); font-size: 10px; color: var(--gray-dim); margin-top: 4px; }
+  1951→.time-divider { width: 1px; height: 44px; background: var(--border); }
+  1952→
+  1953→/* ============ CHANGELOGS PILL + MODAL ============ */
+  1954→.changelog-pill {
+  1955→  position: fixed; bottom: 20px; right: 20px; z-index: 800;
+  1956→  display: flex; align-items: center; gap: 7px;
+  1957→  font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em; color: var(--gray);
+  1958→  padding: 9px 16px; border-radius: var(--radius-btn);
+  1959→  background: rgba(18,18,24,0.55); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  1960→  border: 1px solid var(--border); transition: all 0.22s ease;
+  1961→}
+  1962→html.light .changelog-pill { background: rgba(255,255,255,0.6); }
+  1963→.changelog-pill:hover { color: var(--white); border-color: var(--border-hover); transform: translateY(-2px); }
+  1964→.changelog-dot { width: 7px; height: 7px; border-radius: 50%; background: #34d399; box-shadow: 0 0 8px #34d399; animation: pulse 1.8s ease-in-out infinite; }
+  1965→.changelog-modal {
+  1966→  position: fixed; bottom: 64px; right: 20px; z-index: 801; width: 340px; max-width: 90vw; max-height: 60vh;
+  1967→  background: rgba(12,12,16,0.92); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+  1968→  border: 1px solid var(--border); border-radius: 20px; overflow: hidden;
+  1969→  display: flex; flex-direction: column;
+  1970→  opacity: 0; transform: translateY(10px) scale(0.97); pointer-events: none; transition: all 0.25s cubic-bezier(0.22,1,0.36,1);
+  1971→}
+  1972→html.light .changelog-modal { background: rgba(245,245,250,0.95); }
+  1973→.changelog-modal.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+  1974→.changelog-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 12px; color: var(--gray-dim); }
+  1975→.changelog-close { font-size: 14px; color: var(--gray); }
+  1976→.changelog-close:hover { color: var(--white); }
+  1977→.changelog-body { padding: 14px 18px; overflow-y: auto; }
+  1978→.changelog-entry { padding: 12px 0; border-bottom: 1px solid var(--border); }
+  1979→.changelog-entry:last-child { border-bottom: none; }
+  1980→.changelog-date { font-family: var(--mono); font-size: 11px; color: var(--accent); margin-bottom: 6px; }
+  1981→.changelog-entry ul { list-style: none; padding: 0; }
+  1982→.changelog-entry li { font-size: 12px; color: var(--gray); line-height: 1.6; padding-left: 12px; position: relative; }
+  1983→.changelog-entry li::before { content: '›'; position: absolute; left: 0; color: var(--gray-dim); }
+  1984→
+  1985→/* ============ AMA SORT + PAGINATION + VOTING ============ */
+  1986→.ama-list-wrap { margin-top: 28px; }
+  1987→.ama-sort-label { font-family: var(--mono); font-size: 12px; color: var(--gray-dim); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  1988→.ama-refresh-btn { background: none; border: none; color: var(--gray-dim); cursor: pointer; padding: 2px; display: inline-flex; align-items: center; border-radius: 6px; transition: color 0.2s, background 0.2s; }
+  1989→.ama-refresh-btn:hover { color: var(--accent); background: color-mix(in srgb, var(--accent-solid) 8%, transparent); }
+  1990→.ama-refresh-btn .material-symbols-outlined { font-size: 16px; }
+  1991→.ama-refresh-spin .material-symbols-outlined { animation: ama-refresh-rotate 0.6s ease; }
+  1992→@keyframes ama-refresh-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  1993→.ama-sort { display: flex; gap: 8px; margin-bottom: 18px; }
+  1994→.ama-sort-btn { font-family: var(--mono); font-size: 11px; padding: 6px 14px; border-radius: var(--radius-btn); border: 1px solid var(--border); color: var(--gray-dim); }
+  1995→.ama-sort-btn.active { background: var(--white); color: #000; border-color: var(--white); }
+  1996→.ama-search-wrap { position: relative; display: flex; align-items: center; margin-bottom: 18px; }
+  1997→.ama-search-icon { position: absolute; left: 12px; font-size: 18px; color: var(--gray-dim); pointer-events: none; }
+  1998→.ama-search-input {
+  1999→  width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px;
+  2000→  padding: 10px 38px 10px 40px; color: var(--white); font-family: inherit; font-size: 14px;
+  2001→}
+  2002→.ama-search-input::placeholder { color: var(--gray-dim); }
+  2003→.ama-search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-solid) 10%, transparent), 0 0 16px color-mix(in srgb, var(--accent-solid) 8%, transparent); }
+  2004→.ama-search-clear { position: absolute; right: 8px; background: none; border: none; color: var(--gray-dim); cursor: pointer; padding: 4px; display: inline-flex; align-items: center; border-radius: 8px; transition: color 0.2s, background 0.2s; }
+  2005→.ama-search-clear:hover { color: var(--accent); background: color-mix(in srgb, var(--accent-solid) 8%, transparent); }
+  2006→.ama-search-clear .material-symbols-outlined { font-size: 16px; }
+  2007→.ama-q-vote { display: flex; align-items: center; gap: 4px; margin-top: 10px; }
+  2008→.ama-vote-btn { font-size: 14px; width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border); color: var(--gray); display: flex; align-items: center; justify-content: center; transition: all 0.15s ease; }
+  2009→.ama-vote-btn:hover { border-color: var(--border-hover); color: var(--white); }
+  2010→.ama-vote-btn.voted { background: var(--accent); color: #000; border-color: var(--accent); }
+  2011→.ama-vote-count { font-family: var(--mono); font-size: 13px; font-weight: 700; min-width: 24px; text-align: center; }
+  2012→.ama-pager { display: flex; gap: 6px; justify-content: center; margin-top: 18px; flex-wrap: wrap; }
+  2013→.ama-page { font-family: var(--mono); font-size: 11px; min-width: 30px; height: 30px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--border); color: var(--gray-dim); display: flex; align-items: center; justify-content: center; }
+  2014→.ama-page.active { background: var(--white); color: #000; border-color: var(--white); }
+  2015→.ama-page:hover:not(.active) { border-color: var(--border-hover); }
+  2016→
+  2017→/* ============ PLAYGROUND CARDS ============ */
+  2018→.pg-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+  2019→.pg-card {
+  2020→  display: flex; flex-direction: column; gap: 6px; text-align: left;
+  2021→  padding: 22px; border-radius: 20px; border: 1px solid var(--border);
+  2022→  background: rgba(12,12,12,0.5); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  2023→  transition: all 0.25s cubic-bezier(0.22,1,0.36,1); color: inherit;
+  2024→}
+  2025→html.light .pg-card { background: rgba(255,255,255,0.5); }
+  2026→.pg-card:hover { border-color: var(--border-hover); transform: translateY(-4px); box-shadow: 0 12px 36px rgba(0,0,0,0.4); }
+  2027→.pg-card-icon { font-size: 30px; margin-bottom: 4px; }
+  2028→.pg-card-name { font-size: 16px; font-weight: 700; }
+  2029→.pg-card-desc { font-size: 12px; color: var(--gray); line-height: 1.5; flex: 1; }
+  2030→.pg-card-play { font-family: var(--mono); font-size: 11px; color: var(--accent); margin-top: 8px; }
+  2031→
+  2032→/* ============ PLAYGROUND OVERLAY ============ */
+  2033→.pg-overlay {
+  2034→  position: fixed; inset: 0; z-index: 6000;
+  2035→  background: rgba(5,5,9,0.96); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  2036→  display: flex; flex-direction: column;
+  2037→  opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+  2038→}
+  2039→.pg-overlay.open { opacity: 1; pointer-events: auto; }
+  2040→.pg-topbar { display: flex; align-items: center; gap: 16px; padding: 16px 24px; border-bottom: 1px solid var(--border); }
+  2041→.pg-close { font-size: 20px; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border); color: var(--gray); }
+  2042→.pg-close:hover { background: rgba(255,255,255,0.08); color: #fff; }
+  2043→.pg-title { font-weight: 700; font-size: 18px; }
+  2044→.pg-score { margin-left: auto; font-family: var(--mono); font-size: 13px; color: var(--accent); margin-right: 12px; }
+  2045→.pg-host { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 30px; overflow: auto; }
+  2046→.pg-canvas { background: #0a0a0e; border: 1px solid var(--border); border-radius: 16px; max-width: 100%; height: auto; touch-action: none; }
+  2047→.pg-btn { padding: 11px 24px; border-radius: var(--radius-btn); font-size: 13px; font-weight: 700; background: var(--white); color: #000; border: none; }
+  2048→.pg-btn:hover { transform: translateY(-1px); box-shadow: 0 0 20px rgba(255,255,255,0.2); }
+  2049→.pg-mines { display: grid; gap: 3px; padding: 10px; background: rgba(255,255,255,0.04); border-radius: 12px; border: 1px solid var(--border); }
+  2050→.pg-cell { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; border-radius: 6px; background: rgba(255,255,255,0.08); border: 1px solid transparent; cursor: pointer; }
+  2051→.pg-cell.rev { background: transparent; }
+  2052→.pg-cell.mine { background: rgba(255,80,80,0.25); }
+  2053→.pg-react { width: 320px; max-width: 90vw; height: 240px; border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; cursor: pointer; transition: background 0.1s ease; border: 1px solid var(--border); position: relative; }
+  2054→.pg-react.idle { background: rgba(255,255,255,0.05); }
+  2055→.pg-react.red { background: #dc2626; color: #fff; }
+  2056→.pg-react.green { background: #16a34a; color: #fff; }
+  2057→.pg-react.done { background: rgba(52,211,153,0.2); color: #34d399; border-color: #34d399; }
+  2058→.pg-react-best { font-family: var(--mono); font-size: 11px; font-weight: 400; color: var(--gray-dim); margin-top: 10px; }
+  2059→
+  2060→/* ============ SNAKE D-PAD ============ */
+  2061→.pg-dpad {
+  2062→  display: grid; grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(3, 52px);
+  2063→  gap: 6px; justify-content: center; margin-top: 6px;
+  2064→}
+  2065→.pg-dpad-btn {
+  2066→  border-radius: 12px; border: 1px solid var(--border); color: var(--white);
+  2067→  font-size: 20px; display: flex; align-items: center; justify-content: center;
+  2068→  background: rgba(255,255,255,0.05); transition: all 0.12s ease; user-select: none;
+  2069→}
+  2070→.pg-dpad-btn:active { background: var(--accent); color: #000; transform: scale(0.94); }
+  2071→.pg-dpad-btn.up { grid-column: 2; grid-row: 1; }
+  2072→.pg-dpad-btn.left { grid-column: 1; grid-row: 2; }
+  2073→.pg-dpad-btn.right { grid-column: 3; grid-row: 2; }
+  2074→.pg-dpad-btn.down { grid-column: 2; grid-row: 3; }
+  2075→
+  2076→/* ============ PROJECT BUTTONS ============ */
+  2077→.project-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  2078→.project-dl-btn {
+  2079→  display: inline-flex; align-items: center; gap: 7px;
+  2080→  padding: 11px 22px; border-radius: var(--radius-btn);
+  2081→  font-size: 13px; font-weight: 700; text-decoration: none;
+  2082→  background: var(--white); color: #000; border: 1.5px solid var(--white);
+  2083→  transition: all 0.22s cubic-bezier(0.22,1,0.36,1);
+  2084→}
+  2085→.project-dl-btn:hover { box-shadow: 0 0 24px rgba(255,255,255,0.15); transform: translateY(-1px); }
+  2086→.project-live-btn {
+  2087→  display: inline-flex; align-items: center; gap: 7px;
+  2088→  padding: 11px 22px; border-radius: var(--radius-btn);
+  2089→  font-size: 13px; font-weight: 600; text-decoration: none;
+  2090→  background: color-mix(in srgb, var(--accent-solid) 10%, transparent); color: var(--accent-solid); border: 1.5px solid color-mix(in srgb, var(--accent-solid) 30%, transparent);
+  2091→  transition: all 0.22s ease;
+  2092→}
+  2093→.project-live-btn:hover { background: color-mix(in srgb, var(--accent-solid) 18%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 55%, transparent); transform: translateY(-1px); }
+  2094→
+  2095→/* ============ ANILIST SUMMARY ============ */
+  2096→.al-summary { font-family: var(--mono); font-size: 12px; color: var(--gray-dim); margin-bottom: 16px; }
+  2097→/* AniList — stats panel */
+  2098→.al-stats { margin-bottom: 18px; }
+  2099→.al-stat-nums { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 12px; color: var(--gray-dim); margin-bottom: 12px; }
+  2100→.al-stat-nums b { color: var(--white); font-size: 14px; }
+  2101→.al-stat-genres { display: grid; gap: 6px; max-width: 440px; }
+  2102→.al-stat-genre { display: grid; grid-template-columns: 96px 1fr 28px; align-items: center; gap: 10px; font-family: var(--mono); font-size: 11px; color: var(--gray-dim); }
+  2103→.al-sg-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  2104→.al-sg-bar { height: 6px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; }
+  2105→.al-sg-bar i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), #7850ff); }
+  2106→.al-sg-count { text-align: right; color: var(--gray); }
+  2107→/* AniList — controls (search + sort) */
+  2108→.al-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+  2109→.al-search-wrap { position: relative; display: flex; align-items: center; flex: 1; min-width: 180px; }
+  2110→.al-search-icon { position: absolute; left: 12px; font-size: 18px; color: var(--gray-dim); pointer-events: none; }
+  2111→.al-search-input { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 9px 36px 9px 38px; color: var(--white); font-family: inherit; font-size: 13px; }
+  2112→.al-search-input::placeholder { color: var(--gray-dim); }
+  2113→.al-search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-solid) 10%, transparent); }
+  2114→.al-search-clear { position: absolute; right: 8px; background: none; border: none; color: var(--gray-dim); cursor: pointer; padding: 4px; display: inline-flex; border-radius: 8px; transition: color 0.2s, background 0.2s; }
+  2115→.al-search-clear:hover { color: var(--accent); background: color-mix(in srgb, var(--accent-solid) 8%, transparent); }
+  2116→.al-search-clear .material-symbols-outlined { font-size: 16px; }
+  2117→.al-sort { display: flex; gap: 6px; flex-wrap: wrap; }
+  2118→.al-sort-btn { font-family: var(--mono); font-size: 11px; padding: 6px 12px; border-radius: var(--radius-btn); border: 1px solid var(--border); color: var(--gray-dim); }
+  2119→.al-sort-btn.active { background: var(--white); color: #000; border-color: var(--white); }
+  2120→/* AniList — genre filter */
+  2121→.al-genres { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+  2122→.al-genre-pill { font-family: var(--mono); font-size: 10px; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--border); color: var(--gray-dim); }
+  2123→.al-genre-pill.active { background: var(--accent); color: #000; border-color: var(--accent); }
+  2124→.al-pagination { display: flex; gap: 6px; justify-content: center; align-items: center; margin-top: 20px; }
+  2125→.al-page-btn { font-family: var(--mono); font-size: 13px; min-width: 34px; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border); color: var(--gray); display: flex; align-items: center; justify-content: center; }
+  2126→.al-page-btn.active { background: var(--white); color: #000; border-color: var(--white); }
+  2127→.al-page-btn:hover:not(.active):not(:disabled) { border-color: var(--border-hover); }
+  2128→.al-page-btn:disabled { opacity: 0.3; cursor: default; }
+  2129→.al-page-dots { font-family: var(--mono); color: var(--gray-dim); }
+  2130→
+  2131→/* ============ RESPONSIVE ============ */
+  2132→@media (max-width: 820px) {
+  2133→  .about-grid { grid-template-columns: 1fr; }
+  2134→  .gh-card { flex-direction: column; text-align: center; }
+  2135→  .gh-stats { justify-content: center; }
+  2136→  .gh-langs-wrap { flex-direction: column; align-items: center; }
+  2137→  .projects-grid { grid-template-columns: 1fr; }
+  2138→  .gh-live-list { grid-template-columns: 1fr; }
+  2139→  .testimonials-grid { grid-template-columns: 1fr; }
+  2140→  .pg-cards { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  2141→  .al-list { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+  2142→  .presence-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+  2143→  .contrib-total { font-size: 24px; }
+  2144→  .contrib-summary { gap: 12px; }
+  2145→  .contrib-stat-value { font-size: 16px; }
+  2146→}
+  2147→@media (max-width: 600px) {
+  2148→  .section { padding: 50px 16px; }
+  2149→  .section + .section { padding-top: 30px; }
+  2150→  .section-head { margin-bottom: 28px; }
+  2151→  .section-title { font-size: clamp(24px, 7vw, 36px); }
+  2152→  .topbar-pill { gap: 0; }
+  2153→  .tb-track-meta { display: none; }
+  2154→  .topbar-nav-icons { gap: 0; }
+  2155→  .hero-actions { flex-direction: column; align-items: center; }
+  2156→  .btn-primary, .btn-ghost { width: 100%; max-width: 280px; justify-content: center; }
+  2157→
+  2158→  /* Cards — consistent mobile padding */
+  2159→  .glass-card { padding: 20px; border-radius: 22px; }
+  2160→  .gh-card { padding: 24px; }
+  2161→  .skill-panel { padding: 20px; }
+  2162→  .contrib-card { padding: 20px; }
+  2163→  .wakatime-card { padding: 20px; }
+  2164→  .ama-card { padding: 20px; }
+  2165→  .anilist-card { padding: 20px; }
+  2166→  .interest-card { padding: 22px; }
+  2167→  .quote-card, .bio-card, .stack-card, .time-card { padding: 18px; }
+  2168→
+  2169→  /* Contribution heatmap — mobile scrollable */
+  2170→  .contrib-scroll {
+  2171→    overflow-x: auto;
+  2172→    -webkit-overflow-scrolling: touch;
+  2173→    scrollbar-width: thin;
+  2174→    scrollbar-color: var(--border-hover) transparent;
+  2175→    margin: 0 -4px;
+  2176→    padding: 0 4px 10px;
+  2177→  }
+  2178→  .contrib-scroll::-webkit-scrollbar { height: 5px; }
+  2179→  .contrib-scroll::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 3px; }
+  2180→  .contrib-day { width: 10px; height: 10px; }
+  2181→  .contrib-week { gap: 2px; }
+  2182→  .contrib-grid { gap: 2px; }
+  2183→  .contrib-legend { margin-top: 8px; }
+  2184→  .contrib-header { gap: 8px; margin-bottom: 12px; }
+  2185→
+  2186→  /* Skills grid */
+  2187→  .skill-list { grid-template-columns: 1fr; gap: 10px; }
+  2188→  .skill-tabs { gap: 6px; }
+  2189→  .skill-tab { padding: 6px 12px; font-size: 10px; }
+  2190→
+  2191→  /* Projects */
+  2192→  .projects-grid { gap: 16px; }
+  2193→  .project-body { padding: 18px; }
+  2194→  .project-name { font-size: 17px; }
+  2195→
+  2196→  /* GitHub repos */
+  2197→  .gh-live { margin-top: 30px; }
+  2198→  .gh-repo { padding: 14px; }
+  2199→
+  2200→  /* GitHub card avatar */
+  2201→  .gh-avatar { width: 72px; height: 72px; }
+  2202→  .gh-name { font-size: 20px; }
+  2203→  .gh-stats { gap: 20px; }
+  2204→  .gh-stat span { font-size: 22px; }
+  2205→
+  2206→  /* Last.fm */
+  2207→  .lfm-head { gap: 10px; margin-bottom: 16px; }
+  2208→  .lfm-avatar { width: 40px; height: 40px; }
+  2209→  .lfm-title { font-size: 16px; }
+  2210→  .lfm-nowplaying { padding: 14px; gap: 14px; flex-wrap: wrap; }
+  2211→  .lfm-np-art { width: 72px; height: 72px; }
+  2212→  .lfm-np-track { font-size: 15px; }
+  2213→  .lfm-columns { gap: 16px; }
+  2214→  .lfm-col-title { font-size: 9px; }
+  2215→  .lfm-recent-item { padding: 5px 10px 5px 5px; }
+  2216→  .lfm-recent-name { max-width: 90px; }
+  2217→  .lfm-recent-artist { max-width: 90px; }
+  2218→  .lfm-period-tabs { gap: 4px; margin-bottom: 14px; }
+  2219→  .lfm-period-tab { padding: 4px 10px; font-size: 9px; }
+  2220→  .lfm-activity { margin-bottom: 16px; }
+  2221→  .lfm-activity-bar { max-width: 20px; }
+  2222→
+  2223→  /* AniList */
+  2224→  .al-head { gap: 10px; margin-bottom: 18px; }
+  2225→  .al-avatar { width: 44px; height: 44px; }
+  2226→  .al-title { font-size: 16px; }
+  2227→  .al-tabs { gap: 6px; }
+  2228→  .al-tab { padding: 6px 11px; font-size: 10px; }
+  2229→  .al-media { margin-bottom: 14px; }
+  2230→  .al-media-btn { padding: 6px 14px; font-size: 12px; }
+  2231→  .al-list { gap: 12px; }
+  2232→  .al-controls { gap: 8px; }
+  2233→  .al-search-wrap { min-width: 140px; }
+  2234→  .al-sort { gap: 4px; }
+  2235→  .al-sort-btn { padding: 5px 10px; font-size: 10px; }
+  2236→  .al-genres { gap: 4px; }
+  2237→  .al-genre-pill { padding: 4px 9px; font-size: 9px; }
+  2238→
+  2239→  /* WakaTime */
+  2240→  .wt-head { gap: 10px; margin-bottom: 14px; }
+  2241→  .wt-total { font-size: 20px; }
+  2242→  .wt-range-selector { gap: 4px; margin-bottom: 12px; }
+  2243→  .wt-range-btn { padding: 5px 12px; font-size: 10px; }
+  2244→  .wt-heatmap { height: 64px; gap: 6px; }
+  2245→  .wt-heatmap-days { gap: 6px; }
+  2246→  .wt-heatmap-days span { font-size: 8px; }
+  2247→  .wt-lang-name { min-width: 72px; font-size: 12px; }
+  2248→  .wt-editor-name { min-width: 64px; }
+  2249→  .wt-project-name { min-width: 80px; max-width: 120px; font-size: 11px; }
+  2250→
+  2251→  /* Interests */
+  2252→  .interests-grid { grid-template-columns: 1fr; gap: 16px; }
+  2253→  .interest-icon { width: 52px; height: 52px; font-size: 30px; border-radius: 14px; }
+  2254→
+  2255→  /* AMA */
+  2256→  .ama-deco .material-symbols-outlined { font-size: 26px; }
+  2257→  .ama-counter { font-size: 11px; padding: 5px 12px; }
+  2258→  .ama-input { min-height: 72px; padding: 14px 14px 28px 40px; font-size: 14px; }
+  2259→  .ama-name-input { padding: 10px 14px 10px 40px; font-size: 13px; }
+  2260→  .ama-input-icon { font-size: 16px; left: 12px; }
+  2261→  .ama-textarea-wrap .ama-input-icon { top: 14px; }
+  2262→  .ama-char-count { font-size: 10px; bottom: 8px; right: 10px; }
+  2263→  .ama-q { padding: 14px; border-radius: 12px; }
+  2264→  .ama-q-text { font-size: 13px; }
+  2265→  .ama-q-ans { font-size: 12px; padding-left: 10px; }
+  2266→  .ama-sort { gap: 6px; flex-wrap: wrap; }
+  2267→  .ama-sort-btn { padding: 5px 12px; font-size: 10px; }
+  2268→
+  2269→  /* Presence grid */
+  2270→  .presence-grid { gap: 10px; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+  2271→  .presence-link { padding: 18px 8px; border-radius: 14px; }
+  2272→  .presence-icon { font-size: 26px; }
+  2273→  .presence-name { font-size: 11px; }
+  2274→
+  2275→  /* Playground cards */
+  2276→  .pg-cards { grid-template-columns: 1fr 1fr; gap: 12px; }
+  2277→  .pg-card { padding: 18px; }
+  2278→
+  2279→  /* Testimonials */
+  2280→  .testimonials-grid { gap: 14px; }
+  2281→  .testimonial-card { padding: 20px; }
+  2282→
+  2283→  /* Bio/time cards */
+  2284→  .bio-row { padding: 8px 0; }
+  2285→  .bio-row b { font-size: 13px; }
+  2286→  .time-grid { gap: 12px; }
+  2287→  .time-value { font-size: 22px; }
+  2288→
+  2289→  /* Footer */
+  2290→  .footer-bar { margin-top: 36px; }
+  2291→  .footer-content { gap: 10px; }
+  2292→  .footer-brand { font-size: 13px; }
+  2293→}
+  2294→
+  2295→/* ============ CURSOR GLOW + TRAIL ============ */
+  2296→.cursor-glow {
+  2297→  position: fixed; width: 300px; height: 300px; border-radius: 50%;
+  2298→  background: radial-gradient(circle, color-mix(in srgb, var(--accent-solid) 8%, transparent), transparent 60%);
+  2299→  background: radial-gradient(circle, color-mix(in srgb, var(--accent-solid) 12%, transparent), transparent 60%);
+  2300→  pointer-events: none; z-index: 9998; transform: translate(-50%, -50%);
+  2301→  transition: opacity 0.3s ease; opacity: 0;
+  2302→}
+  2303→@media (hover: hover) { body:hover .cursor-glow { opacity: 1; } }
+  2304→@media (hover: none) { .cursor-glow { display: none; } }
+  2305→.cursor-trail { position: fixed; inset: 0; z-index: 9997; pointer-events: none; }
+  2306→@media (hover: none) { .cursor-trail { display: none; } }
+  2307→
+  2308→/* ============ SECTION DIVIDERS ============ */
+  2309→.section-divider {
+  2310→  display: flex; align-items: center; gap: 16px; margin: 0 auto; max-width: var(--maxw);
+  2311→  padding: 0 24px; opacity: 0; transform: translateX(-20px); transition: all 0.6s ease;
+  2312→}
+  2313→.section-divider.visible { opacity: 1; transform: translateX(0); }
+  2314→.section-divider-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--border-hover), transparent); }
+  2315→.section-divider-label {
+  2316→  font-family: var(--mono); font-size: 11px; color: var(--gray-dim); letter-spacing: 0.1em; white-space: nowrap;
+  2317→  position: relative;
+  2318→}
+  2319→/* Small accent dot before the label */
+  2320→.section-divider-label::before {
+  2321→  content: ''; display: inline-block; width: 5px; height: 5px; border-radius: 50%;
+  2322→  background: var(--accent); margin-right: 8px; vertical-align: middle;
+  2323→  box-shadow: 0 0 6px color-mix(in srgb, var(--accent-solid) 40%, transparent);
+  2324→}
+  2325→
+  2326→/* ============ GITHUB CONTRIBUTION GRAPH ============ */
+  2327→.contrib-card { padding: 28px; }
+  2328→.contrib-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  2329→.contrib-total { font-size: 28px; font-weight: 800; color: var(--accent); }
+  2330→.contrib-label { font-size: 13px; color: var(--gray); }
+  2331→
+  2332→/* Streak badge */
+  2333→.contrib-streak { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--gray); display: flex; align-items: center; gap: 5px; }
+  2334→.contrib-streak-fire { font-size: 14px; }
+  2335→.contrib-streak-num { font-weight: 800; color: var(--accent); font-size: 15px; }
+  2336→.contrib-streak-slash { color: var(--gray-dim); }
+  2337→
+  2338→/* Summary stats bar */
+  2339→.contrib-summary { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+  2340→.contrib-stat { display: flex; flex-direction: column; gap: 2px; }
+  2341→.contrib-stat-value { font-size: 18px; font-weight: 800; color: var(--white); }
+  2342→.contrib-stat-label { font-family: var(--mono); font-size: 10px; color: var(--gray-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  2343→
+  2344→/* Scrollable wrapper for months + grid */
+  2345→.contrib-scroll { overflow-x: auto; max-width: 100%; padding-bottom: 8px; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: var(--border-hover) transparent; }
+  2346→.contrib-scroll::-webkit-scrollbar { height: 6px; }
+  2347→.contrib-scroll::-webkit-scrollbar-track { background: transparent; }
+  2348→.contrib-scroll::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 3px; }
+  2349→.contrib-scroll::-webkit-scrollbar-thumb:hover { background: var(--gray); }
+  2350→
+  2351→/* Month labels */
+  2352→.contrib-months { display: flex; position: relative; height: 16px; margin-bottom: 4px; min-width: max-content; }
+  2353→.contrib-month-label { position: absolute; font-family: var(--mono); font-size: 9px; color: var(--gray-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  2354→
+  2355→/* Grid */
+  2356→.contrib-grid { display: flex; gap: 3px; position: relative; }
+  2357→.contrib-week { display: flex; flex-direction: column; gap: 3px; }
+  2358→.contrib-day { width: 11px; height: 11px; border-radius: 2px; background: color-mix(in srgb, var(--accent-solid) 10%, transparent); position: relative; cursor: pointer; transition: transform 0.1s, outline 0.1s; outline: 2px solid transparent; outline-offset: 1px; }
+  2359→.contrib-day:hover { transform: scale(1.4); z-index: 2; outline-color: var(--accent); border-radius: 3px; }
+  2360→.contrib-day[data-level="1"] { background: color-mix(in srgb, var(--accent-solid) 25%, transparent); }
+  2361→.contrib-day[data-level="2"] { background: color-mix(in srgb, var(--accent-solid) 45%, transparent); }
+  2362→.contrib-day[data-level="3"] { background: color-mix(in srgb, var(--accent-solid) 70%, transparent); }
+  2363→.contrib-day[data-level="4"] { background: var(--accent-solid); }
+  2364→
+  2365→/* Busy day highlight */
+  2366→.contrib-day.busiest::after { content: ''; position: absolute; top: -3px; right: -3px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: contrib-pulse 2s ease-in-out infinite; }
+  2367→@keyframes contrib-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.5); } }
+  2368→
+  2369→/* Skeleton grid */
+  2370→.contrib-skeleton-grid { display: flex; gap: 3px; }
+  2371→/* Custom glass tooltip */
+  2372→.contrib-tip { position: fixed; z-index: 9000; pointer-events: none; background: rgba(12,12,16,0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; font-family: var(--mono); font-size: 11px; color: var(--gray); white-space: nowrap; opacity: 0; transition: opacity 0.15s ease; box-shadow: 0 6px 20px rgba(0,0,0,0.4); display: flex; flex-direction: column; gap: 4px; }
+  2373→html.light .contrib-tip { background: rgba(255,255,255,0.95); border-color: rgba(0,0,0,0.1); color: #555; box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+  2374→.contrib-tip.visible { opacity: 1; }
+  2375→.contrib-tip-date { color: var(--white); font-weight: 600; font-size: 12px; }
+  2376→.contrib-tip-day { color: var(--gray); font-weight: 400; }
+  2377→.contrib-tip-count { color: var(--accent); font-weight: 700; font-size: 12px; }
+  2378→.contrib-legend { display: flex; align-items: center; gap: 6px; margin-top: 12px; font-family: var(--mono); font-size: 10px; color: var(--gray-dim); }
+  2379→.contrib-legend-boxes { display: flex; gap: 3px; }
+  2380→.contrib-legend-boxes i { width: 11px; height: 11px; border-radius: 2px; background: var(--accent-solid); display: inline-block; }
+  2381→
+  2382→/* ============ TESTIMONIALS ============ */
+  2383→.testimonials-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+  2384→.testimonial-card { padding: 26px; display: flex; flex-direction: column; gap: 14px; }
+  2385→.testimonial-text { font-size: 15px; line-height: 1.7; color: var(--gray); font-style: italic; }
+  2386→.testimonial-author { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+  2387→
+  2388→/* ============ GAME SOUND TOGGLE ============ */
+  2389→.sound-toggle { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border); color: var(--gray); display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; flex-shrink: 0; }
+  2390→.sound-toggle:hover { background: rgba(255,255,255,0.1); color: #fff; }
+  2391→.sound-toggle.muted { opacity: 0.4; }
+  2392→
+  2393→/* ============ VISITOR COUNTER BADGE ============ */
+  2394→.visitor-badge {
+  2395→  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  2396→  z-index: 800; padding: 8px 16px; border-radius: 999px;
+  2397→  background: rgba(18,18,24,0.6); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  2398→  border: 1px solid var(--border); font-family: var(--mono); font-size: 11px;
+  2399→  color: var(--gray); letter-spacing: 0.05em; white-space: nowrap;
+  2400→  opacity: 0; animation: visitorFadeIn 0.6s ease 1s forwards;
+  2401→  display: flex; align-items: center; gap: 6px;
+  2402→}
+  2403→html.light .visitor-badge { background: rgba(255,255,255,0.6); }
+  2404→.visitor-badge::before { content: 'group'; font-family: 'Material Symbols Outlined'; font-size: 14px; color: var(--accent); font-variation-settings: 'FILL' 1, 'wght' 400, 'opsz' 24; }
+  2405→@keyframes visitorFadeIn { to { opacity: 0.8; } }
+  2406→@media (max-width: 600px) {
+  2407→  .visitor-badge { bottom: 14px; font-size: 10px; padding: 6px 12px; }
+  2408→}
+  2409→
+  2410→/* Extra-small screen — compact now-playing */
+  2411→@media (max-width: 380px) {
+  2412→  .lfm-nowplaying { padding: 12px; gap: 10px; }
+  2413→  .lfm-np-art { width: 56px; height: 56px; border-radius: 10px; }
+  2414→  .lfm-np-track { font-size: 14px; }
+  2415→  .lfm-np-artist { font-size: 11px; }
+  2416→  .lfm-period-tabs { gap: 3px; }
+  2417→  .lfm-period-tab { padding: 3px 8px; font-size: 8px; }
+  2418→}
+  2419→
+  2420→/* ============ WAKATIME ============ */
+  2421→.wakatime-card { padding: 28px; }
+  2422→.wt-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+  2423→.wt-icon { font-size: 24px; color: var(--accent); }
+  2424→.wt-title { font-weight: 800; font-size: 16px; }
+  2425→.wt-sub { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); }
+  2426→.wt-total { font-size: 22px; font-weight: 800; color: var(--accent); margin-left: auto; }
+  2427→.wt-daily { font-family: var(--mono); font-size: 12px; color: var(--gray); }
+  2428→
+  2429→/* Range selector */
+  2430→.wt-range-selector { display: flex; gap: 6px; margin-bottom: 16px; }
+  2431→.wt-range-btn { font-family: var(--mono); font-size: 11px; padding: 5px 14px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--gray-dim); cursor: pointer; transition: all 0.2s; }
+  2432→.wt-range-btn:hover { color: var(--white); border-color: var(--gray); }
+  2433→.wt-range-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+  2434→
+  2435→/* Streak */
+  2436→.wt-streak { font-family: var(--mono); font-size: 12px; color: var(--gray); margin-bottom: 18px; display: flex; align-items: center; gap: 6px; }
+  2437→.wt-streak-count { font-weight: 800; color: var(--accent); font-size: 15px; }
+  2438→.wt-streak-slash { color: var(--gray-dim); }
+  2439→
+  2440→/* Daily heatmap */
+  2441→.wt-heatmap-section { margin-bottom: 22px; }
+  2442→.wt-heatmap-label { font-family: var(--mono); font-size: 10px; color: var(--gray-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  2443→.wt-heatmap { display: flex; align-items: flex-end; gap: 8px; height: 80px; }
+  2444→.wt-heatmap-bar { flex: 1; height: 100%; border-radius: 6px 6px 3px 3px; background: rgba(255,255,255,0.04); overflow: hidden; position: relative; cursor: pointer; transition: background 0.2s; min-width: 0; }
+  2445→.wt-heatmap-bar:hover { background: rgba(255,255,255,0.08); }
+  2446→.wt-heatmap-fill { position: absolute; bottom: 0; left: 0; right: 0; border-radius: 6px 6px 0 0; background: var(--accent); opacity: 0.7; transition: height 0.6s cubic-bezier(0.22,1,0.36,1), opacity 0.2s; }
+  2447→.wt-heatmap-bar:hover .wt-heatmap-fill { opacity: 1; }
+  2448→.wt-heatmap-bar .wt-heatmap-tooltip { position: absolute; top: -32px; left: 50%; transform: translateX(-50%); background: var(--white); color: var(--bg); font-family: var(--mono); font-size: 10px; padding: 3px 8px; border-radius: 6px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.15s; z-index: 5; }
+  2449→.wt-heatmap-bar:hover .wt-heatmap-tooltip { opacity: 1; }
+  2450→.wt-heatmap-days { display: flex; gap: 8px; margin-top: 6px; }
+  2451→.wt-heatmap-days span { flex: 1; text-align: center; font-family: var(--mono); font-size: 9px; color: var(--gray-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  2452→
+  2453→/* Languages */
+  2454→.wt-languages { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; }
+  2455→.wt-lang { display: flex; align-items: center; gap: 12px; }
+  2456→.wt-lang-name { font-size: 13px; font-weight: 600; min-width: 90px; display: flex; align-items: center; gap: 6px; }
+  2457→.wt-lang-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  2458→.wt-lang-bar { flex: 1; height: 8px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; }
+  2459→.wt-lang-fill { height: 100%; border-radius: 4px; transition: width 0.8s cubic-bezier(0.22,1,0.36,1); }
+  2460→.wt-lang-time { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); min-width: 50px; text-align: right; }
+  2461→.wt-lang-pct { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--gray); min-width: 36px; text-align: right; }
+  2462→
+  2463→/* Section title */
+  2464→.wt-section-title { font-family: var(--mono); font-size: 10px; color: var(--gray-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; margin-top: 4px; }
+  2465→
+  2466→/* Editors with progress */
+  2467→.wt-editors { display: flex; flex-direction: column; gap: 8px; margin-bottom: 22px; }
+  2468→.wt-editor { display: flex; align-items: center; gap: 10px; }
+  2469→.wt-editor-name { font-family: var(--mono); font-size: 11px; font-weight: 600; min-width: 80px; color: var(--gray); }
+  2470→.wt-editor-bar { flex: 1; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.06); overflow: hidden; }
+  2471→.wt-editor-fill { height: 100%; border-radius: 3px; background: var(--accent); opacity: 0.5; transition: width 0.8s cubic-bezier(0.22,1,0.36,1); }
+  2472→.wt-editor-pct { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); min-width: 36px; text-align: right; }
+  2473→
+  2474→/* Projects */
+  2475→.wt-projects { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+  2476→.wt-project { display: flex; align-items: center; gap: 10px; }
+  2477→.wt-project-name { font-size: 12px; font-weight: 600; min-width: 100px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--gray); }
+  2478→.wt-project-bar { flex: 1; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.06); overflow: hidden; }
+  2479→.wt-project-fill { height: 100%; border-radius: 3px; background: var(--accent); opacity: 0.35; transition: width 0.8s cubic-bezier(0.22,1,0.36,1); }
+  2480→.wt-project-time { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); min-width: 56px; text-align: right; }
+  2481→
+  2482→/* Loading / error state */
+  2483→.wt-loading { font-family: var(--mono); font-size: 12px; color: var(--gray-dim); text-align: center; padding: 20px; }
+  2484→
+  2485→/* ============ EMOJI REACTIONS (AMA) ============ */
+  2486→.ama-q-reactions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  2487→.ama-react-btn {
+  2488→  display: inline-flex; align-items: center; gap: 4px;
+  2489→  padding: 4px 10px; border-radius: 999px;
+  2490→  border: 1px solid var(--border); background: rgba(255,255,255,0.03);
+  2491→  font-size: 13px; transition: all 0.15s ease; cursor: pointer;
+  2492→}
+  2493→.ama-react-btn span { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); }
+  2494→.ama-react-btn:hover { border-color: var(--border-hover); background: rgba(255,255,255,0.06); transform: translateY(-1px); }
+  2495→.ama-react-btn.react-active { border-color: var(--accent); background: color-mix(in srgb, var(--accent-solid) 10%, transparent); }
+  2496→.ama-react-btn.react-active span { color: var(--accent); }
+  2497→
+  2498→/* ── AMA Pin Badge ── */
+  2499→.ama-pin-badge {
+  2500→  display: inline-flex; align-items: center; gap: 4px;
+  2501→  font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em;
+  2502→  padding: 3px 10px 3px 8px; border-radius: 999px;
+  2503→  background: color-mix(in srgb, var(--accent-solid) 12%, transparent); color: var(--accent);
+  2504→  border: 1px solid color-mix(in srgb, var(--accent-solid) 25%, transparent);
+  2505→  margin-bottom: 8px;
+  2506→}
+  2507→.ama-pin-icon {
+  2508→  font-size: 13px !important; font-variation-settings: 'FILL' 1, 'wght' 500, 'opsz' 20;
+  2509→  line-height: 1; flex-shrink: 0;
+  2510→}
+  2511→.ama-q-pinned {
+  2512→  border-color: color-mix(in srgb, var(--accent-solid) 20%, transparent) !important;
+  2513→  background: color-mix(in srgb, var(--accent-solid) 2%, transparent) !important;
+  2514→}
+  2515→html.light .ama-pin-badge {
+  2516→  background: color-mix(in srgb, var(--accent-solid) 10%, transparent); color: var(--accent);
+  2517→  border-color: color-mix(in srgb, var(--accent-solid) 20%, transparent);
+  2518→}
+  2519→html.light .ama-pin-icon {
+  2520→  color: var(--accent);
+  2521→}
+  2522→html.light .ama-q-pinned {
+  2523→  border-color: color-mix(in srgb, var(--accent-solid) 15%, transparent) !important;
+  2524→  background: color-mix(in srgb, var(--accent-solid) 2%, transparent) !important;
+  2525→}
+  2526→
+  2527→/* ── AMA Reaction Summary Line ── */
+  2528→.ama-reaction-summary {
+  2529→  display: flex; gap: 10px; margin-top: 8px;
+  2530→  font-family: var(--mono); font-size: 11px; color: var(--gray-dim);
+  2531→}
+  2532→.ama-reaction-summary span {
+  2533→  display: inline-flex; align-items: center; gap: 3px;
+  2534→}
+  2535→
+  2536→/* ============ G. PROJECT IMAGE HOVER ZOOM ============ */
+  2537→.project-card { overflow: hidden; }
+  2538→.project-thumb-img { transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+  2539→.project-card:hover .project-thumb-img { transform: scale(1.08); }
+  2540→
+  2541→/* ============ E. GLASSMORPHISM CARD GLOW ============ */
+  2542→.glass-card {
+  2543→  position: relative; overflow: hidden;
+  2544→}
+  2545→.contrib-card { overflow: visible; }
+  2546→.contrib-card .contrib-scroll { margin-left: -4px; margin-right: -4px; padding-left: 4px; padding-right: 4px; }
+  2547→.glass-card::before {
+  2548→  content: '';
+  2549→  position: absolute; top: var(--mouse-y, 50%); left: var(--mouse-x, 50%); border-radius: 50%; pointer-events: none;
+  2550→  width: 300px; height: 300px; transform: translate(-50%, -50%);
+  2551→  background: radial-gradient(color-mix(in srgb, var(--accent-solid) 10%, transparent) 0%, transparent 70%);
+  2552→  opacity: 0; transition: opacity 0.3s ease; z-index: -1;
+  2553→}
+  2554→.glass-card:hover::before { opacity: 1; }
+  2555→
+  2556→/* ============ D. SECTION TRANSITIONS ============ */
+  2557→.section-head, .about-grid, .gh-card, .skill-panel, .projects-grid, .lastfm-card, .anilist-card, .interests-grid, .ama-card, .pg-cards {
+  2558→  animation: slideUpFade 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  2559→}
+  2560→@keyframes slideUpFade {
+  2561→  from { opacity: 0; transform: translateY(30px); }
+  2562→  to { opacity: 1; transform: translateY(0); }
+  2563→}
+  2564→
+  2565→/* ============ N. TOUCH RIPPLE EFFECT ============ */
+  2566→.ripple {
+  2567→  position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.4);
+  2568→  transform: scale(0); animation: rippleEffect 0.6s linear; pointer-events: none;
+  2569→}
+  2570→@keyframes rippleEffect {
+  2571→  to { transform: scale(4); opacity: 0; }
+  2572→}
+  2573→
+  2574→/* ============ P. SKELETON LOADING ============ */
+  2575→.skeleton {
+  2576→  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 75%);
+  2577→  background-size: 200% 100%;
+  2578→  animation: shimmer 1.5s infinite;
+  2579→  border-radius: 8px;
+  2580→}
+  2581→@keyframes shimmer { 0% {background-position: 200% 0;} 100% {background-position: -200% 0;} }
+  2582→
+  2583→/* ============ B. AURORA HERO TEXT ============ */
+  2584→.hero-h1-grad {
+  2585→  background: linear-gradient(120deg, #00c8ff, #7850ff, #00f0b4, #00c8ff);
+  2586→  background-size: 300% auto;
+  2587→  -webkit-background-clip: text; background-clip: text;
+  2588→  -webkit-text-fill-color: transparent; color: transparent;
+  2589→  animation: auroraShift 8s linear infinite;
+  2590→  filter: drop-shadow(0 2px 15px color-mix(in srgb, var(--accent-solid) 25%, transparent));
+  2591→}
+  2592→@keyframes auroraShift { to { background-position: 300% center; } }
+  2593→
+  2594→/* ============ H. GITHUB LANG DONUT CHART ============ */
+  2595→.gh-langs-wrap { display: flex; align-items: center; gap: 32px; padding: 24px 0 0; border-top: 1px solid var(--border); flex-wrap: wrap; }
+  2596→.gh-lang-chart { width: 130px; height: 130px; border-radius: 50%; background: var(--surface2); position: relative; flex-shrink: 0; box-shadow: 0 0 20px color-mix(in srgb, var(--accent-solid) 10%, transparent); }
+  2597→.gh-lang-chart::after { content: ''; position: absolute; inset: 24px; background: var(--bg); border-radius: 50%; }
+  2598→.gh-lang-legend { display: flex; flex-wrap: wrap; gap: 10px 18px; flex: 1; min-width: 200px; }
+  2599→.gh-lang-pill { display: flex; align-items: center; gap: 8px; font-size: 12px; font-family: var(--mono); color: var(--gray); }
+  2600→.gh-lang-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  2601→
+  2602→/* ============ M. KEYBOARD SHORTCUT OVERLAY ============ */
+  2603→.shortcut-overlay { position: fixed; inset: 0; z-index: 9500; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; }
+  2604→.shortcut-overlay.open { display: flex; }
+  2605→.shortcut-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; max-width: 400px; width: 90%; }
+  2606→.shortcut-head { display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+  2607→.shortcut-close { color: var(--gray); }
+  2608→.shortcut-list div { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 14px; color: var(--gray); }
+  2609→kbd { background: var(--surface2); border: 1px solid var(--border-hover); border-radius: 4px; padding: 4px 8px; font-family: var(--mono); font-size: 12px; color: var(--accent); min-width: 20px; text-align: center; }
+  2610→
+  2611→/* ============ I. DAY IN THE LIFE TIMELINE ============ */
+  2612→.timeline-section { margin-top: 60px; padding: 20px; border-radius: 20px; background: rgba(12,12,12,0.5); border: 1px solid var(--border); }
+  2613→.timeline-title { font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; color: var(--gray-dim); margin-bottom: 24px; text-align: center; }
+  2614→.timeline-track { display: flex; justify-content: space-between; position: relative; }
+  2615→.timeline-track::before { content: ''; position: absolute; top: 24px; left: 0; width: 100%; height: 2px; background: var(--border); z-index: 0; }
+  2616→.timeline-item { flex: 1; text-align: center; position: relative; z-index: 1; padding: 0 10px; }
+  2617→.timeline-dot { width: 50px; height: 50px; background: var(--bg); border: 2px solid var(--accent); border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 0 15px color-mix(in srgb, var(--accent-solid) 20%, transparent); }
+  2618→.timeline-time { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+  2619→.timeline-desc { font-size: 12px; color: var(--gray); line-height: 1.4; }
+  2620→
+  2621→/* ============ L. ACHIEVEMENT TOAST ============ */
+  2622→.achievement-toast {
+  2623→  position: fixed; bottom: calc(30px + env(safe-area-inset-bottom, 0px)); left: 50%;
+  2624→  transform: translateX(-50%) translateY(calc(100% + 60px));
+  2625→  background: rgba(12,12,16,0.9); border: 1px solid var(--accent); border-radius: 12px;
+  2626→  padding: 16px 24px; display: flex; align-items: center; gap: 16px; z-index: 9999;
+  2627→  width: max-content; min-width: 260px; max-width: calc(100vw - 32px);
+  2628→  box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 20px color-mix(in srgb, var(--accent-solid) 20%, transparent);
+  2629→  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  2630→  transition: transform 0.5s cubic-bezier(0.22,1,0.36,1);
+  2631→  pointer-events: none;
+  2632→}
+  2633→.achievement-toast.show { transform: translateX(-50%) translateY(0); pointer-events: auto; }
+  2634→.toast-icon { font-size: 24px; flex-shrink: 0; }
+  2635→.toast-content { min-width: 0; }
+  2636→.toast-title { font-weight: 700; font-size: 14px; color: var(--white); }
+  2637→.toast-desc { font-size: 12px; color: var(--gray); font-family: var(--mono); }
+  2638→
+  2639→/* ============ K. GAME DIFFICULTY SELECTOR ============ */
+  2640→.diff-selector { display: flex; gap: 8px; justify-content: center; margin-bottom: 10px; }
+  2641→.diff-btn { padding: 4px 12px; border-radius: 6px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: var(--gray-dim); font-size: 12px; font-family: var(--mono); cursor: pointer; transition: all 0.2s ease; }
+  2642→.diff-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+  2643→
+  2644→/* ============ 1. COMMAND PALETTE ============ */
+  2645→.cmd-palette-overlay {
+  2646→  position: fixed; inset: 0; z-index: 9800;
+  2647→  background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  2648→  display: none; align-items: flex-start; justify-content: center; padding-top: 15vh;
+  2649→}
+  2650→.cmd-palette-overlay.open { display: flex; animation: cmdFadeIn 0.15s ease; }
+  2651→@keyframes cmdFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  2652→.cmd-palette {
+  2653→  width: 90%; max-width: 560px;
+  2654→  background: rgba(12,12,16,0.95);
+  2655→  border: 1px solid color-mix(in srgb, var(--accent-solid) 20%, transparent);
+  2656→  border-radius: 16px; overflow: hidden;
+  2657→  box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 30px color-mix(in srgb, var(--accent-solid) 10%, transparent);
+  2658→  animation: cmdSlideDown 0.2s cubic-bezier(0.22,1,0.36,1);
+  2659→}
+  2660→@keyframes cmdSlideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  2661→/* ── Command Palette: Search Bar (expand/collapse) ── */
+  2662→.cmd-input-wrap { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.06); position: relative; }
+  2663→
+  2664→/* Collapsed: just the search icon button */
+  2665→.cmd-search-toggle {
+  2666→  width: 40px; height: 40px; border-radius: 50%;
+  2667→  background: color-mix(in srgb, var(--accent-solid) 8%, transparent); border: 1px solid color-mix(in srgb, var(--accent-solid) 20%, transparent);
+  2668→  color: var(--accent); display: flex; align-items: center; justify-content: center;
+  2669→  flex-shrink: 0; cursor: pointer; transition: all 0.25s cubic-bezier(0.22,1,0.36,1);
+  2670→}
+  2671→.cmd-search-toggle .material-symbols-outlined { font-size: 20px; font-variation-settings: 'FILL' 0, 'wght' 400, 'opsz' 24; }
+  2672→.cmd-search-toggle:hover { background: color-mix(in srgb, var(--accent-solid) 15%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 40%, transparent); transform: scale(1.05); }
+  2673→
+  2674→/* Input bar: hidden until expanded */
+  2675→.cmd-input-bar {
+  2676→  display: flex; align-items: center; gap: 8px; flex: 1;
+  2677→  max-width: 0; opacity: 0; overflow: hidden;
+  2678→  transition: max-width 0.4s cubic-bezier(0.22,1,0.36,1), opacity 0.25s ease 0.1s;
+  2679→}
+  2680→.cmd-input-bar.expanded {
+  2681→  max-width: 500px; opacity: 1;
+  2682→}
+  2683→
+  2684→/* Search input */
+  2685→.cmd-input {
+  2686→  flex: 1; min-width: 0; background: none; border: none; outline: none;
+  2687→  color: #fff; font-size: 15px; font-family: var(--sans);
+  2688→}
+  2689→.cmd-input::placeholder { color: var(--gray-dim); }
+  2690→
+  2691→/* Submit / show-results button */
+  2692→.cmd-submit-btn {
+  2693→  width: 34px; height: 34px; border-radius: 8px;
+  2694→  background: color-mix(in srgb, var(--accent-solid) 10%, transparent); border: 1px solid color-mix(in srgb, var(--accent-solid) 20%, transparent);
+  2695→  color: var(--accent); display: flex; align-items: center; justify-content: center;
+  2696→  flex-shrink: 0; cursor: pointer; transition: all 0.2s ease;
+  2697→}
+  2698→.cmd-submit-btn .material-symbols-outlined { font-size: 18px; font-variation-settings: 'FILL' 1, 'wght' 500, 'opsz' 24; }
+  2699→.cmd-submit-btn:hover { background: color-mix(in srgb, var(--accent-solid) 20%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 50%, transparent); transform: scale(1.05); }
+  2700→
+  2701→/* ESC key badge */
+  2702→.cmd-esc-kbd { flex-shrink: 0; }
+  2703→
+  2704→/* When expanded, shrink the toggle icon */
+  2705→.cmd-input-wrap.expanded .cmd-search-toggle {
+  2706→  width: 32px; height: 32px; border-radius: 8px; background: transparent; border-color: transparent;
+  2707→}
+  2708→.cmd-input-wrap.expanded .cmd-search-toggle .material-symbols-outlined { font-size: 18px; color: var(--gray-dim); }
+  2709→.cmd-input-wrap.expanded .cmd-search-toggle:hover { background: rgba(255,255,255,0.06); border-color: var(--border); }
+  2710→
+  2711→/* Light mode */
+  2712→html.light .cmd-search-toggle { background: color-mix(in srgb, var(--accent-solid) 6%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 15%, transparent); color: var(--accent); }
+  2713→html.light .cmd-search-toggle:hover { background: color-mix(in srgb, var(--accent-solid) 12%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 30%, transparent); }
+  2714→html.light .cmd-submit-btn { background: color-mix(in srgb, var(--accent-solid) 6%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 15%, transparent); }
+  2715→html.light .cmd-submit-btn:hover { background: color-mix(in srgb, var(--accent-solid) 12%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 30%, transparent); }
+  2716→html.light .cmd-input-wrap.expanded .cmd-search-toggle:hover { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.1); }
+  2717→.cmd-results { max-height: 340px; overflow-y: auto; padding: 8px; }
+  2718→.cmd-results::-webkit-scrollbar { width: 4px; }
+  2719→.cmd-results::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 2px; }
+  2720→.cmd-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; cursor: pointer; transition: background 0.1s ease; }
+  2721→.cmd-item.selected, .cmd-item:hover { background: color-mix(in srgb, var(--accent-solid) 10%, transparent); }
+  2722→.cmd-item-icon { font-size: 20px; width: 28px; text-align: center; flex-shrink: 0; color: var(--accent); font-variation-settings: 'FILL' 1, 'wght' 400, 'opsz' 24; }
+  2723→.cmd-item-label { flex: 1; font-size: 14px; color: var(--gray); }
+  2724→.cmd-item-label mark { background: color-mix(in srgb, var(--accent-solid) 20%, transparent); color: var(--accent); border-radius: 2px; padding: 0 2px; }
+  2725→.cmd-item-hint { font-family: var(--mono); font-size: 10px; color: var(--gray-dim); }
+  2726→.cmd-footer { display: flex; align-items: center; gap: 16px; padding: 10px 20px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 11px; color: var(--gray-dim); }
+  2727→.cmd-footer kbd { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 2px 6px; font-family: var(--mono); font-size: 10px; margin-right: 4px; }
+  2728→.cmd-hint { margin-left: auto; font-family: var(--mono); }
+  2729→
+  2730→/* ============ 2. SPOTLIGHT BORDER HOVER (Stripe-style) ============ */
+  2731→.glass-card { position: relative; border: 1px solid transparent; }
+  2732→.glass-card::after {
+  2733→  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
+  2734→  background: radial-gradient(120px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), color-mix(in srgb, var(--accent-solid) 50%, transparent), transparent 40%);
+  2735→  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  2736→  -webkit-mask-composite: xor; mask-composite: exclude;
+  2737→  opacity: 0; transition: opacity 0.3s ease; pointer-events: none;
+  2738→}
+  2739→.glass-card:hover::after { opacity: 1; }
+  2740→
+  2741→
+  2742→
+  2743→
+  2744→
+  2745→/* ============ ARTIST FALLBACK (Site Theme Match) ============ */
+  2746→.lfm-artist-gradient {
+  2747→  display: flex !important; align-items: center; justify-content: center;
+  2748→  font-size: 18px; font-weight: 900; color: #ffffff !important;
+  2749→  text-shadow: 0 1px 4px rgba(0,0,0,0.9) !important; /* dark shadow for readability */
+  2750→  text-transform: uppercase; letter-spacing: -0.02em;
+  2751→  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  2752→  background-color: #0c0c0c !important;
+  2753→}
+  2754→
+  2755→/* ============ G. LIGHT THEME POLISH FOR NEW FEATURES ============ */
+  2756→html.light .hero-terminal { background: rgba(240,240,248,0.8); border-color: rgba(0,0,0,0.1); }
+  2757→html.light .term-dots { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.06); }
+  2758→html.light .term-line { color: #059669; }
+  2759→html.light .term-caret { color: var(--accent); }
+  2760→
+  2761→html.light .cmd-palette { background: rgba(255,255,255,0.98); border-color: rgba(0,0,0,0.1); }
+  2762→html.light .cmd-input { color: #000; }
+  2763→html.light .cmd-item.selected, html.light .cmd-item:hover { background: rgba(0,0,0,0.05); }
+  2764→html.light .cmd-footer { color: #555566; border-top-color: rgba(0,0,0,0.08); }
+  2765→html.light .cmd-footer kbd { background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.1); color: #44445a; }
+  2766→html.light .cmd-hint { color: #777788; }
+  2767→html.light .cmd-esc-kbd { background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.1); color: #44445a; }
+  2768→
+  2769→html.light .cursor-glow { background: radial-gradient(circle, color-mix(in srgb, var(--accent-solid) 10%, transparent), transparent 60%); background: radial-gradient(circle, color-mix(in srgb, var(--accent-solid) 16%, transparent), transparent 60%); }
+  2770→
+  2771→/* H. MOBILE MUSIC PLAYER FULL SCREEN */
+  2772→@media (max-width: 600px) {
+  2773→  .slide-player-panel {
+  2774→    width: 100vw; max-width: 100vw;
+  2775→    padding-top: 80px;
+  2776→  }
+  2777→  .sp-cd-sleeve { width: 160px; height: 160px; }
+  2778→  .sp-cd-disc { width: 140px; height: 140px; margin-top: -70px; margin-left: -70px; }
+  2779→  .sp-cd-disc.playing { margin-left: -40px; }
+  2780→  .sp-title { font-size: 20px; }
+  2781→}
+  2782→
+  2783→/* I. SMOOTH SCROLL SNAP (Optional, subtle) */
+  2784→/* Subtle scroll snap — sections land cleanly */
+  2785→html { scroll-snap-type: y proximity; }
+  2786→.section { scroll-snap-align: start; }
+  2787→
+  2788→/* ============ COMPREHENSIVE LIGHT MODE FIXES ============ */
+  2789→
+  2790→/* Intro overlay */
+  2791→html.light .intro-char.scrambling { color: var(--accent); text-shadow: 0 0 20px rgba(0,150,220,0.2); }
+  2792→html.light .intro-char.locked { color: var(--white); text-shadow: none; }
+  2793→html.light .intro-progress-bar { background: rgba(0,0,0,0.06); }
+  2794→html.light .intro-progress-fill { box-shadow: 0 0 12px color-mix(in srgb, var(--accent-solid) 20%, transparent); }
+  2795→html.light .intro-topbar { color: var(--gray); }
+  2796→html.light .intro-tag { color: var(--gray-dim); }
+  2797→html.light .intro-dot { background: #059669; box-shadow: 0 0 8px rgba(5,150,105,0.5); }
+  2798→
+  2799→/* Hero "View Projects" button */
+  2800→html.light .btn-primary { background: var(--white); color: #fff; }
+  2801→html.light .project-dl-btn { background: var(--white); color: #fff; border-color: var(--white); }
+  2802→html.light .project-dl-btn:hover { box-shadow: 0 0 24px rgba(0,0,0,0.15); }
+  2803→html.light .project-live-btn { background: color-mix(in srgb, var(--accent-solid) 10%, transparent); color: color-mix(in srgb, var(--accent-solid) 65%, #000); border-color: color-mix(in srgb, var(--accent-solid) 30%, transparent); }
+  2804→html.light .btn-primary:hover { box-shadow: 0 0 28px rgba(0,0,0,0.15); }
+  2805→html.light .btn-ghost { border-color: rgba(80,80,140,0.3); }
+  2806→
+  2807→/* GitHub card with chart */
+  2808→html.light .gh-card { background: rgba(255,255,255,0.6); }
+  2809→html.light .gh-lang-chart { background: #dddde8; }
+  2810→html.light .gh-lang-chart::after { background: var(--bg); }
+  2811→
+  2812→/* Tech stack orbital pills */
+  2813→html.light .orbit-item { background: rgba(240,240,248,0.8); border-color: rgba(80,80,140,0.15); color: var(--white); }
+  2814→
+  2815→/* Day in the Life Timeline */
+  2816→html.light .timeline-section { background: rgba(255,255,255,0.5); }
+  2817→html.light .timeline-dot { background: var(--bg); border-color: var(--accent); }
+  2818→
+  2819→/* Skill tabs + items */
+  2820→html.light .skill-panel { background: rgba(255,255,255,0.6); }
+  2821→html.light .skill-tab { color: var(--gray-dim); border-color: var(--border); }
+  2822→html.light .skill-tab.active { background: var(--white); color: #fff; }
+  2823→html.light .skill-item { background: rgba(0,0,0,0.02); }
+  2824→html.light .skill-item:hover { background: rgba(0,0,0,0.05); }
+  2825→
+  2826→/* Project cards */
+  2827→html.light .project-card { background: rgba(255,255,255,0.6); }
+  2828→html.light .project-card:hover { box-shadow: 0 16px 50px rgba(0,0,0,0.08), 0 0 30px color-mix(in srgb, var(--accent-solid) 6%, transparent); }
+  2829→
+  2830→/* AMA Send button + Sort pills */
+  2831→html.light .ama-card { background: rgba(255,255,255,0.6); }
+  2832→html.light .ama-deco .material-symbols-outlined { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent-solid) 25%, transparent)); }
+  2833→html.light .ama-counter { background: rgba(0,0,0,0.04); border-color: var(--border); }
+  2834→html.light .ama-counter-bar { background: rgba(0,0,0,0.08); }
+  2835→html.light .ama-input-icon { color: var(--gray-dim); }
+  2836→html.light .ama-input-wrap:focus-within .ama-input-icon,
+  2837→html.light .ama-textarea-wrap:focus-within .ama-input-icon { color: var(--accent); }
+  2838→html.light .ama-sort-btn { color: var(--gray-dim); border-color: var(--border); }
+  2839→html.light .ama-sort-btn.active { background: var(--white); color: #fff; }
+  2840→html.light .ama-name-input { background: rgba(0,0,0,0.03); color: var(--white); }
+  2841→html.light .ama-name-input:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-solid) 10%, transparent), 0 0 16px color-mix(in srgb, var(--accent-solid) 6%, transparent); }
+  2842→html.light .ama-input { background: rgba(0,0,0,0.03); color: var(--white); }
+  2843→html.light .ama-input:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-solid) 10%, transparent), 0 0 16px color-mix(in srgb, var(--accent-solid) 6%, transparent); }
+  2844→html.light .ama-q { border-color: var(--border); background: transparent; }
+  2845→html.light .ama-q:hover { border-color: color-mix(in srgb, var(--accent-solid) 25%, var(--border)); box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+  2846→html.light .ama-divider { background: linear-gradient(90deg, transparent, var(--border), transparent); }
+  2847→html.light .ama-vote-btn { border-color: var(--border); color: var(--gray); }
+  2848→html.light .ama-react-btn { border-color: var(--border); background: rgba(0,0,0,0.03); }
+  2849→html.light .ama-page { border-color: var(--border); color: var(--gray-dim); }
+  2850→html.light .ama-page.active { background: var(--white); color: #fff; border-color: var(--white); }
+  2851→html.light .ama-page:hover:not(.active) { border-color: var(--border-hover); background: rgba(0,0,0,0.03); }
+  2852→
+  2853→/* AniList tabs + pagination */
+  2854→html.light .anilist-card { background: rgba(255,255,255,0.6); }
+  2855→html.light .al-tab { color: var(--gray-dim); border-color: var(--border); }
+  2856→html.light .al-tab.active { background: var(--white); color: #fff; }
+  2857→html.light .al-sort-btn { color: var(--gray-dim); border-color: var(--border); }
+  2858→html.light .al-sort-btn.active { background: var(--white); color: #fff; }
+  2859→html.light .al-genre-pill.active { color: #fff; }
+  2860→html.light .al-stat-nums b { color: var(--white); }
+  2861→html.light .al-item-bar { background: rgba(0,0,0,0.07); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.04); }
+  2862→html.light .al-item-bar i { box-shadow: 0 0 8px rgba(0,120,200,0.35); }
+  2863→@media (prefers-reduced-motion: reduce) { .al-item-bar i::after { animation: none; } .al-item-bar i { transition: none; } }
+  2864→html.light .al-page-btn { border-color: var(--border); color: var(--gray); }
+  2865→html.light .al-page-btn.active { background: var(--white); color: #fff; border-color: var(--white); }
+  2866→html.light .al-page-btn:hover:not(.active):not(:disabled) { border-color: var(--border-hover); background: rgba(0,0,0,0.03); }
+  2867→html.light .al-page-dots { color: var(--gray-dim); }
+  2868→
+  2869→/* Full Music Player */
+  2870→html.light .slide-player-panel { background: rgba(245,245,250,0.95); }
+  2871→html.light .sp-title { color: var(--white); }
+  2872→html.light .sp-artist { color: var(--gray); }
+  2873→html.light .sp-times span { color: var(--gray-dim); }
+  2874→html.light .sp-progress-bar { background: rgba(0,0,0,0.1); }
+  2875→html.light .sp-progress-fill { background: var(--accent); }
+  2876→html.light .sp-vol-slider { background: rgba(0,0,0,0.15); }
+  2877→html.light .sp-vol-slider::-webkit-slider-thumb { background: #fff; border: 1px solid var(--border-hover); }
+  2878→html.light .sp-close { color: rgba(0,0,0,0.5); border-color: rgba(0,0,0,0.12); }
+  2879→html.light .sp-yt-link { color: var(--gray); }
+  2880→html.light .sp-cd-disc {
+  2881→  background:
+  2882→    radial-gradient(circle at 50% 50%, var(--accent) 0 12%, color-mix(in srgb, var(--accent-solid) 30%, transparent) 13%, transparent 14%),
+  2883→    radial-gradient(circle at 50% 50%, #aaa 0 4%, transparent 4.5%),
+  2884→    repeating-radial-gradient(circle at 50% 50%, #bbb 0 1px, #999 1px 3px);
+  2885→  border-color: rgba(0,0,0,0.4);
+  2886→}
+  2887→html.light .sp-cd-disc::before {
+  2888→  background: conic-gradient(
+  2889→    from 0deg,
+  2890→    transparent 0deg,
+  2891→    rgba(59,130,246,0.35) 20deg,
+  2892→    rgba(80,160,255,0.4) 50deg,
+  2893→    rgba(120,80,255,0.35) 80deg,
+  2894→    rgba(200,60,255,0.3) 110deg,
+  2895→    rgba(240,80,180,0.25) 140deg,
+  2896→    transparent 170deg,
+  2897→    transparent 240deg,
+  2898→    rgba(59,130,246,0.2) 280deg,
+  2899→    rgba(120,80,255,0.15) 320deg,
+  2900→    transparent 360deg
+  2901→  );
+  2902→  mix-blend-mode: multiply;
+  2903→}
+  2904→html.light .sp-cd-label { background: linear-gradient(135deg, color-mix(in srgb, var(--accent-solid) 20%, transparent), rgba(0,150,220,0.15)); }
+  2905→html.light .sp-cd-cover { box-shadow: 0 4px 20px rgba(0,0,0,0.1), inset 0 0 0 1px rgba(0,0,0,0.06); }
+  2906→html.light .tb-cd-disc {
+  2907→  background:
+  2908→    radial-gradient(circle at 50% 50%, var(--accent) 0 22%, transparent 22%),
+  2909→    radial-gradient(circle at 50% 50%, #ddd 0 8%, transparent 8%),
+  2910→    repeating-radial-gradient(circle at 50% 50%, #e0e0e0 0 1px, #ccc 1px 2px);
+  2911→}
+  2912→html.light .tb-cd-disc::before {
+  2913→  background: conic-gradient(
+  2914→    from 0deg,
+  2915→    transparent 0deg,
+  2916→    color-mix(in srgb, var(--accent-solid) 20%, transparent) 30deg,
+  2917→    rgba(120,80,255,0.18) 60deg,
+  2918→    rgba(200,60,220,0.15) 90deg,
+  2919→    transparent 120deg,
+  2920→    transparent 360deg
+  2921→  );
+  2922→}
+  2923→html.light .tb-cd-cover { box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  2924→
+  2925→/* Last.fm card */
+  2926→html.light .lastfm-card { background: rgba(255,255,255,0.6); }
+  2927→html.light .lfm-nowplaying { background: linear-gradient(135deg, color-mix(in srgb, var(--accent-solid) 5%, transparent), color-mix(in srgb, var(--accent-solid) 3%, transparent)); border-color: rgba(0,0,0,0.08); }
+  2928→html.light .lfm-nowplaying.live { border-color: rgba(16, 185, 129, 0.4); box-shadow: 0 0 16px rgba(16, 185, 129, 0.1); }
+  2929→html.light .lfm-track:hover, html.light .lfm-artist:hover { background: rgba(0,0,0,0.03); }
+  2930→html.light .lfm-np-progress { background: rgba(0,0,0,0.05); }
+  2931→html.light .lfm-activity-bar { background: color-mix(in srgb, var(--accent-solid) 40%, transparent); }
+  2932→html.light .lfm-period-tab.active { background: color-mix(in srgb, var(--accent-solid) 8%, transparent); }
+  2933→
+  2934→/* Contributions card */
+  2935→html.light .contrib-card { background: rgba(255,255,255,0.6); }
+  2936→
+  2937→/* WakaTime card */
+  2938→html.light .wakatime-card { background: rgba(255,255,255,0.6); }
+  2939→
+  2940→/* Glass card glow in light mode */
+  2941→html.light .glass-card::after {
+  2942→  background: radial-gradient(120px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), color-mix(in srgb, var(--accent-solid) 20%, transparent), transparent 40%);
+  2943→}
+  2944→
+  2945→/* Playground cards */
+  2946→html.light .pg-overlay { background: rgba(245,245,250,0.96); }
+  2947→html.light .pg-close { color: rgba(0,0,0,0.5); border-color: rgba(0,0,0,0.12); }
+  2948→html.light .pg-canvas { background: #f0f0f8; }
+  2949→
+  2950→/* Section dividers */
+  2951→html.light .section-divider-line { background: linear-gradient(90deg, transparent, rgba(80,80,140,0.2), transparent); }
+  2952→
+  2953→/* Shortcut overlay */
+  2954→html.light .shortcut-card { background: rgba(255,255,255,0.98); border-color: rgba(0,0,0,0.1); }
+  2955→html.light kbd { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); color: var(--accent); }
+  2956→
+  2957→/* Achievement toast */
+  2958→html.light .achievement-toast { background: rgba(255,255,255,0.98); border-color: var(--accent); }
+  2959→
+  2960→/* Skeleton loading */
+  2961→html.light .skeleton { background: linear-gradient(90deg, rgba(0,0,0,0.04) 25%, rgba(0,0,0,0.09) 50%, rgba(0,0,0,0.04) 75%); }
+  2962→
+  2963→/* Footer bar */
+  2964→html.light .footer-line { background: linear-gradient(90deg, transparent, rgba(80,80,140,0.2), transparent); }
+  2965→html.light .footer-link { border-color: rgba(80,80,140,0.15); color: var(--gray-dim); }
+  2966→html.light .footer-link:hover { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent-solid) 6%, transparent); box-shadow: 0 4px 16px color-mix(in srgb, var(--accent-solid) 10%, transparent); }
+  2967→html.light .footer-nav a:hover { color: var(--accent); background: color-mix(in srgb, var(--accent-solid) 6%, transparent); }
+  2968→
+  2969→/* ============ AMA Featured / Spotlight ============ */
+  2970→:root {
+  2971→  --ama-featured-purple: #D0BCFF;
+  2972→  --ama-featured-purple-line: rgba(208,188,255,0.28);
+  2973→  --ama-pinned-blue: #00C8FF;
+  2974→  --ama-pinned-blue-line: rgba(0,200,255,0.20);
+  2975→  --ama-card-bg: rgba(255,255,255,0.035);
+  2976→}
+  2977→html.light {
+  2978→  --ama-featured-purple: #6750A4;
+  2979→  --ama-featured-purple-line: rgba(103,80,164,0.26);
+  2980→  --ama-pinned-blue: #006CBA;
+  2981→  --ama-pinned-blue-line: rgba(0,108,186,0.20);
+  2982→  --ama-card-bg: rgba(255,255,255,0.6);
+  2983→}
+  2984→
+  2985→.ama-featured { margin: 22px 0 26px; }
+  2986→.ama-featured-label { display: none !important; }
+  2987→
+  2988→/* Badge layout */
+  2989→.ama-badge-row {
+  2990→  display: flex;
+  2991→  align-items: center;
+  2992→  justify-content: flex-start;
+  2993→  gap: 8px;
+  2994→  margin-bottom: 10px;
+  2995→}
+  2996→.ama-badge-row .ama-pin-badge,
+  2997→.ama-badge-row .ama-spotlight-badge { margin: 0; }
+  2998→.ama-badge-row .ama-pin-badge:nth-child(2) { margin-left: auto; }
+  2999→
+  3000→.ama-spotlight-badge,
+  3001→.ama-pin-badge,
+  3002→.ama-topic-badge {
+  3003→  display: inline-flex;
+  3004→  align-items: center;
+  3005→  gap: 5px;
+  3006→  font-family: var(--mono);
+  3007→  font-size: 10px;
+  3008→  font-weight: 800;
+  3009→  letter-spacing: 0.05em;
+  3010→  border-radius: 999px;
+  3011→  padding: 4px 9px;
+  3012→  box-shadow: none !important;
+  3013→  text-shadow: none !important;
+  3014→  filter: none !important;
+  3015→}
+  3016→.ama-spotlight-badge {
+  3017→  color: var(--ama-featured-purple) !important;
+  3018→  background: rgba(208,188,255,0.12) !important;
+  3019→  border: 1px solid var(--ama-featured-purple-line) !important;
+  3020→}
+  3021→.ama-pin-badge {
+  3022→  color: var(--ama-pinned-blue) !important;
+  3023→  background: rgba(0,200,255,0.10) !important;
+  3024→  border: 1px solid var(--ama-pinned-blue-line) !important;
+  3025→}
+  3026→.ama-topic-badge {
+  3027→  color: var(--gray);
+  3028→  background: rgba(255,255,255,0.055);
+  3029→  border: 1px solid var(--border);
+  3030→  margin-left: auto;
+  3031→}
+  3032→.ama-badge-row .ama-topic-badge:first-child { margin-left: 0; }
+  3033→.ama-badge-row .ama-pin-badge:nth-child(2) + .ama-topic-badge { margin-left: 8px; }
+  3034→html.light .ama-spotlight-badge { background: rgba(103,80,164,0.10) !important; }
+  3035→html.light .ama-pin-badge { background: rgba(0,108,186,0.08) !important; }
+  3036→html.light .ama-topic-badge { background: rgba(0,0,0,0.035); border-color: var(--border); }
+  3037→
+  3038→.ama-spotlight-icon,
+  3039→.ama-q-meta-spotlight,
+  3040→.ama-q-meta-spotlight .ama-q-meta-icon { color: var(--ama-featured-purple) !important; }
+  3041→.ama-pin-icon { color: var(--ama-pinned-blue) !important; }
+  3042→.ama-spotlight-icon,
+  3043→.ama-pin-icon { font-size: 13px !important; font-variation-settings: 'FILL' 1, 'wght' 700, 'opsz' 20; }
+  3044→
+  3045→.ama-empty-note {
+  3046→  font-family: var(--mono);
+  3047→  font-size: 12px;
+  3048→  color: var(--gray-dim);
+  3049→  text-align: center;
+  3050→  padding: 16px;
+  3051→  border: 1px dashed var(--border);
+  3052→  border-radius: 14px;
+  3053→}
+  3054→
+  3055→/* State cards: no glow, no body tint. */
+  3056→.ama-q.ama-q-spotlight,
+  3057→.ama-q.ama-q-featured-card {
+  3058→  box-shadow: none !important;
+  3059→  filter: none !important;
+  3060→  text-shadow: none !important;
+  3061→  background: var(--ama-card-bg) !important;
+  3062→}
+  3063→.ama-q.ama-q-spotlight:not(.ama-q-pinned) {
+  3064→  border-color: var(--ama-featured-purple-line) !important;
+  3065→}
+  3066→.ama-q.ama-q-pinned:not(.ama-q-spotlight) {
+  3067→  border-color: var(--ama-pinned-blue-line) !important;
+  3068→  background: var(--ama-card-bg) !important;
+  3069→}
+  3070→
+  3071→/* Featured + pinned: TRUE border-only split, no body tint. */
+  3072→.ama-q.ama-q-spotlight.ama-q-pinned,
+  3073→.ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned {
+  3074→  position: relative !important;
+  3075→  border-color: transparent !important;
+  3076→  background: var(--ama-card-bg) !important;
+  3077→  overflow: hidden !important;
+  3078→}
+  3079→.ama-q.ama-q-spotlight.ama-q-pinned::before,
+  3080→.ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned::before {
+  3081→  content: "" !important;
+  3082→  display: block !important;
+  3083→  position: absolute !important;
+  3084→  inset: 0 !important;
+  3085→  padding: 1px !important;
+  3086→  border-radius: inherit !important;
+  3087→  background: linear-gradient(to bottom,
+  3088→    var(--ama-featured-purple-line) 0%,
+  3089→    var(--ama-featured-purple-line) 50%,
+  3090→    var(--ama-pinned-blue-line) 50%,
+  3091→    var(--ama-pinned-blue-line) 100%) !important;
+  3092→  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
+  3093→  -webkit-mask-composite: xor !important;
+  3094→  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
+  3095→  mask-composite: exclude !important;
+  3096→  pointer-events: none !important;
+  3097→  z-index: 1 !important;
+  3098→  box-shadow: none !important;
+  3099→  filter: none !important;
+  3100→}
+  3101→.ama-q.ama-q-spotlight.ama-q-pinned > *,
+  3102→.ama-q.ama-q-featured-card.ama-q-spotlight.ama-q-pinned > * {
+  3103→  position: relative;
+  3104→  z-index: 2;
+  3105→}
+  3106→.ama-q.ama-q-spotlight::after,
+  3107→.ama-q.ama-q-featured-card::after,
+  3108→.ama-spotlight-badge::before,
+  3109→.ama-spotlight-badge::after {
+  3110→  content: none !important;
+  3111→  display: none !important;
+  3112→}
+  3113→
+  3114→/* AMA topic pill icon */
+  3115→.ama-topic-icon {
+  3116→  font-size: 13px !important;
+  3117→  line-height: 1;
+  3118→  color: var(--gray-dim);
+  3119→  font-variation-settings: 'FILL' 1, 'wght' 600, 'opsz' 20;
+  3120→}
+  3121→html.light .ama-topic-icon { color: var(--gray-dim); }
+  3122→
+  3123→/* ============ Global mobile tap/hold highlight reset ============ */
+  3124→html, body,
+  3125→a, button, input, textarea, select, label,
+  3126→[role="button"], [tabindex], summary,
+  3127→.topbar-music-widget, .tb-icon-btn, .theme-toggle,
+  3128→.btn-primary, .btn-ghost, .project-dl-btn, .project-live-btn,
+  3129→.skill-tab, .al-tab, .ama-sort-btn, .ama-vote-btn, .ama-react-btn,
+  3130→.ama-page, .ama-refresh-btn, .pg-card, .diff-btn,
+  3131→.sp-close, .sp-play-btn, .sp-progress-bar, .sp-vol-slider,
+  3132→.cmd-search-toggle, .cmd-submit-btn, .cmd-item,
+  3133→.lfm-link, .al-link, .presence-link, .footer-link, .footer-nav a,
+  3134→.interest-card, .project-card, .gh-card, .glass-card {
+  3135→  -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
+  3136→  -webkit-touch-callout: none;
+  3137→}
+  3138→
+  3139→button, a, [role="button"], summary,
+  3140→.topbar-music-widget, .tb-icon-btn, .theme-toggle,
+  3141→.btn-primary, .btn-ghost, .project-dl-btn, .project-live-btn,
+  3142→.skill-tab, .al-tab, .ama-sort-btn, .ama-vote-btn, .ama-react-btn,
+  3143→.ama-page, .ama-refresh-btn, .pg-card, .diff-btn,
+  3144→.sp-close, .sp-play-btn, .cmd-search-toggle, .cmd-submit-btn, .cmd-item,
+  3145→.presence-link, .footer-link, .footer-nav a {
+  3146→  touch-action: manipulation;
+  3147→}
+  3148→
+  3149→/* Keep UI chrome from showing browser/native red press surfaces. */
+  3150→button:active, a:active, [role="button"]:active, summary:active,
+  3151→.topbar-music-widget:active, .tb-icon-btn:active, .theme-toggle:active,
+  3152→.btn-primary:active, .btn-ghost:active, .project-dl-btn:active, .project-live-btn:active,
+  3153→.skill-tab:active, .al-tab:active, .ama-sort-btn:active, .ama-vote-btn:active, .ama-react-btn:active,
+  3154→.ama-page:active, .ama-refresh-btn:active, .pg-card:active, .diff-btn:active,
+  3155→.sp-close:active, .sp-play-btn:active, .cmd-search-toggle:active, .cmd-submit-btn:active, .cmd-item:active,
+  3156→.presence-link:active, .footer-link:active, .footer-nav a:active {
+  3157→  -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
+  3158→  outline: none;
+  3159→}
+  3160→
+  3161→/* Inputs keep focus usability but remove native mobile hold/tap overlays. */
+  3162→input:active, textarea:active, select:active,
+  3163→input:focus, textarea:focus, select:focus {
+  3164→  -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
+  3165→}
+  3166→
+  3167→/* Preserve readable text selection, but make selected text blue/cyan instead of red. */
+  3168→::selection {
+  3169→  background: color-mix(in srgb, var(--accent-solid) 24%, transparent) !important;
+  3170→  color: var(--white);
+  3171→}
+  3172→html.light ::selection {
+  3173→  background: rgba(103,80,164,0.22) !important;
+  3174→  color: var(--white);
+  3175→}
+  3176→
