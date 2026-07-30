@@ -1288,16 +1288,16 @@ html.light .interest-icon { background: color-mix(in srgb, var(--accent-solid) 8
   width: 100%;
   background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px;
   padding: 12px 16px 12px 44px; color: var(--white); font-family: inherit; font-size: 14px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  outline: none;
 }
-.ama-name-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-solid) 10%, transparent), 0 0 16px color-mix(in srgb, var(--accent-solid) 8%, transparent); }
+.ama-name-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-solid) 10%, transparent), 0 0 16px color-mix(in srgb, var(--accent-solid) 8%, transparent); }
 .ama-input {
   width: 100%; min-height: 90px; resize: vertical;
   background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 16px;
   padding: 16px 16px 32px 44px; color: var(--white); font-family: inherit; font-size: 15px; line-height: 1.5;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  outline: none;
 }
-.ama-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-solid) 10%, transparent), 0 0 16px color-mix(in srgb, var(--accent-solid) 8%, transparent); }
+.ama-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-solid) 10%, transparent), 0 0 16px color-mix(in srgb, var(--accent-solid) 8%, transparent); }
 
 /* Character counter */
 .ama-char-count {
