@@ -997,9 +997,10 @@ html.light .pchat-close:hover, html.light .pchat-clear:hover { background: rgba(
 html.light .pchat-suggest-chip { background: rgba(60,60,110,0.04); }
 html.light .pchat-status { background: rgba(60,60,110,0.06); }
 
-/* Mobile */
+/* Mobile fullscreen on narrow screens */
 @media (max-width: 440px) {
-  .pchat-panel { right: 0; bottom: 0; width: 100vw; height: 100vh; border-radius: 0; border: none; }
+  .pchat-panel { right: 0 !important; bottom: 0 !important; width: 100vw !important; height: 100vh !important; max-height: 100vh !important; border-radius: 0 !important; border: none !important; }
+  .pchat-fab { right: 14px; bottom: 14px; }
   .pchat-scroll-btn { right: 16px; bottom: 64px; }
   .pchat-suggest-chip { font-size: 12px; padding: 7px 12px; }
 }
