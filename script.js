@@ -1205,7 +1205,8 @@
           '<div class="al-perpage" id="al-perpage">Per page:<button class="al-perpage-btn" data-pp="6">6</button><button class="al-perpage-btn active" data-pp="12">12</button><button class="al-perpage-btn" data-pp="24">24</button><button class="al-perpage-btn" data-pp="48">48</button></div>';
         list.parentNode.insertBefore(controlsBar, list);
         const si = controlsBar.querySelector('#al-search'), sc = controlsBar.querySelector('#al-search-clear');
-        Widgets.bindSearch({ input: si, clear: sc, onChange: (v) => { activeSearch = v; page = 1; render(); } });
+        var searchTimer = null;
+        Widgets.bindSearch({ input: si, clear: sc, onChange: (v) => { clearTimeout(searchTimer); searchTimer = setTimeout(function () { activeSearch = v; page = 1; render(); }, 250); } });
         Widgets.bindPills({ container: controlsBar.querySelector('#al-sort'), selector: '.al-sort-btn', attr: 'sort', onSelect: (v) => { activeSort = v; page = 1; render(); } });
         var scoreTgl = controlsBar.querySelector('#al-score-toggle'); if (scoreTgl) scoreTgl.addEventListener('click', function () { showMeanScore = !showMeanScore; this.classList.toggle('active', showMeanScore); render(); });
         var viewTgl = controlsBar.querySelector('#al-view-toggle'); if (viewTgl) viewTgl.addEventListener('click', function (ev) { var b = ev.target.closest('.al-view-btn'); if (!b) return; listView = b.dataset.view === 'list'; list.classList.toggle('list-view', listView); viewTgl.querySelectorAll('.al-view-btn').forEach(function(x){x.classList.toggle('active',x===b);}); });
@@ -1222,9 +1223,12 @@
     }
     function loadFallbackAnime() {
       datasets.ANIME = [
-        { _status: 'CURRENT', progress: 52, score: 0, updatedAt: Date.now()/1000, media: { title: { romaji: 'NARUTO', english: 'Naruto' }, coverImage: { large: '' }, episodes: 220, duration: 23, genres: ['Action', 'Adventure'], format: 'TV' } },
-        { _status: 'COMPLETED', progress: 64, score: 0, updatedAt: Date.now()/1000 - 10, media: { title: { romaji: 'Hagane no Renkinjutsushi: FULLMETAL ALCHEMIST', english: 'Fullmetal Alchemist: Brotherhood' }, coverImage: { large: '' }, episodes: 64, duration: 25, genres: ['Action', 'Adventure', 'Drama'], format: 'TV' } },
-        { _status: 'COMPLETED', progress: 37, score: 0, updatedAt: Date.now()/1000 - 20, media: { title: { romaji: 'DEATH NOTE', english: 'Death Note' }, coverImage: { large: '' }, episodes: 37, duration: 23, genres: ['Mystery', 'Psychological', 'Thriller'], format: 'TV' } }
+        { _status: 'CURRENT', progress: 52, score: 0, updatedAt: Date.now()/1000, media: { id: 20, title: { romaji: 'NARUTO', english: 'Naruto' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20-CXyit3VSQwF4.png' }, episodes: 220, duration: 23, meanScore: 79, genres: ['Action', 'Adventure'], format: 'TV' } },
+        { _status: 'COMPLETED', progress: 64, score: 0, updatedAt: Date.now()/1000 - 10, media: { id: 5114, title: { romaji: 'FULLMETAL ALCHEMIST: BROTHERHOOD', english: 'Fullmetal Alchemist: Brotherhood' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/nx5114-CXyit3VSQwF4.png' }, episodes: 64, duration: 25, meanScore: 92, genres: ['Action', 'Adventure', 'Drama'], format: 'TV' } },
+        { _status: 'COMPLETED', progress: 37, score: 0, updatedAt: Date.now()/1000 - 20, media: { id: 1535, title: { romaji: 'DEATH NOTE', english: 'Death Note' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/nx1535-CXyit3VSQwF4.png' }, episodes: 37, duration: 23, meanScore: 87, genres: ['Mystery', 'Psychological', 'Thriller'], format: 'TV' } },
+        { _status: 'COMPLETED', progress: 75, score: 0, updatedAt: Date.now()/1000 - 30, media: { id: 16498, title: { romaji: 'SHINGEKI NO KYOJIN', english: 'Attack on Titan' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx16498-CXyit3VSQwF4.png' }, episodes: 75, duration: 24, meanScore: 86, genres: ['Action', 'Drama'], format: 'TV' } },
+        { _status: 'COMPLETED', progress: 26, score: 0, updatedAt: Date.now()/1000 - 40, media: { id: 21, title: { romaji: 'ONE PIECE', english: 'One Piece' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21-CXyit3VSQwF4.png' }, episodes: 26, duration: 24, meanScore: 87, genres: ['Action', 'Adventure', 'Comedy'], format: 'TV' } },
+        { _status: 'PLANNING', progress: 0, score: 0, updatedAt: Date.now()/1000 - 50, media: { id: 1, title: { romaji: 'COWBOY BEBOP', english: 'Cowboy Bebop' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx1-CXyit3VSQwF4.png' }, episodes: 26, duration: 24, meanScore: 88, genres: ['Action', 'Sci-Fi'], format: 'TV' } }
       ];
       loaded.ANIME = true;
       if (activeMedia === 'ANIME') { allEntries = datasets.ANIME; refreshAll(); }
@@ -1333,10 +1337,14 @@
           genres = Object.keys(gc).map(g => ({ genre: g, count: gc[g] }));
         }
         if (!count) { statsPanel.innerHTML = ''; return; }
+        /* #6 Chapters this week */
+        var weekAgo = Math.floor(Date.now() / 1000) - 7 * 86400;
+        var weekEps = allEntries.filter(e => (e.updatedAt || 0) >= weekAgo).reduce((s, e) => s + (Number(e.progress) || 0), 0);
         numbers = '<div class="al-stat-nums">' +
           '<span><b>' + count.toLocaleString() + '</b> manga</span>' +
           '<span><b>' + chapters.toLocaleString() + '</b> chapters</span>' +
           (volumes ? '<span><b>' + volumes.toLocaleString() + '</b> volumes</span>' : '') +
+          (weekEps ? '<span class="al-stat-week"><b>' + weekEps + '</b> ch this week</span>' : '') +
           (mean ? '<span><b>' + (mean / 10).toFixed(1) + '</b> mean score</span>' : '') +
         '</div>';
       } else {
@@ -1355,10 +1363,14 @@
         }
         if (!count) { statsPanel.innerHTML = ''; return; }
         const days = (mins / 1440).toFixed(1);
+        /* #6 Episodes this week */
+        var weekAgo = Math.floor(Date.now() / 1000) - 7 * 86400;
+        var weekEps = allEntries.filter(e => (e.updatedAt || 0) >= weekAgo).reduce((s, e) => s + (Number(e.progress) || 0), 0);
         numbers = '<div class="al-stat-nums">' +
           '<span><b>' + count.toLocaleString() + '</b> anime</span>' +
           '<span><b>' + eps.toLocaleString() + '</b> episodes</span>' +
           '<span><b>' + days + '</b> days watched</span>' +
+          (weekEps ? '<span class="al-stat-week"><b>' + weekEps + '</b> eps this week</span>' : '') +
           (mean ? '<span><b>' + (mean / 10).toFixed(1) + '</b> mean score</span>' : '') +
         '</div>';
       }
@@ -1411,6 +1423,7 @@
       const total = totalUnits(item.media);
       const progress = item.progress ? item.progress + (total ? '/' + total : '') + ' ' + unitShort() + (isOngoing ? ' ' + verbPast() : '') : (statusRaw === 'COMPLETED' ? 'completed' : '');
       const score = item.score ? ' · ★ ' + item.score : '';
+      var prog = item.progress || 0;
       var bPct = (total && prog) ? Math.min(100, Math.round(prog / total * 100)) : (statusRaw === 'COMPLETED' ? 100 : 0);
       var bBar = (bPct > 0 && bPct < 100) ? '<div class="al-banner-progress-bar"><div class="al-banner-progress-fill" style="width:' + bPct + '%"></div></div>' : '';
       return (img ? '<img class="al-banner-img" alt="' + esc(t) + '" src="' + img + '">' : '') + '<div class="al-banner-info"><div class="al-banner-label" data-status="' + statusRaw.toLowerCase() + '">' + label + '</div><div class="al-banner-title">' + esc(t) + '</div><div class="al-banner-progress">' + esc(progress + score) + '</div>' + bBar + '</div>';

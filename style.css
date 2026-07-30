@@ -1423,7 +1423,7 @@ html.light .lastfm-card .skeleton { background: linear-gradient(90deg, rgba(0,0,
 .anilist-card { padding: 32px; }
 .al-head { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
 .al-avatar { width: 52px; height: 52px; border-radius: 50%; border: 2px solid var(--border); }
-.al-title { font-weight: 800; font-size: 18px; }
+.al-title { font-weight: 800; font-size: 18px; display: flex; align-items: center; gap: 8px; }
 .al-sub { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); }
 .al-link { font-size: 12px; color: var(--accent); margin-left: auto; }
 .al-refresh-btn { margin-left: 8px; }
@@ -1431,8 +1431,8 @@ html.light .lastfm-card .skeleton { background: linear-gradient(90deg, rgba(0,0,
 .al-tab { font-family: var(--mono); font-size: 11px; padding: 7px 14px; border-radius: var(--radius-btn); border: 1px solid var(--border); color: var(--gray-dim); }
 .al-tab.active { background: var(--white); color: #000; border-color: var(--white); }
 .al-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
-.al-item { border-radius: 14px; overflow: hidden; border: 1px solid var(--border); transition: transform 0.2s ease; }
-.al-item:hover { transform: translateY(-3px); }
+.al-item { border-radius: 14px; overflow: hidden; border: 1px solid var(--border); transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.2s ease; }
+.al-item:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.4), 0 0 20px color-mix(in srgb, var(--accent-solid) 12%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 30%, transparent); }
 .al-item img { width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block; }
 .al-item-cover { position: relative; overflow: hidden; }
 .al-fav { position: absolute; top: 6px; right: 6px; z-index: 2; color: #ff5c8a; font-size: 13px; background: rgba(0,0,0,0.55); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
@@ -2098,6 +2098,7 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
 .al-stats { margin-bottom: 18px; }
 .al-stat-nums { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 12px; color: var(--gray-dim); margin-bottom: 12px; }
 .al-stat-nums b { color: var(--white); font-size: 14px; }
+.al-stat-week b { color: #34d399; }
 .al-stat-genres { display: grid; gap: 6px; max-width: 440px; }
 .al-stat-genre { display: grid; grid-template-columns: 96px 1fr 28px; align-items: center; gap: 10px; font-family: var(--mono); font-size: 11px; color: var(--gray-dim); }
 .al-sg-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
