@@ -826,13 +826,22 @@ html.light .site-particles { opacity: 0.8; }
   padding: 2px 8px; border-radius: 8px; margin-left: 4px;
 }
 .pchat-head-actions { display: flex; gap: 6px; align-items: center; }
-.pchat-clear, .pchat-close {
+.pchat-clear {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 28px; padding: 0 10px; border-radius: 8px;
+  border: 1px solid var(--border); background: rgba(255,255,255,0.04);
+  color: var(--white); cursor: pointer; font-size: 11px; font-weight: 600;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.pchat-clear .material-symbols-outlined { font-size: 15px; }
+.pchat-clear:hover { background: rgba(255,255,255,0.1); border-color: var(--border-hover); }
+.pchat-close {
   width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border);
   background: rgba(255,255,255,0.04); color: var(--white); cursor: pointer;
   display: grid; place-items: center; transition: background 0.15s ease, border-color 0.15s ease;
 }
-.pchat-clear:hover, .pchat-close:hover { background: rgba(255,255,255,0.1); border-color: var(--border-hover); }
-.pchat-clear .material-symbols-outlined, .pchat-close { font-size: 16px; }
+.pchat-close:hover { background: rgba(255,255,255,0.1); border-color: var(--border-hover); }
+.pchat-close { font-size: 16px; }
 
 /* Chat log */
 .pchat-log { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth; }
@@ -997,9 +1006,9 @@ html.light .pchat-close:hover, html.light .pchat-clear:hover { background: rgba(
 html.light .pchat-suggest-chip { background: rgba(60,60,110,0.04); }
 html.light .pchat-status { background: rgba(60,60,110,0.06); }
 
-/* Mobile fullscreen on narrow screens */
+/* Mobile — tall panel, NOT forced fullscreen. User can close via ✕ */
 @media (max-width: 440px) {
-  .pchat-panel { right: 0 !important; bottom: 0 !important; width: 100vw !important; height: 100vh !important; max-height: 100vh !important; border-radius: 0 !important; border: none !important; }
+  .pchat-panel { right: 0; bottom: 0; width: 100vw; height: 85vh; max-height: 85vh; border-radius: 16px 16px 0 0; }
   .pchat-fab { right: 14px; bottom: 14px; }
   .pchat-scroll-btn { right: 16px; bottom: 64px; }
   .pchat-suggest-chip { font-size: 12px; padding: 7px 12px; }
