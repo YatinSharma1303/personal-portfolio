@@ -637,14 +637,23 @@
       <h2 class="section-title">Got a <em>question?</em></h2>
       <p class="section-desc">Drop a question, collab idea, or project request. I read every one.</p>
     </div>
+    <div class="ama-deco"><span class="material-symbols-outlined">forum</span></div>
 
     <div class="ama-card glass-card fade-in">
-      <div class="ama-counter">Used <span id="ama-count">0</span>/20 today</div>
-      <input class="ama-name-input" id="ama-name-input" maxlength="60" placeholder="Your name (optional)" autocomplete="off" />
-      <textarea class="ama-input" id="ama-input" maxlength="280" placeholder="Ask me anything…"></textarea>
-      <button class="btn-primary ama-send" id="ama-send">Send</button>
+      <div class="ama-counter">Used <span id="ama-count">0</span><span class="ama-counter-slash">/</span><span class="ama-counter-max">20</span> today</div>
+      <div class="ama-counter-bar"><div class="ama-counter-fill" id="ama-counter-fill"></div></div>
+      <div class="ama-input-wrap">
+        <span class="material-symbols-outlined ama-input-icon">person</span>
+        <input class="ama-name-input" id="ama-name-input" maxlength="60" placeholder="Your name (optional)" autocomplete="off" />
+      </div>
+      <div class="ama-textarea-wrap">
+        <span class="material-symbols-outlined ama-input-icon">chat_bubble</span>
+        <textarea class="ama-input" id="ama-input" maxlength="280" placeholder="Ask me anything…"></textarea>
+        <span class="ama-char-count"><span id="ama-char-count">0</span>/280</span>
+      </div>
+      <button class="btn-primary ama-send" id="ama-send" disabled><span class="ama-send-text">Send</span><span class="material-symbols-outlined ama-send-icon">send</span><span class="ama-send-spinner" hidden></span></button>
       <div class="ama-status" id="ama-status"></div>
-
+      <div class="ama-divider"></div>
       <div class="ama-list-wrap" id="ama-list-wrap" hidden>
         <div class="ama-featured" id="ama-featured" hidden></div>
         <div class="ama-sort-label">Answered questions <button class="ama-refresh-btn" id="ama-refresh" title="Refresh answers"><span class="material-symbols-outlined">refresh</span></button></div>

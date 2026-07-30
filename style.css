@@ -1230,26 +1230,138 @@ html.light .interest-icon { background: color-mix(in srgb, var(--accent-solid) 8
 
 /* ============ AMA ============ */
 .ama-card { padding: 32px; max-width: 680px; }
-.ama-counter { font-family: var(--mono); font-size: 12px; color: var(--gray-dim); margin-bottom: 14px; }
+
+/* Decorative icon */
+.ama-deco {
+  display: flex; justify-content: center; margin-top: -12px; margin-bottom: 8px;
+}
+.ama-deco .material-symbols-outlined {
+  font-size: 32px; color: var(--accent); font-variation-settings: 'FILL' 1, 'wght' 300, 'opsz' 24;
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent-solid) 40%, transparent));
+  animation: amaDecoFloat 4s ease-in-out infinite;
+}
+@keyframes amaDecoFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* Counter — pill badge with progress bar */
+.ama-counter {
+  font-family: var(--mono); font-size: 12px; color: var(--gray-dim);
+  margin-bottom: 6px; display: flex; align-items: center; gap: 0;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  padding: 6px 14px; border-radius: 20px; width: fit-content;
+}
+.ama-counter #ama-count { color: var(--white); font-weight: 700; }
+.ama-counter-slash { margin: 0 2px; color: var(--gray-dim); }
+.ama-counter-max { color: var(--gray-dim); }
+.ama-counter-bar {
+  width: 100%; max-width: 160px; height: 3px;
+  background: rgba(255,255,255,0.06); border-radius: 4px;
+  margin-bottom: 16px; overflow: hidden;
+}
+.ama-counter-fill {
+  height: 100%; width: 0%; border-radius: 4px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  transition: width 0.4s cubic-bezier(0.22,1,0.36,1);
+}
+.ama-counter-fill.warn { background: linear-gradient(90deg, #f59e0b, #ef4444); }
+
+/* Input wrappers with icon prefix */
+.ama-input-wrap {
+  position: relative; margin-bottom: 12px;
+}
+.ama-textarea-wrap {
+  position: relative; margin-bottom: 14px;
+}
+.ama-input-icon {
+  position: absolute; top: 50%; left: 14px; transform: translateY(-50%);
+  font-size: 18px; color: var(--gray-dim); pointer-events: none;
+  transition: color 0.2s ease; z-index: 1;
+}
+.ama-textarea-wrap .ama-input-icon {
+  top: 18px; transform: none;
+}
+.ama-input-wrap:focus-within .ama-input-icon,
+.ama-textarea-wrap:focus-within .ama-input-icon {
+  color: var(--accent);
+}
 .ama-name-input {
-  width: 100%; margin-bottom: 12px;
+  width: 100%;
   background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px;
-  padding: 12px 16px; color: var(--white); font-family: inherit; font-size: 14px;
+  padding: 12px 16px 12px 44px; color: var(--white); font-family: inherit; font-size: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .ama-name-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-solid) 10%, transparent), 0 0 16px color-mix(in srgb, var(--accent-solid) 8%, transparent); }
 .ama-input {
   width: 100%; min-height: 90px; resize: vertical;
   background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 16px;
-  padding: 16px; color: var(--white); font-family: inherit; font-size: 15px; line-height: 1.5;
-  margin-bottom: 14px;
+  padding: 16px 16px 32px 44px; color: var(--white); font-family: inherit; font-size: 15px; line-height: 1.5;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .ama-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-solid) 10%, transparent), 0 0 16px color-mix(in srgb, var(--accent-solid) 8%, transparent); }
-.ama-send { margin-bottom: 8px; }
-.ama-status { font-size: 13px; min-height: 20px; }
+
+/* Character counter */
+.ama-char-count {
+  position: absolute; bottom: 10px; right: 14px;
+  font-family: var(--mono); font-size: 11px; color: var(--gray-dim);
+  pointer-events: none; transition: color 0.2s ease;
+}
+.ama-char-count.warn { color: #f59e0b; }
+.ama-char-count.limit { color: #ef4444; font-weight: 700; }
+
+/* Send button — icon + spinner + disabled */
+.ama-send {
+  margin-bottom: 8px; position: relative; min-width: 100px; justify-content: center;
+  transition: all 0.22s cubic-bezier(0.22,1,0.36,1);
+}
+.ama-send:disabled {
+  opacity: 0.4; cursor: not-allowed; transform: none !important;
+  box-shadow: none !important;
+}
+.ama-send:not(:disabled):hover {
+  box-shadow: 0 0 28px rgba(255,255,255,0.2); transform: translateY(-2px);
+}
+.ama-send-icon {
+  font-size: 16px; transition: transform 0.2s ease;
+}
+.ama-send:not(:disabled):hover .ama-send-icon { transform: translateX(2px) translateY(-1px); }
+.ama-send-spinner {
+  display: inline-block; width: 16px; height: 16px;
+  border: 2px solid rgba(0,0,0,0.2); border-top-color: #000;
+  border-radius: 50%; animation: amaSpin 0.6s linear infinite;
+}
+@keyframes amaSpin { to { transform: rotate(360deg); } }
+
+/* Status with icon */
+.ama-status {
+  font-size: 13px; min-height: 20px; display: flex; align-items: center; gap: 6px;
+}
 .ama-status.ok { color: #34d399; }
 .ama-status.err { color: #ff6b6b; }
+
+/* Divider between form and list */
+.ama-divider {
+  height: 1px; margin: 24px 0 0;
+  background: linear-gradient(90deg, transparent, var(--border-hover), transparent);
+}
+
+/* Question cards — hover lift + glow */
 .ama-list { margin-top: 24px; display: flex; flex-direction: column; gap: 12px; }
-.ama-q { padding: 16px; border-radius: 14px; border: 1px solid var(--border); }
+.ama-q {
+  padding: 16px; border-radius: 14px; border: 1px solid var(--border);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  animation: amaFadeIn 0.4s ease both;
+}
+.ama-q:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent-solid) 30%, var(--border));
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2), 0 0 0 1px color-mix(in srgb, var(--accent-solid) 10%, transparent);
+}
+@keyframes amaFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .ama-q-text { font-size: 14px; margin-bottom: 8px; }
 .ama-q-ans { font-size: 13px; color: var(--gray); padding-left: 12px; border-left: 2px solid var(--accent); }
 .ama-q-meta { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
@@ -1756,8 +1868,13 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
   .interest-icon { width: 52px; height: 52px; font-size: 30px; border-radius: 14px; }
 
   /* AMA */
-  .ama-input { min-height: 72px; padding: 14px; font-size: 14px; }
-  .ama-name-input { padding: 10px 14px; font-size: 13px; }
+  .ama-deco .material-symbols-outlined { font-size: 26px; }
+  .ama-counter { font-size: 11px; padding: 5px 12px; }
+  .ama-input { min-height: 72px; padding: 14px 14px 28px 40px; font-size: 14px; }
+  .ama-name-input { padding: 10px 14px 10px 40px; font-size: 13px; }
+  .ama-input-icon { font-size: 16px; left: 12px; }
+  .ama-textarea-wrap .ama-input-icon { top: 14px; }
+  .ama-char-count { font-size: 10px; bottom: 8px; right: 10px; }
   .ama-q { padding: 14px; border-radius: 12px; }
   .ama-q-text { font-size: 13px; }
   .ama-q-ans { font-size: 12px; padding-left: 10px; }
@@ -2327,13 +2444,21 @@ html.light .project-card:hover { box-shadow: 0 16px 50px rgba(0,0,0,0.08), 0 0 3
 
 /* AMA Send button + Sort pills */
 html.light .ama-card { background: rgba(255,255,255,0.6); }
+html.light .ama-deco .material-symbols-outlined { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent-solid) 25%, transparent)); }
+html.light .ama-counter { background: rgba(0,0,0,0.04); border-color: var(--border); }
+html.light .ama-counter-bar { background: rgba(0,0,0,0.08); }
+html.light .ama-input-icon { color: var(--gray-dim); }
+html.light .ama-input-wrap:focus-within .ama-input-icon,
+html.light .ama-textarea-wrap:focus-within .ama-input-icon { color: var(--accent); }
 html.light .ama-sort-btn { color: var(--gray-dim); border-color: var(--border); }
 html.light .ama-sort-btn.active { background: var(--white); color: #fff; }
 html.light .ama-name-input { background: rgba(0,0,0,0.03); color: var(--white); }
 html.light .ama-name-input:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-solid) 10%, transparent), 0 0 16px color-mix(in srgb, var(--accent-solid) 6%, transparent); }
 html.light .ama-input { background: rgba(0,0,0,0.03); color: var(--white); }
 html.light .ama-input:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-solid) 10%, transparent), 0 0 16px color-mix(in srgb, var(--accent-solid) 6%, transparent); }
-html.light .ama-q { border-color: var(--border); }
+html.light .ama-q { border-color: var(--border); background: transparent; }
+html.light .ama-q:hover { border-color: color-mix(in srgb, var(--accent-solid) 25%, var(--border)); box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+html.light .ama-divider { background: linear-gradient(90deg, transparent, var(--border), transparent); }
 html.light .ama-vote-btn { border-color: var(--border); color: var(--gray); }
 html.light .ama-react-btn { border-color: var(--border); background: rgba(0,0,0,0.03); }
 html.light .ama-page { border-color: var(--border); color: var(--gray-dim); }

@@ -1836,7 +1836,8 @@
     const input = $('ama-input'), send = $('ama-send'), status = $('ama-status'),
           countEl = $('ama-count'), listWrap = $('ama-list-wrap'),
           list = $('ama-list'), sortWrap = $('ama-sort'), pager = $('ama-pager'), featured = $('ama-featured'),
-          searchInput = $('ama-search'), searchClear = $('ama-search-clear');
+          searchInput = $('ama-search'), searchClear = $('ama-search-clear'),
+          charCountEl = $('ama-char-count'), counterFill = $('ama-counter-fill');
     if (!input) return;
 
     const nameInput = $('ama-name-input');
@@ -1862,6 +1863,30 @@
     let todayCount = 0;
     try { const stored = JSON.parse(localStorage.getItem(LIMIT_KEY) || '{}'); todayCount = stored.date === today ? stored.count : 0; } catch (e) {}
     countEl.textContent = todayCount;
+    function updateCounterBar() {
+      if (counterFill) {
+        const pct = Math.min(100, (todayCount / 20) * 100);
+        counterFill.style.width = pct + '%';
+        counterFill.classList.toggle('warn', pct >= 75);
+      }
+    }
+    updateCounterBar();
+
+    // Character counter & send button state
+    const MAX_CHARS = 280;
+    function updateCharCount() {
+      const len = input.value.length;
+      if (charCountEl) charCountEl.textContent = len;
+      const charWrap = input.closest('.ama-textarea-wrap');
+      const charSpan = charWrap ? charWrap.querySelector('.ama-char-count') : null;
+      if (charSpan) {
+        charSpan.classList.remove('warn', 'limit');
+        if (len > 250) charSpan.classList.add(len >= MAX_CHARS ? 'limit' : 'warn');
+      }
+      if (send) send.disabled = len === 0;
+    }
+    input.addEventListener('input', updateCharCount);
+    updateCharCount();
 
     let votedSet = new Set();
     try { votedSet = new Set(JSON.parse(localStorage.getItem('yatin_ama_votes') || '[]')); } catch (e) {}
@@ -2185,7 +2210,7 @@
         // matches aren't hidden above the results.
         if (spotlightDoc && !searching) {
           featured.hidden = false;
-          featured.innerHTML = amaQuestionCard(spotlightDoc, { featured: true, activeSpotlight: true });
+          featured.innerHTML = '<div style="animation-delay:0s">' + amaQuestionCard(spotlightDoc, { featured: true, activeSpotlight: true }) + '</div>';
           wireAmaActions(featured);
         } else {
           featured.hidden = true;
@@ -2199,7 +2224,7 @@
       if (page > pages) page = pages;
       const slice = arr.slice((page - 1) * PER_PAGE, page * PER_PAGE);
       list.innerHTML = slice.length
-        ? slice.map(q => amaQuestionCard(q, { activeSpotlight: q.id === activeSpotlightId && (searching || !featured) })).join('')
+        ? slice.map((q, i) => '<div style="animation-delay:' + (i * 0.06) + 's">' + amaQuestionCard(q, { activeSpotlight: q.id === activeSpotlightId && (searching || !featured) }) + '</div>').join('')
         : (searching
             ? '<div class="ama-empty-note">No answered questions match “' + esc(activeSearch) + '”.</div>'
             : (spotlightDoc ? '<div class="ama-empty-note">No more answered questions yet.</div>' : ''));
@@ -2279,8 +2304,8 @@
     }
     function submit() {
       const text = input.value.trim();
-      if (!text) { status.textContent = 'Please type a question first.'; status.className = 'ama-status err'; return; }
-      if (todayCount >= CONFIG.amaLimit) { status.textContent = 'Daily limit reached.'; status.className = 'ama-status err'; return; }
+      if (!text) { status.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">error</span> Please type a question first.'; status.className = 'ama-status err'; return; }
+      if (todayCount >= CONFIG.amaLimit) { status.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">block</span> Daily limit reached.'; status.className = 'ama-status err'; return; }
       const typedName = (nameTouched && nameInput) ? nameInput.value.trim() : '';
       // Empty/untouched name should always be anonymous. We intentionally do
       // not reuse localStorage or browser-autofilled values here.
@@ -2294,20 +2319,24 @@
         pinned: { booleanValue: false }, dismissed: { booleanValue: false },
         topic: { stringValue: autoTopic }, topicManual: { booleanValue: false }, topicAt: { stringValue: createdAt }
       };
-      status.textContent = 'Sending…'; status.className = 'ama-status';
+      status.innerHTML = '<span class="ama-send-spinner"></span> Sending…'; status.className = 'ama-status';
+      if (send) { send.disabled = true; send.querySelector('.ama-send-text').textContent = 'Sending…'; send.querySelector('.ama-send-icon').hidden = true; send.querySelector('.ama-send-spinner').hidden = false; }
       const notify = () => fetch('/api/telegram', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, question: text, id, createdAt, topic: autoTopic }) }).catch(() => {});
       const afterSubmit = (ok) => {
         todayCount++; localStorage.setItem(LIMIT_KEY, JSON.stringify({ date: today, count: todayCount })); countEl.textContent = todayCount; input.value = '';
+        updateCounterBar();
         if (nameInput) nameInput.value = '';
         nameTouched = false;
         try { localStorage.removeItem('yatin_ama_name'); } catch (e) {}
         if (ok) {
-          status.textContent = '✅ Sent! Yatin will reply soon — check back here.';
+          status.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">check_circle</span> Sent! Yatin will reply soon — check back here.';
           if (window.unlockAchievement) window.unlockAchievement('asked', 'Inquisitive Mind', 'Asked a question!');
         } else {
-          status.textContent = 'Could not send. Try again later.';
+          status.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">error</span> Could not send. Try again later.';
         }
         status.className = ok ? 'ama-status ok' : 'ama-status err';
+        if (send) { send.querySelector('.ama-send-text').textContent = 'Send'; send.querySelector('.ama-send-icon').hidden = false; send.querySelector('.ama-send-spinner').hidden = true; }
+        updateCharCount();
         setTimeout(() => { status.textContent = ''; status.className = 'ama-status'; }, 4500);
       };
       if (FIREBASE_READY) {
