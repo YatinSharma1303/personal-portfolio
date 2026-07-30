@@ -1118,6 +1118,57 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .lfm-recent-name { font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
 .lfm-recent-artist { font-size: 9px; color: var(--gray-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
 .lfm-recent-time { font-size: 8px; color: var(--accent); font-family: var(--mono); opacity: 0.7; white-space: nowrap; }
+/* -- Genre tags on tracks -- */
+.lfm-track-tags { display: flex; gap: 4px; margin-top: 3px; flex-wrap: wrap; }
+.lfm-track-tag { font-family: var(--mono); font-size: 8px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border); color: var(--gray-dim); white-space: nowrap; }
+
+/* -- Period selector tabs -- */
+.lfm-period-tabs { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
+.lfm-period-tab { font-family: var(--mono); font-size: 10px; padding: 5px 12px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--gray-dim); cursor: pointer; transition: all 0.2s ease; }
+.lfm-period-tab:hover { border-color: var(--border-hover); color: var(--fg); }
+.lfm-period-tab.active { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent-solid) 10%, transparent); }
+
+/* -- Loved tracks heart -- */
+.lfm-loved { color: #ef4444; font-size: 10px; margin-left: 4px; font-style: normal; }
+
+/* -- Now Playing background blur -- */
+.lfm-nowplaying { position: relative; overflow: hidden; }
+.lfm-np-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: blur(40px); opacity: 0; transition: opacity 0.6s ease; border-radius: inherit; z-index: 0; pointer-events: none; }
+.lfm-nowplaying.live .lfm-np-bg { opacity: 0.15; }
+.lfm-np-art-wrap, .lfm-np-info { position: relative; z-index: 1; }
+
+/* -- 7-day activity chart -- */
+.lfm-activity { display: flex; align-items: flex-end; gap: 6px; margin-bottom: 22px; padding: 14px 0 0; }
+.lfm-activity-label { font-family: var(--mono); font-size: 9px; color: var(--gray-dim); margin-bottom: 8px; }
+.lfm-activity-bars { display: flex; align-items: flex-end; gap: 4px; flex: 1; }
+.lfm-activity-day { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+.lfm-activity-bar { width: 100%; max-width: 28px; min-height: 3px; border-radius: 4px; background: color-mix(in srgb, var(--accent-solid) 60%, transparent); transition: height 0.4s ease; }
+.lfm-activity-day-label { font-family: var(--mono); font-size: 8px; color: var(--gray-dim); opacity: 0.6; }
+
+/* -- Now Playing progress bar -- */
+.lfm-np-progress { position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: rgba(255,255,255,0.05); border-radius: 0 0 18px 18px; z-index: 2; overflow: hidden; opacity: 0; transition: opacity 0.3s ease; }
+.lfm-nowplaying.live .lfm-np-progress { opacity: 1; }
+.lfm-np-progress-bar { height: 100%; background: var(--accent); border-radius: 0 0 18px 18px; width: 0; }
+.lfm-nowplaying.live .lfm-np-progress-bar { animation: npProgress 12s linear infinite; }
+@keyframes npProgress { 0% { width: 0; } 85% { width: 92%; } 100% { width: 95%; } }
+
+/* -- Album name in now playing -- */
+.lfm-np-album { font-size: 11px; color: var(--gray-dim); font-family: var(--mono); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.7; }
+
+/* -- Artist rank numbers -- */
+.lfm-artist-rank { font-family: var(--mono); font-size: 12px; color: var(--gray-dim); width: 16px; text-align: center; flex-shrink: 0; }
+
+/* -- Clickable track/artist links -- */
+.lfm-track-name a, .lfm-artist-name a { color: inherit; text-decoration: none; }
+.lfm-track-name a:hover, .lfm-artist-name a:hover { color: var(--accent); text-decoration: underline; }
+.lfm-recent-name a { color: inherit; text-decoration: none; }
+.lfm-recent-name a:hover { color: var(--accent); text-decoration: underline; }
+
+/* -- Shimmer skeleton -- */
+.lastfm-card .skeleton { background: linear-gradient(90deg, var(--border) 25%, rgba(255,255,255,0.06) 50%, var(--border) 75%) !important; background-size: 200px 100% !important; animation: lfmShimmer 1.5s ease-in-out infinite !important; }
+@keyframes lfmShimmer { 0% { background-position: -200px 0; } 100% { background-position: calc(200px + 100%) 0; } }
+html.light .lastfm-card .skeleton { background: linear-gradient(90deg, rgba(0,0,0,0.06) 25%, rgba(0,0,0,0.02) 50%, rgba(0,0,0,0.06) 75%) !important; background-size: 200px 100% !important; animation: lfmShimmer 1.5s ease-in-out infinite !important; }
+
 @media (max-width: 820px) { .lfm-columns { grid-template-columns: 1fr; } }
 
 /* ============ ANILIST ============ */
@@ -1667,6 +1718,10 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
   .lfm-recent-item { padding: 5px 10px 5px 5px; }
   .lfm-recent-name { max-width: 90px; }
   .lfm-recent-artist { max-width: 90px; }
+  .lfm-period-tabs { gap: 4px; margin-bottom: 14px; }
+  .lfm-period-tab { padding: 4px 10px; font-size: 9px; }
+  .lfm-activity { margin-bottom: 16px; }
+  .lfm-activity-bar { max-width: 20px; }
 
   /* AniList */
   .al-head { gap: 10px; margin-bottom: 18px; }
@@ -1856,6 +1911,8 @@ html.light .visitor-badge { background: rgba(255,255,255,0.6); }
   .lfm-np-art { width: 56px; height: 56px; border-radius: 10px; }
   .lfm-np-track { font-size: 14px; }
   .lfm-np-artist { font-size: 11px; }
+  .lfm-period-tabs { gap: 3px; }
+  .lfm-period-tab { padding: 3px 8px; font-size: 8px; }
 }
 
 /* ============ WAKATIME ============ */
@@ -2360,6 +2417,9 @@ html.light .lastfm-card { background: rgba(255,255,255,0.6); }
 html.light .lfm-nowplaying { background: linear-gradient(135deg, color-mix(in srgb, var(--accent-solid) 5%, transparent), color-mix(in srgb, var(--accent-solid) 3%, transparent)); border-color: rgba(0,0,0,0.08); }
 html.light .lfm-nowplaying.live { border-color: rgba(16, 185, 129, 0.4); box-shadow: 0 0 16px rgba(16, 185, 129, 0.1); }
 html.light .lfm-track:hover, html.light .lfm-artist:hover { background: rgba(0,0,0,0.03); }
+html.light .lfm-np-progress { background: rgba(0,0,0,0.05); }
+html.light .lfm-activity-bar { background: color-mix(in srgb, var(--accent-solid) 40%, transparent); }
+html.light .lfm-period-tab.active { background: color-mix(in srgb, var(--accent-solid) 8%, transparent); }
 
 /* Contributions card */
 html.light .contrib-card { background: rgba(255,255,255,0.6); }
