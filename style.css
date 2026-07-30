@@ -1213,37 +1213,43 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .skill-panel-sub { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); }
 .skill-count { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--gray); }
 
-/* Skill toggle button */
-.skill-toggle {
-  display: flex; align-items: center; gap: 6px;
-  margin: 0 auto 0 0; padding: 9px 18px; border-radius: 10px;
-  border: 1px solid var(--border); background: rgba(255,255,255,0.03);
-  color: var(--white); font-size: 13px; font-weight: 600; cursor: pointer;
-  transition: all 0.2s ease;
-}
-.skill-toggle:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent-solid) 8%, transparent); }
-.skill-toggle-text { font-family: var(--mono); letter-spacing: 0.02em; }
-.skill-toggle-icon { font-size: 20px; transition: transform 0.25s ease; }
-.skill-toggle[aria-expanded="true"] .skill-toggle-icon { transform: rotate(180deg); }
-
-/* Collapsible skill body */
-.skill-body {
-  max-height: 0; overflow: hidden;
-  transition: max-height 0.4s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease, margin 0.3s ease;
-  opacity: 0; margin-top: 0;
-}
-.skill-body.open {
-  max-height: 2000px; opacity: 1; margin-top: 20px;
-}
-
-.skill-tabs { display: flex; gap: 8px; margin-bottom: 22px; flex-wrap: wrap; }
+.skill-tabs { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
 .skill-tab {
   font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em;
   padding: 7px 14px; border-radius: var(--radius-btn);
   border: 1px solid var(--border); color: var(--gray-dim);
 }
 .skill-tab.active { background: var(--white); color: #000; border-color: var(--white); }
-.skill-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+
+/* Skill toggle — collapse/expand the list */
+.skill-toggle {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: 10px 16px; margin-top: 4px;
+  border-radius: 10px; border: 1px solid var(--border);
+  background: rgba(255,255,255,0.03); color: var(--white);
+  font-family: var(--mono); font-size: 12px; font-weight: 600;
+  letter-spacing: 0.04em; cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.skill-toggle:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent-solid) 8%, transparent);
+}
+.skill-toggle-arrow {
+  font-size: 18px; transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.skill-toggle.open .skill-toggle-arrow { transform: rotate(180deg); }
+
+/* Skill list — collapsible */
+.skill-list {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px;
+  max-height: 0; overflow: hidden; opacity: 0;
+  transition: max-height 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease, margin-top 0.35s ease;
+  margin-top: 0;
+}
+.skill-list.open {
+  max-height: 3000px; opacity: 1; margin-top: 16px;
+}
 .skill-item {
   padding: 16px; border-radius: 18px; border: 1px solid var(--border);
   background: rgba(255,255,255,0.02); transition: all 0.22s ease;
