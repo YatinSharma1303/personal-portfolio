@@ -86,13 +86,7 @@
     if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
     return Math.floor(diff / 604800) + 'w ago';
   }
-  // Build a Last.fm track/artist URL
-  function lfmTrackUrl(artist, track) {
-    return 'https://www.last.fm/music/' + encodeURIComponent(artist || '') + '/_/' + encodeURIComponent(track || '');
-  }
-  function lfmArtistUrl(artist) {
-    return 'https://www.last.fm/music/' + encodeURIComponent(artist || '');
-  }
+
   // Build a {size: url} map of Last.fm images, dropping default placeholder art.
   function lfmImgMap(images) {
     const map = {};
@@ -872,8 +866,7 @@
             : '<div class="lfm-track-img lfm-noart" style="background:#141414 !important">♪</div>';
           const artistName = tr.artist ? (tr.artist.name || tr.artist['#text'] || '') : '';
           const lovedHtml = isLovedTrack(tr.name, artistName) ? '<span class="lfm-loved">♥</span>' : '';
-          const trackLink = artistName ? '<a href="' + lfmTrackUrl(artistName, tr.name) + '" target="_blank" rel="noopener">' + esc(tr.name) + lovedHtml + '</a>' : esc(tr.name) + lovedHtml;
-          return '<div class="lfm-track"><span class="lfm-track-rank">' + (idx+1) + '</span>' + art + '<div class="lfm-track-info"><div class="lfm-track-name">' + trackLink + '</div><div class="lfm-track-artist">' + esc(artistName) + '</div><div class="lfm-track-tags" data-artist="' + esc(artistName) + '" data-track="' + esc(tr.name) + '"></div></div><span class="lfm-track-plays">' + formatPlays(tr.playcount) + '</span></div>';
+          return '<div class="lfm-track"><span class="lfm-track-rank">' + (idx+1) + '</span>' + art + '<div class="lfm-track-info"><div class="lfm-track-name">' + esc(tr.name) + lovedHtml + '</div><div class="lfm-track-artist">' + esc(artistName) + '</div><div class="lfm-track-tags" data-artist="' + esc(artistName) + '" data-track="' + esc(tr.name) + '"></div></div><span class="lfm-track-plays">' + formatPlays(tr.playcount) + '</span></div>';
         }).join('');
         fetchTrackTags(tracks);
       }
@@ -883,7 +876,7 @@
         artistsWrap.innerHTML = artists.map((ar, idx) => {
           const url = ar.artUrl || lfmImg(ar.image);
           const art = url ? '<div class="lfm-artist-img" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>' : artistFallback(ar.name, idx);
-          return '<div class="lfm-artist"><span class="lfm-artist-rank">' + (idx+1) + '</span>' + art + '<span class="lfm-artist-name"><a href="' + lfmArtistUrl(ar.name) + '" target="_blank" rel="noopener">' + esc(ar.name) + '</a></span><span class="lfm-artist-plays">' + formatPlays(ar.playcount) + '</span></div>';
+          return '<div class="lfm-artist"><span class="lfm-artist-rank">' + (idx+1) + '</span>' + art + '<span class="lfm-artist-name">' + esc(ar.name) + '</span><span class="lfm-artist-plays">' + formatPlays(ar.playcount) + '</span></div>';
         }).join('');
       }
     }
@@ -903,13 +896,11 @@
         const artistsWrap = $('lfm-artists');
         if (tracksWrap) tracksWrap.innerHTML = '<div class="lfm-track"><div class="skeleton" style="width:40px;height:40px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="width:80%;height:12px;margin-bottom:4px"></div><div class="skeleton" style="width:50%;height:10px"></div></div></div>'.repeat(3);
         if (artistsWrap) artistsWrap.innerHTML = '<div class="lfm-artist"><div class="skeleton" style="width:40px;height:40px;border-radius:50%;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:12px"></div></div>'.repeat(3);
-        // Fetch new data
-        Promise.all([
-          fetchWithTimeout(lfmAPI + '?method=user.gettoptracks&user=' + encodeURIComponent(u) + '&period=' + period + '&limit=5', 5000).then(r => r.json()),
-          fetchWithTimeout(lfmAPI + '?method=user.gettopartists&user=' + encodeURIComponent(u) + '&period=' + period + '&limit=5', 5000).then(r => r.json())
-        ]).then(([tracksData, artistsData]) => {
-          renderTopSection({ toptracks: tracksData.toptracks, topartists: artistsData.topartists });
-        }).catch(() => {});
+        // Fetch via bundle endpoint (includes server-side art enrichment)
+        fetchWithTimeout(lfmAPI + '?bundle=1&user=' + encodeURIComponent(u) + '&period=' + period, 6000)
+          .then(r => r.json())
+          .then(d => { renderTopSection({ toptracks: d.toptracks, topartists: d.topartists }); })
+          .catch(() => {});
       });
     }
 
@@ -933,8 +924,7 @@
             : '<div class="lfm-track-img lfm-noart" style="background:#141414 !important">♪</div>';
           const artistName = tr.artist ? (tr.artist.name || tr.artist['#text'] || '') : '';
           const lovedHtml = isLovedTrack(tr.name, artistName) ? '<span class="lfm-loved">♥</span>' : '';
-          const trackLink = artistName ? '<a href="' + lfmTrackUrl(artistName, tr.name) + '" target="_blank" rel="noopener">' + esc(tr.name) + lovedHtml + '</a>' : esc(tr.name) + lovedHtml;
-          return '<div class="lfm-track"><span class="lfm-track-rank">' + (idx+1) + '</span>' + art + '<div class="lfm-track-info"><div class="lfm-track-name">' + trackLink + '</div><div class="lfm-track-artist">' + esc(artistName) + '</div><div class="lfm-track-tags" data-artist="' + esc(artistName) + '" data-track="' + esc(tr.name) + '"></div></div><span class="lfm-track-plays">' + formatPlays(tr.playcount) + '</span></div>';
+          return '<div class="lfm-track"><span class="lfm-track-rank">' + (idx+1) + '</span>' + art + '<div class="lfm-track-info"><div class="lfm-track-name">' + esc(tr.name) + lovedHtml + '</div><div class="lfm-track-artist">' + esc(artistName) + '</div><div class="lfm-track-tags" data-artist="' + esc(artistName) + '" data-track="' + esc(tr.name) + '"></div></div><span class="lfm-track-plays">' + formatPlays(tr.playcount) + '</span></div>';
         }).join('');
         // Fetch genre tags asynchronously
         fetchTrackTags(tracks);
@@ -946,7 +936,7 @@
         artistsWrap.innerHTML = artists.map((ar, idx) => {
           const url = ar.artUrl || lfmImg(ar.image);
           const art = url ? '<div class="lfm-artist-img" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>' : artistFallback(ar.name, idx);
-          return '<div class="lfm-artist"><span class="lfm-artist-rank">' + (idx+1) + '</span>' + art + '<span class="lfm-artist-name"><a href="' + lfmArtistUrl(ar.name) + '" target="_blank" rel="noopener">' + esc(ar.name) + '</a></span><span class="lfm-artist-plays">' + formatPlays(ar.playcount) + '</span></div>';
+          return '<div class="lfm-artist"><span class="lfm-artist-rank">' + (idx+1) + '</span>' + art + '<span class="lfm-artist-name">' + esc(ar.name) + '</span><span class="lfm-artist-plays">' + formatPlays(ar.playcount) + '</span></div>';
         }).join('');
       }
 
@@ -1034,11 +1024,9 @@
       if (recentWrap) {
         const tickerTracks = isLive ? tracks.slice(1, 9) : tracks.slice(0, 9);
         recentWrap.innerHTML = tickerTracks.map(tr => {
-          const name = esc(tr.name || '—');
           const artistName = (tr.artist && (tr.artist['#text'] || tr.artist.name)) || '';
           const lovedHtml = isLovedTrack(tr.name, artistName) ? ' <span class="lfm-loved">♥</span>' : '';
-          const trackUrl = artistName ? 'https://www.last.fm/music/' + encodeURIComponent(artistName) + '/_/' + encodeURIComponent(tr.name || '') : '';
-          const nameHtml = trackUrl ? '<a href="' + trackUrl + '" target="_blank" rel="noopener">' + name + lovedHtml + '</a>' : name + lovedHtml;
+          const nameHtml = esc(tr.name || '—') + lovedHtml;
           const uts = (tr.date && tr.date.uts) || '';
           const ago = timeAgo(uts);
           const timeHtml = ago ? '<div class="lfm-recent-time">' + ago + '</div>' : '';

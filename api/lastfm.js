@@ -175,7 +175,8 @@ module.exports = async function handler(req, res) {
 
   if (req.query.bundle === '1') {
     var user = req.query.user || 'YATINSHARMA';
-    var bundleKey = 'bundle:' + user;
+    var period = req.query.period || '1month';
+    var bundleKey = 'bundle:' + user + ':' + period;
     var cachedBundle = _lfmCache[bundleKey];
     if (cachedBundle && Date.now() - cachedBundle.ts < LFM_CACHE_TTL) {
       res.setHeader('X-LastFM-Cache', 'HIT');
@@ -194,8 +195,8 @@ module.exports = async function handler(req, res) {
     try {
       var settled = await Promise.allSettled([
         fetchLastfmJson(baseParams('user.getinfo'), 3200),
-        fetchLastfmJson(baseParams('user.gettoptracks', { period: '1month', limit: '5' }), 3200),
-        fetchLastfmJson(baseParams('user.gettopartists', { period: '1month', limit: '5' }), 3200),
+        fetchLastfmJson(baseParams('user.gettoptracks', { period: period, limit: '5' }), 3200),
+        fetchLastfmJson(baseParams('user.gettopartists', { period: period, limit: '5' }), 3200),
         fetchLastfmJson(baseParams('user.getrecenttracks', { limit: '10' }), 3200)
       ]);
       var results = settled.map(function(x) { return x.status === 'fulfilled' ? (x.value || {}) : {}; });
