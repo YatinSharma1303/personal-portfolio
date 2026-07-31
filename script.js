@@ -1528,7 +1528,8 @@
         function fmtD(d) { try { if (!d || !d.year) return ''; if (d.month && d.day) return MONTHS[(d.month-1)] + ' ' + d.day + ', ' + d.year; if (d.month) return MONTHS[(d.month-1)] + ' ' + d.year; return '' + d.year; } catch(err) { return ''; } }
         const airStr = (function() { try { const s = fmtD(sd), ee = fmtD(ed); if (s && ee && s !== ee) return s + ' \u2192 ' + ee; return s || ''; } catch(err) { return ''; } })();
         const wdS = fmtD(e.startedAt), wdE = fmtD(e.completedAt);
-        const watchStr = (function() { try { if (wdS && wdE && wdS !== wdE) return wdS + ' \u2192 ' + wdE; if (wdS) return wdS; return ''; } catch(err) { return ''; } })();
+        const hasCustomDates = e.startedAt && e.startedAt.year;
+        const watchStr = hasCustomDates ? (function() { try { if (wdS && wdE && wdS !== wdE) return wdS + ' \u2192 ' + wdE; return wdS || ''; } catch(err) { return ''; } })() : '';
         var dateInfo = '';
         if (airStr) dateInfo += '<div class="al-item-date"><span class="material-symbols-outlined">tv</span><span>' + esc(airStr) + '</span></div>';
         if (watchStr) dateInfo += '<div class="al-item-date"><span class="material-symbols-outlined">schedule</span><span>' + esc(watchStr) + '</span></div>';
