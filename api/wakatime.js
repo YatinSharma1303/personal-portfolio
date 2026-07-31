@@ -178,8 +178,8 @@ module.exports = async function handler(req, res) {
     if (rangeKey === '1y') {
       // --- 1 YEAR: Use stats API (aggregated, fast) + 7d summaries for heatmap ---
       const [statsData, weekData] = await Promise.all([
-        fetchWithAuth('https://wakatime.com/api/v1/users/current/stats?range=last_year', auth, 8000),
-        fetchWithAuth('https://wakatime.com/api/v1/users/current/summaries?range=Last%207%20days', auth, 6000)
+        fetchWithAuth('https://wakatime.com/api/v1/users/current/stats?range=last_year', auth, 6000),
+        fetchWithAuth('https://wakatime.com/api/v1/users/current/summaries?range=Last%207%20days', auth, 5000)
       ]);
 
       if (!statsData || !statsData.data) {
