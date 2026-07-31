@@ -1371,7 +1371,7 @@
       const topG = genres.slice().sort((a, b) => b.count - a.count).slice(0, 8);
       const maxC = topG.length ? topG[0].count : 1;
       const bars = topG.length ? '<div class="al-genre-tags">' + topG.map(g =>
-        '<div class="al-genre-tag" style="--fill:' + Math.max(8, Math.round(g.count / maxC * 100)) + '%"><span class="al-gt-name">' + esc(g.genre) + '</span><span class="al-gt-count">' + g.count + '</span></div>').join('') + '</div>' : '';
+        '<div class="al-genre-tag" style="--fill:' + Math.max(8, Math.round(g.count / maxC * 75)) + '%"><span class="al-gt-name">' + esc(g.genre) + '</span><span class="al-gt-count">' + g.count + '</span></div>').join('') + '</div>' : '';
       statsPanel.innerHTML = numbers + bars;
     }
     function renderGenres() {
