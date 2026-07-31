@@ -1661,6 +1661,22 @@ html.light .lastfm-card .skeleton { background: linear-gradient(90deg, rgba(0,0,
   color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 0.04em;
 }
 
+/* Anime/manga cover date chip */
+.al-cover-dates {
+  position: absolute; bottom: 6px; left: 6px; z-index: 3;
+  display: flex; align-items: center; gap: 3px;
+  padding: 2px 7px; border-radius: 5px;
+  background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);
+}
+.al-cover-date {
+  font-size: 10px; line-height: 1;
+  color: var(--accent);
+}
+.al-cover-date-text {
+  font-family: var(--mono); font-size: 9px; font-weight: 600;
+  color: rgba(255,255,255,0.8); letter-spacing: 0.02em;
+}
+
 /* #4 Status indicator strip */
 .al-item[data-status="CURRENT"] { border-left: 3px solid #34d399; }
 .al-item[data-status="REPEATING"] { border-left: 3px solid #a78bfa; }
@@ -1737,7 +1753,7 @@ html.light .anilist-card .skeleton { background: linear-gradient(90deg, rgba(0,0
 .al-list.list-view .al-item-overlay,
 .al-list.list-view .al-fav,
 .al-list.list-view .al-cover-score,
-.al-list.list-view .al-cover-fmt { display: none !important; }
+.al-list.list-view .al-cover-fmt, .al-list.list-view .al-cover-dates { display: none !important; }
 
 /* #14 Per-page control */
 .al-perpage {
@@ -1763,7 +1779,8 @@ html.light .anilist-card .skeleton { background: linear-gradient(90deg, rgba(0,0
 mark.al-hl { background: color-mix(in srgb, var(--accent-solid) 25%, transparent); color: var(--white); border-radius: 2px; padding: 0 1px; }
 
 /* Light-mode additions for new elements */
-html.light .al-cover-score, html.light .al-cover-fmt { background: rgba(255,255,255,0.85); color: var(--gray); border-color: rgba(0,0,0,0.1); }
+html.light .al-cover-score, html.light .al-cover-fmt, html.light .al-cover-dates { background: rgba(255,255,255,0.85); color: var(--gray); border-color: rgba(0,0,0,0.1); }
+html.light .al-cover-date { color: #0e7490; }
 html.light .al-cover-score.high { color: #059669; }
 html.light .al-cover-score.mid { color: #d97706; }
 html.light .al-cover-score.low { color: #dc2626; }
