@@ -981,16 +981,19 @@
       if (!wrap) return;
       const days = [];
       const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      function localDateKey(date) {
+        return date.getFullYear() + '-' + String(date.getMonth()+1).padStart(2,'0') + '-' + String(date.getDate()).padStart(2,'0');
+      }
       for (let i = 6; i >= 0; i--) {
         const d = new Date(); d.setDate(d.getDate() - i);
-        const key = d.toISOString().slice(0, 10);
+        const key = localDateKey(d);
         days.push({ label: dayNames[d.getDay()], date: key, count: 0 });
       }
       tracks.forEach(tr => {
         const uts = (tr.date && tr.date.uts) || '';
         if (!uts) return;
         const d = new Date(parseInt(uts, 10) * 1000);
-        const key = d.toISOString().slice(0, 10);
+        const key = localDateKey(d);
         const day = days.find(dd => dd.date === key);
         if (day) day.count++;
       });
@@ -1002,6 +1005,19 @@
         const opacity = d.count > 0 ? (0.3 + (d.count / maxCount) * 0.7) : 0.15;
         return '<div class="lfm-activity-day"><div class="lfm-activity-bar" style="height:' + h + 'px;opacity:' + opacity.toFixed(2) + '"></div><div class="lfm-activity-day-label">' + d.label + '</div></div>';
       }).join('') + '</div>';
+    }
+
+    function loadWeeklyTracks() {
+      const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7); weekAgo.setHours(0,0,0,0);
+      const from = Math.floor(weekAgo.getTime() / 1000);
+      return fetchWithTimeout(`${lfmAPI}?method=user.getrecenttracks&user=${encodeURIComponent(u)}&limit=200&from=${from}&extended=0`, 6000)
+        .then(r => r.json())
+        .then(d => {
+          const tracks = (d.recenttracks && d.recenttracks.track) || [];
+          renderActivityChart(tracks);
+          return tracks;
+        })
+        .catch(() => {});
     }
 
     function renderRecent(recenttracks) {
@@ -1030,7 +1046,6 @@
       }
       const npCard = $('lfm-nowplaying'); if (npCard) npCard.classList.toggle('live', !!isLive);
       const npLabel = $('lfm-np-label'); if (npLabel) npLabel.textContent = isLive ? 'NOW PLAYING' : 'LAST PLAYED';
-      renderActivityChart(tracks);
       const recentWrap = $('lfm-recent');
       if (recentWrap) {
         const tickerTracks = isLive ? tracks.slice(1, 9) : tracks.slice(0, 9);
@@ -1072,7 +1087,7 @@
       return fetchWithTimeout(`${lfmAPI}?bundle=1&user=${encodeURIComponent(u)}`, 5000)
         .then(r => r.json())
         .then(d => { saveBundleCache(d); renderBundle(d); })
-        .then(() => { fetchLovedTracks(); setupPeriodTabs(); })
+        .then(() => { fetchLovedTracks(); setupPeriodTabs(); loadWeeklyTracks(); })
         .catch(err => {
           console.warn('Last.fm bundle failed:', err);
           if (!cached) {
