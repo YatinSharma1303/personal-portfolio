@@ -1504,6 +1504,7 @@
         return;
       }
       list.innerHTML = slice.map((e, idx) => {
+        try {
         const m = e.media || {};
         const t = (m.title && (m.title.romaji || m.title.english)) || '—';
         const img = (m.coverImage && (m.coverImage.extraLarge || m.coverImage.large || m.coverImage.medium)) || '';
@@ -1524,12 +1525,12 @@
         const fmt = m.format ? String(m.format).replace(/_/g, ' ') : '';
         const sd = m.startDate, ed = m.endDate;
         const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        function fmtD(d) { if (!d || !d.year) return ''; if (d.month && d.day) return MONTHS[(d.month-1)] + ' ' + d.day + ', ' + d.year; if (d.month) return MONTHS[(d.month-1)] + ' ' + d.year; return '' + d.year; }
-        const airStr = (function() { const s = fmtD(sd), ee = fmtD(ed); if (s && ee && s !== ee) return s + ' → ' + ee; return s || ''; })();
+        function fmtD(d) { try { if (!d || !d.year) return ''; if (d.month && d.day) return MONTHS[(d.month-1)] + ' ' + d.day + ', ' + d.year; if (d.month) return MONTHS[(d.month-1)] + ' ' + d.year; return '' + d.year; } catch(err) { return ''; } }
+        const airStr = (function() { try { const s = fmtD(sd), ee = fmtD(ed); if (s && ee && s !== ee) return s + ' \u2192 ' + ee; return s || ''; } catch(err) { return ''; } })();
         const wdS = fmtD(e.startedAt), wdE = fmtD(e.completedAt);
-        const watchStr = (function() { if (wdS && wdE && wdS !== wdE) return wdS + ' → ' + wdE; if (wdS) return wdS; return ''; })();
+        const watchStr = (function() { try { if (wdS && wdE && wdS !== wdE) return wdS + ' \u2192 ' + wdE; if (wdS) return wdS; return ''; } catch(err) { return ''; } })();
         var dateInfo = '';
-        if (airStr) dateInfo += '<div class="al-item-date"><span class="material-symbols-outlined">tv_gen</span><span>' + esc(airStr) + '</span></div>';
+        if (airStr) dateInfo += '<div class="al-item-date"><span class="material-symbols-outlined">tv</span><span>' + esc(airStr) + '</span></div>';
         if (watchStr) dateInfo += '<div class="al-item-date"><span class="material-symbols-outlined">schedule</span><span>' + esc(watchStr) + '</span></div>';
         const overlay = (genres.length || desc || fmt) ?
           '<div class="al-item-overlay">' +
@@ -1558,7 +1559,8 @@
             (showBar ? '<div class="al-item-bar"><i style="width:' + pct + '%"></i></div>' : '') +
           '</div>' +
         '</div>';
-      }).join('');
+        } catch(err) { console.warn('AniList item render error:', err); return ''; }
+      }).filter(Boolean).join('');
       renderPager(pages);
       isFirstRender = false;
     }
