@@ -705,13 +705,13 @@
       const preview = p.img ? '<div class="project-preview"><img src="' + p.img + '" alt="' + esc(p.name) + ' preview"></div>' : '';
       return '<article class="project-card">' + preview + thumb +
         '<div class="project-body">' +
-        '<div class="project-cat">' + p.cat + '</div>' +
+        '<div class="project-cat"><span class="material-symbols-outlined">category</span>' + p.cat + '</div>' +
         '<div class="project-name">' + p.name + '</div>' +
         '<div class="project-desc">' + p.desc + '</div>' +
         '<div class="project-tags">' + p.tags.map(t => '<span>' + t + '</span>').join('') + '</div>' +
         '<div class="project-actions">' +
-        '<a class="project-dl-btn" href="' + p.repo + '" target="_blank" rel="noopener">Source</a>' +
-        (p.live ? '<a class="project-live-btn" href="' + p.live + '" target="_blank" rel="noopener">Live Demo</a>' : '') +
+        '<a class="project-dl-btn" href="' + p.repo + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">code</span>Source</a>' +
+        (p.live ? '<a class="project-live-btn" href="' + p.live + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">open_in_new</span>Live Demo</a>' : '') +
         '</div></div></article>';
     }).join('');
   })();

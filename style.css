@@ -1341,14 +1341,14 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .skill-item-desc { font-size: 12px; color: var(--gray); line-height: 1.5; }
 
 /* ============ PROJECTS ============ */
-.projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+.projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
 .project-card {
   border-radius: var(--radius-card); overflow: hidden; border: 1px solid var(--border);
   background: rgba(12,12,12,0.6); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
   transition: all 0.3s cubic-bezier(0.22,1,0.36,1); display: flex; flex-direction: column;
   position: relative;
 }
-.project-card:hover { border-color: var(--border-hover); transform: translateY(-5px); box-shadow: 0 16px 50px rgba(0,0,0,0.5), 0 0 30px color-mix(in srgb, var(--accent-solid) 8%, transparent); }
+.project-card:hover { border-color: color-mix(in srgb, var(--accent-solid) 40%, transparent); transform: translateY(-6px); box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 40px color-mix(in srgb, var(--accent-solid) 12%, transparent); }
 /* Hover preview popup */
 .project-card .project-preview {
   position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%) translateY(10px);
@@ -1359,18 +1359,40 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 }
 .project-card .project-preview img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }
 .project-card:hover .project-preview { opacity: 1; transform: translateX(-50%) translateY(-8px); pointer-events: auto; }
-.project-thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-bottom: 1px solid var(--border); display: block; }
-.project-body { padding: 22px; flex: 1; display: flex; flex-direction: column; }
-.project-cat { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); margin-bottom: 8px; }
-.project-name { font-size: 19px; font-weight: 800; margin-bottom: 10px; }
-.project-desc { font-size: 13px; color: var(--gray); line-height: 1.6; margin-bottom: 16px; flex: 1; }
-.project-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-.project-tags span { font-family: var(--mono); font-size: 10px; padding: 4px 10px; border-radius: var(--radius-btn); border: 1px solid var(--border); color: var(--gray); }
+.project-thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; border-bottom: 1px solid var(--border); }
+.project-body { padding: 20px 22px 22px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+.project-cat {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.04em;
+  padding: 4px 11px; border-radius: 999px; width: fit-content;
+  background: color-mix(in srgb, var(--accent-solid) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-solid) 12%, transparent);
+  color: var(--gray);
+}
+.project-cat .material-symbols-outlined { font-size: 13px; color: var(--accent); }
+.project-name { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
+.project-desc { font-size: 13px; color: var(--gray); line-height: 1.65; flex: 1; }
+.project-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.project-tags span {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.02em;
+  padding: 3px 10px; border-radius: 999px;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+  color: var(--gray-dim); transition: all 0.15s ease;
+}
+.project-tags span:hover { border-color: color-mix(in srgb, var(--accent-solid) 25%, transparent); color: var(--accent); background: color-mix(in srgb, var(--accent-solid) 5%, transparent); }
 .project-link { font-size: 13px; font-weight: 600; color: var(--accent); }
 .project-link:hover { text-decoration: underline; }
 
 .gh-live { margin-top: 44px; }
-.gh-live-label { font-family: var(--mono); font-size: 12px; color: var(--gray-dim); margin-bottom: 14px; }
+.gh-live-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em;
+  padding: 4px 11px; border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-solid) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-solid) 12%, transparent);
+  color: var(--gray); margin-bottom: 16px;
+}
+.gh-live-label .material-symbols-outlined { font-size: 14px; color: var(--accent); }
 .gh-live-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
 .gh-repo {
   padding: 16px; border-radius: 16px; border: 1px solid var(--border);
@@ -2209,23 +2231,25 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
 .pg-dpad-btn.down { grid-column: 2; grid-row: 3; }
 
 /* ============ PROJECT BUTTONS ============ */
-.project-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.project-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .project-dl-btn {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 11px 22px; border-radius: var(--radius-btn);
-  font-size: 13px; font-weight: 700; text-decoration: none;
-  background: var(--white); color: #000; border: 1.5px solid var(--white);
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: 999px;
+  font-size: 12px; font-weight: 600; font-family: var(--mono); text-decoration: none;
+  background: var(--white); color: #000; border: 1px solid var(--white);
   transition: all 0.22s cubic-bezier(0.22,1,0.36,1);
 }
+.project-dl-btn .material-symbols-outlined { font-size: 15px; }
 .project-dl-btn:hover { box-shadow: 0 0 24px rgba(255,255,255,0.15); transform: translateY(-1px); }
 .project-live-btn {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 11px 22px; border-radius: var(--radius-btn);
-  font-size: 13px; font-weight: 600; text-decoration: none;
-  background: color-mix(in srgb, var(--accent-solid) 10%, transparent); color: var(--accent-solid); border: 1.5px solid color-mix(in srgb, var(--accent-solid) 30%, transparent);
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: 999px;
+  font-size: 12px; font-weight: 600; font-family: var(--mono); text-decoration: none;
+  background: color-mix(in srgb, var(--accent-solid) 8%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent-solid) 20%, transparent);
   transition: all 0.22s ease;
 }
-.project-live-btn:hover { background: color-mix(in srgb, var(--accent-solid) 18%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 55%, transparent); transform: translateY(-1px); }
+.project-live-btn .material-symbols-outlined { font-size: 15px; }
+.project-live-btn:hover { background: color-mix(in srgb, var(--accent-solid) 18%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 45%, transparent); transform: translateY(-1px); }
 
 /* ============ ANILIST SUMMARY ============ */
 .al-summary { font-family: var(--mono); font-size: 12px; color: var(--gray-dim); margin-bottom: 16px; }
@@ -2361,7 +2385,7 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
 
   /* Projects */
   .projects-grid { gap: 16px; }
-  .project-body { padding: 18px; }
+  .project-body { padding: 16px 18px 18px; }
   .project-name { font-size: 17px; }
 
   /* GitHub repos */
@@ -2996,7 +3020,10 @@ html.light .skill-item:hover { background: rgba(0,0,0,0.05); }
 
 /* Project cards */
 html.light .project-card { background: rgba(255,255,255,0.6); }
-html.light .project-card:hover { box-shadow: 0 16px 50px rgba(0,0,0,0.08), 0 0 30px color-mix(in srgb, var(--accent-solid) 6%, transparent); }
+html.light .project-card:hover { box-shadow: 0 20px 60px rgba(0,0,0,0.08), 0 0 40px color-mix(in srgb, var(--accent-solid) 8%, transparent); }
+html.light .project-cat { background: color-mix(in srgb, var(--accent-solid) 8%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 18%, transparent); }
+html.light .project-tags span { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.1); color: var(--gray); }
+html.light .gh-live-label { background: color-mix(in srgb, var(--accent-solid) 8%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 18%, transparent); }
 
 /* AMA Send button + Sort pills */
 html.light .ama-card { background: rgba(255,255,255,0.6); }
