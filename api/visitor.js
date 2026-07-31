@@ -46,6 +46,24 @@ module.exports = async function handler(req, res) {
     }
   }
 
+  // POST = increment — skip bots, crawlers, and Vercel health checks
+  const ua = (req.headers['user-agent'] || '').toLowerCase();
+  const botPatterns = ['vercel','bot','crawl','spider','slurp','headless','puppeteer','playwright','sentry','google','baidu','bing','preview','health','curl','wget','httpie','axios','node-fetch'];
+  if (botPatterns.some(b => ua.includes(b))) {
+    // Bot detected — just return current count without incrementing
+    try {
+      const token = await getToken();
+      const docUrl = 'https://firestore.googleapis.com/v1/projects/' + projectId() + '/databases/(default)/documents/' + COLLECTION + '/' + DOC;
+      const readRes = await fetch(docUrl, { headers: { Authorization: 'Bearer ' + token } });
+      if (readRes.status === 404) return res.status(200).json({ ok: true, total: 0 });
+      const doc = await readRes.json().catch(() => null);
+      const current = doc && doc.fields ? Number(doc.fields.total && (doc.fields.total.integerValue || doc.fields.total.doubleValue) || 0) : 0;
+      return res.status(200).json({ ok: true, total: current });
+    } catch (e) {
+      return res.status(200).json({ ok: true, total: 0 });
+    }
+  }
+
   // POST = increment (only called on first visit)
   try {
     const token = await getToken();
