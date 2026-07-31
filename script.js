@@ -919,8 +919,10 @@
       if (user) {
         const av = $('lfm-avatar');
         if (av) { const url = lfmImg(user.image); if (url) av.src = url; }
-        const strip = $('lfm-statstrip');
-        if (strip) strip.textContent = `${(user.playcount||0).toLocaleString()} scrobbles · ${(user.artist_count||0).toLocaleString()} artists · ${(user.album_count||0).toLocaleString()} albums`;
+        const sc = $('lfm-sc'), ac = $('lfm-ac'), alc = $('lfm-alc');
+        if (sc) sc.textContent = (user.playcount||0).toLocaleString();
+        if (ac) ac.textContent = (user.artist_count||0).toLocaleString();
+        if (alc) alc.textContent = (user.album_count||0).toLocaleString();
       }
 
       const tracksWrap = $('lfm-tracks');
@@ -995,7 +997,7 @@
       const maxCount = Math.max(...days.map(d => d.count), 1);
       const total = days.reduce((s, d) => s + d.count, 0);
       if (total === 0) { wrap.innerHTML = ''; return; }
-      wrap.innerHTML = '<div class="lfm-activity-label">' + total + ' tracks this week</div><div class="lfm-activity-bars">' + days.map(d => {
+      wrap.innerHTML = '<div class="lfm-activity-label"><b>' + total + '</b> tracks this week</div><div class="lfm-activity-bars">' + days.map(d => {
         const h = Math.max(3, (d.count / maxCount) * 32);
         const opacity = d.count > 0 ? (0.3 + (d.count / maxCount) * 0.7) : 0.15;
         return '<div class="lfm-activity-day"><div class="lfm-activity-bar" style="height:' + h + 'px;opacity:' + opacity.toFixed(2) + '"></div><div class="lfm-activity-day-label">' + d.label + '</div></div>';
@@ -1202,7 +1204,7 @@
           '</div>' +
           '<button class="al-score-toggle" id="al-score-toggle" title="Toggle score"><span class="material-symbols-outlined">swap_horiz</span>Score</button>' +
           '<div class="al-view-toggle" id="al-view-toggle"><button class="al-view-btn active" data-view="grid" title="Grid"><span class="material-symbols-outlined">grid_view</span></button><button class="al-view-btn" data-view="list" title="List"><span class="material-symbols-outlined">view_list</span></button></div>' +
-          '<div class="al-perpage" id="al-perpage"><span class="al-perpage-label">Per page</span><button class="al-perpage-btn" data-pp="6">6</button><button class="al-perpage-btn active" data-pp="12">12</button><button class="al-perpage-btn" data-pp="24">24</button><button class="al-perpage-btn" data-pp="48">48</button></div>';
+          '<div class="al-perpage" id="al-perpage">Per page:<button class="al-perpage-btn" data-pp="6">6</button><button class="al-perpage-btn active" data-pp="12">12</button><button class="al-perpage-btn" data-pp="24">24</button><button class="al-perpage-btn" data-pp="48">48</button></div>';
         list.parentNode.insertBefore(controlsBar, list);
         const si = controlsBar.querySelector('#al-search'), sc = controlsBar.querySelector('#al-search-clear');
         var searchTimer = null;
@@ -1270,7 +1272,7 @@
       activeStatus = 'ALL'; activeGenre = ''; activeSearch = ''; page = 1;
       if (tabs) { tabs.querySelectorAll('.al-tab').forEach(b => b.classList.toggle('active', b.dataset.status === 'ALL')); }
       updateTabLabels();
-      const sub = $('al-sub'); if (sub) sub.textContent = 'AniList · ' + (isManga() ? 'manga list' : 'anime list');
+      const sub = $('al-sub'); if (sub) sub.innerHTML = '<span class=\"material-symbols-outlined\">' + (isManga() ? 'menu_book' : 'movie') + '</span> ' + (isManga() ? 'Manga library & reading list' : 'Anime collection & watchlist');
       const si = $('al-search'); if (si) { si.value = ''; si.placeholder = isManga() ? 'Search manga…' : 'Search anime…'; }
       const sc = $('al-search-clear'); if (sc) sc.hidden = true;
       stopBannerRotation();
@@ -1337,15 +1339,11 @@
           genres = Object.keys(gc).map(g => ({ genre: g, count: gc[g] }));
         }
         if (!count) { statsPanel.innerHTML = ''; return; }
-        /* #6 Chapters this week */
-        var weekAgo = Math.floor(Date.now() / 1000) - 7 * 86400;
-        var weekEps = allEntries.filter(e => (e.updatedAt || 0) >= weekAgo).reduce((s, e) => s + (Number(e.progress) || 0), 0);
-        numbers = '<div class="al-stat-nums">' +
-          '<span><b>' + count.toLocaleString() + '</b> manga</span>' +
-          '<span><b>' + chapters.toLocaleString() + '</b> chapters</span>' +
-          (volumes ? '<span><b>' + volumes.toLocaleString() + '</b> volumes</span>' : '') +
-          (weekEps ? '<span class="al-stat-week"><b>' + weekEps + '</b> ch this week</span>' : '') +
-          (mean ? '<span><b>' + (mean / 10).toFixed(1) + '</b> mean score</span>' : '') +
+        numbers = '<div class="al-stat-cards">' +
+          '<div class="al-stat-card"><span class="al-sc-val">' + count.toLocaleString() + '</span><span class="al-sc-label">Manga</span></div>' +
+          '<div class="al-stat-card"><span class="al-sc-val">' + chapters.toLocaleString() + '</span><span class="al-sc-label">Chapters</span></div>' +
+          (volumes ? '<div class="al-stat-card"><span class="al-sc-val">' + volumes.toLocaleString() + '</span><span class="al-sc-label">Volumes</span></div>' : '') +
+          (mean ? '<div class="al-stat-card"><span class="al-sc-val">' + (mean / 10).toFixed(1) + '</span><span class="al-sc-label">Mean &#9733;</span></div>' : '') +
         '</div>';
       } else {
         let eps, mins;
@@ -1363,23 +1361,17 @@
         }
         if (!count) { statsPanel.innerHTML = ''; return; }
         const days = (mins / 1440).toFixed(1);
-        /* #6 Episodes this week */
-        var weekAgo = Math.floor(Date.now() / 1000) - 7 * 86400;
-        var weekEps = allEntries.filter(e => (e.updatedAt || 0) >= weekAgo).reduce((s, e) => s + (Number(e.progress) || 0), 0);
-        numbers = '<div class="al-stat-nums">' +
-          '<span><b>' + count.toLocaleString() + '</b> anime</span>' +
-          '<span><b>' + eps.toLocaleString() + '</b> episodes</span>' +
-          '<span><b>' + days + '</b> days watched</span>' +
-          (weekEps ? '<span class="al-stat-week"><b>' + weekEps + '</b> eps this week</span>' : '') +
-          (mean ? '<span><b>' + (mean / 10).toFixed(1) + '</b> mean score</span>' : '') +
+        numbers = '<div class="al-stat-cards">' +
+          '<div class="al-stat-card"><span class="al-sc-val">' + count.toLocaleString() + '</span><span class="al-sc-label">Anime</span></div>' +
+          '<div class="al-stat-card"><span class="al-sc-val">' + eps.toLocaleString() + '</span><span class="al-sc-label">Episodes</span></div>' +
+          '<div class="al-stat-card"><span class="al-sc-val">' + days + '</span><span class="al-sc-label">Days watched</span></div>' +
+          (mean ? '<div class="al-stat-card"><span class="al-sc-val">' + (mean / 10).toFixed(1) + '</span><span class="al-sc-label">Mean &#9733;</span></div>' : '') +
         '</div>';
       }
-      const topG = genres.slice().sort((a, b) => b.count - a.count).slice(0, 5);
+      const topG = genres.slice().sort((a, b) => b.count - a.count).slice(0, 8);
       const maxC = topG.length ? topG[0].count : 1;
-      const bars = topG.length ? '<div class="al-stat-genres">' + topG.map(g =>
-        '<div class="al-stat-genre"><span class="al-sg-name">' + esc(g.genre) + '</span>' +
-        '<div class="al-sg-bar"><i style="width:' + Math.max(6, Math.round(g.count / maxC * 100)) + '%"></i></div>' +
-        '<span class="al-sg-count">' + g.count + '</span></div>').join('') + '</div>' : '';
+      const bars = topG.length ? '<div class="al-genre-tags">' + topG.map(g =>
+        '<div class="al-genre-tag" style="--fill:' + Math.max(8, Math.round(g.count / maxC * 100)) + '%"><span class="al-gt-name">' + esc(g.genre) + '</span><span class="al-gt-count">' + g.count + '</span></div>').join('') + '</div>' : '';
       statsPanel.innerHTML = numbers + bars;
     }
     function renderGenres() {
@@ -1472,6 +1464,7 @@
       else a.sort((x, y) => (y.updatedAt || 0) - (x.updatedAt || 0));
       return a;
     }
+    let isFirstRender = true;
     function render() {
       ensureChrome();
       list.classList.toggle('list-view', listView);
@@ -1502,12 +1495,12 @@
         const st = String(e._status || '').toUpperCase();
         const eps = totalUnits(m);
         const prog = e.progress || 0;
-        const progText = prog ? '<b>' + prog + (eps ? '/' + eps : '') + '</b> ' + unitShort() : (st === 'COMPLETED' ? '<b>done</b>' : '');
+        const progText = prog ? prog + (eps ? '/' + eps : '') + ' ' + unitShort() : (st === 'COMPLETED' ? 'completed' : '');
         const userScore = e.score ? '★ ' + e.score : '';
         const mean = m.meanScore || 0;
         const meanText = mean ? 'avg ' + (mean / 10).toFixed(1) : '';
         var displayScore = showMeanScore ? (mean ? 'avg ★ ' + (mean / 10).toFixed(1) : '') : userScore;
-        const scoreLine = [progText, displayScore, showMeanScore ? '' : meanText].filter(Boolean).join(' · ');
+        const scoreLine = [progText, displayScore].filter(Boolean).join(' · ');
         const pct = eps ? Math.min(100, Math.round(prog / eps * 100)) : (st === 'COMPLETED' ? 100 : 0);
         const showBar = (eps && prog) || st === 'COMPLETED';
         const isFav = favSet.has(m.id);
@@ -1525,22 +1518,24 @@
         var fmtChip = fmt ? '<span class="al-cover-fmt">' + esc(fmt) + '</span>' : '';
         var stAttr = ' data-status="' + st + '"';
         var nameHtml = activeSearch ? highlightMatch(esc(t), activeSearch) : esc(t);
-        var delay = idx * 0.04;
-        return '<div class="al-item"' + stAttr + ' style="animation-delay:' + delay + 's">' +
+        var delay = Math.min(idx * 0.03, 0.36); // cap stagger at ~360ms total
+        var anim = isFirstRender ? ' style=\"animation-delay:' + delay + 's\"' : ' style=\"animation:none\"';
+        return '<div class="al-item"' + stAttr + anim + '>' +
           '<div class="al-item-cover">' +
-            (img ? '<img src="' + img + '" alt="' + esc(t) + '" loading="lazy">' : '') +
+            (img ? '<img src="' + img + '" alt="' + esc(t) + '" loading="lazy" decoding="async">' : '') +
             scoreBadge + fmtChip +
             (isFav ? '<span class="al-fav" title="Favourite">♥</span>' : '') +
             overlay +
           '</div>' +
           '<div class="al-item-info">' +
             '<div class="al-item-name">' + nameHtml + '</div>' +
-            '<div class="al-item-score ' + scoreClass(mean) + '">' + scoreLine + '</div>' +
+            '<div class="al-item-score ' + scoreClass(mean) + '">' + esc(scoreLine) + '</div>' +
             (showBar ? '<div class="al-item-bar"><i style="width:' + pct + '%"></i></div>' : '') +
           '</div>' +
         '</div>';
       }).join('');
       renderPager(pages);
+      isFirstRender = false;
     }
     function renderPager(pages) {
       if (!pagerEl) return;
@@ -1574,8 +1569,27 @@
       ['Programs must be written for people to read.', 'Harold Abelson'],
       ['Make it work, make it right, make it fast.', 'Kent Beck']
     ];
-    let i = 0; const swap = $('quote-swap');
-    if (swap) swap.addEventListener('click', () => { i = (i + 1) % QUOTES.length; $('quote-text').textContent = QUOTES[i][0]; $('quote-author').textContent = '— ' + QUOTES[i][1]; });
+    let i = 0; const swap = $('quote-swap'), quoteBody = document.querySelector('.quote-body');
+    if (swap) swap.addEventListener('click', () => {
+      i = (i + 1) % QUOTES.length;
+      // Remove spin, wait a frame, then re-add to guarantee animation restarts
+      swap.classList.remove('qs-spin');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          swap.classList.add('qs-spin');
+        });
+      });
+      if (quoteBody) {
+        quoteBody.classList.add('qs-out');
+        setTimeout(() => {
+          $('quote-text').textContent = QUOTES[i][0];
+          $('quote-author').textContent = '— ' + QUOTES[i][1];
+          quoteBody.classList.remove('qs-out');
+          quoteBody.classList.add('qs-in');
+          setTimeout(() => quoteBody.classList.remove('qs-in'), 350);
+        }, 220);
+      }
+    });
   })();
 
   /* ============================================================
@@ -1598,7 +1612,7 @@
   (function timeWidget() {
     const india = $('time-india'), visitor = $('time-visitor'), sub = $('time-visitor-sub');
     if (!india) return;
-    const opt = { hour: '2-digit', minute: '2-digit', hour12: true };
+    const opt = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
     function tick() {
       try { india.textContent = new Date().toLocaleTimeString('en-US', { ...opt, timeZone: CONFIG.timezone }); } catch (e) { india.textContent = '—'; }
       try {
@@ -2511,18 +2525,18 @@
     });
   })();
 
-  // E. Card Cursor Tracking Glow
+  // E. Card Cursor Tracking Glow (throttled to ~1 update per 16ms to prevent scroll jank)
   (function cardGlow() {
     document.querySelectorAll('.glass-card').forEach(card => {
+      let rafId = 0;
       card.addEventListener('mousemove', (e) => {
-        const rect = card.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        card.style.setProperty('--card-glow', 'color-mix(in srgb, var(--accent-solid) 10%, transparent)');
-        card.style.setProperty('--mouse-x', x + 'px');
-        card.style.setProperty('--mouse-y', y + 'px');
-        // Update the radial gradient position dynamically
-        card.querySelector('::before'); // force style recalc
+        if (rafId) return; // skip if a frame is already pending
+        rafId = requestAnimationFrame(() => {
+          rafId = 0;
+          const rect = card.getBoundingClientRect();
+          card.style.setProperty('--mouse-x', (e.clientX - rect.left) + 'px');
+          card.style.setProperty('--mouse-y', (e.clientY - rect.top) + 'px');
+        });
       });
     });
   })();

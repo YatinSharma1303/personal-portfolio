@@ -60,7 +60,7 @@
   <link rel="dns-prefetch" href="https://api.github.com"/>
   <link rel="dns-prefetch" href="https://www.youtube.com"/>
   <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml"/>
-  <link rel="stylesheet" href="style.css?v=10.1"/>
+  <link rel="stylesheet" href="style.css?v=10.2"/>
 </head>
 <body>
 
@@ -254,29 +254,59 @@
 
       <div class="about-side">
         <div class="glass-card quote-card fade-in">
-          <div class="quote-label">Random Quote <button class="quote-swap" id="quote-swap" title="Swap quote">autorenew</button></div>
-          <blockquote id="quote-text">Talk is cheap. Show me the code.</blockquote>
-          <cite id="quote-author">— Linus Torvalds</cite>
+          <div class="quote-label">Random Quote <button class="quote-swap" id="quote-swap" title="Swap quote" aria-label="Swap quote"><span class="material-symbols-outlined">autorenew</span></button></div>
+          <div class="quote-body"><blockquote id="quote-text">Talk is cheap. Show me the code.</blockquote><cite id="quote-author">— Linus Torvalds</cite></div>
         </div>
 
         <div class="glass-card bio-card fade-in">
-          <div class="bio-row"><span>Location</span><b>🇮🇳 Agra, India</b></div>
-          <div class="bio-row"><span>Focus</span><b>Frontend + AI</b></div>
-          <div class="bio-row"><span>Email</span><div class="email-wrap"><b id="email-display"></b><button class="copy-btn material-symbols-outlined" id="copy-email" title="Copy email">content_copy</button></div></div>
-          <div class="bio-row"><span>Status</span><b class="now-badge">now · building · shipping</b></div>
+          <div class="bio-grid">
+            <div class="bio-item">
+              <span class="bio-icon material-symbols-outlined">location_on</span>
+              <div class="bio-content">
+                <span class="bio-label">Location</span>
+                <span class="bio-value">Agra, India</span>
+              </div>
+            </div>
+            <div class="bio-item">
+              <span class="bio-icon material-symbols-outlined">center_focus_strong</span>
+              <div class="bio-content">
+                <span class="bio-label">Focus</span>
+                <span class="bio-value bio-chips"><i class="chip chip-accent">Full Stack</i><i class="chip chip-muted">+</i><i class="chip chip-accent">AI</i></span>
+              </div>
+            </div>
+            <div class="bio-item">
+              <span class="bio-icon material-symbols-outlined">mail</span>
+              <div class="bio-content">
+                <span class="bio-label">Email</span>
+                <div class="email-wrap"><span class="bio-value bio-email" id="email-display"></span><button class="copy-btn material-symbols-outlined" id="copy-email" title="Copy email">content_copy</button></div>
+              </div>
+            </div>
+            <div class="bio-item">
+              <span class="bio-icon bio-status-dot"></span>
+              <div class="bio-content">
+                <span class="bio-label">Status</span>
+                <span class="bio-value bio-status"><span class="status-dot"></span>now · building · shipping</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="glass-card time-card fade-in">
-          <div class="time-label">Time Link</div>
+          <div class="time-header">
+            <span class="time-icon material-symbols-outlined">schedule</span>
+            <span class="time-label">Time Link</span>
+          </div>
           <div class="time-grid">
             <div class="time-col">
-              <div class="time-zone">India</div>
+              <div class="time-zone"><span class="material-symbols-outlined tz-icon">flag</span>India</div>
               <div class="time-value" id="time-india">—</div>
               <div class="time-sub">GMT+5:30 · my time</div>
             </div>
-            <div class="time-divider"></div>
+            <div class="time-divider">
+              <span class="material-symbols-outlined">sync_alt</span>
+            </div>
             <div class="time-col">
-              <div class="time-zone">Visitor</div>
+              <div class="time-zone"><span class="material-symbols-outlined tz-icon">person</span>Visitor</div>
               <div class="time-value" id="time-visitor">—</div>
               <div class="time-sub" id="time-visitor-sub">your time</div>
             </div>
@@ -284,9 +314,12 @@
         </div>
 
         <div class="glass-card stack-card fade-in">
-          <div class="stack-label">Daily Stack</div>
+          <div class="stack-header">
+            <span class="stack-icon material-symbols-outlined">code_blocks</span>
+            <span class="stack-label">Daily Stack</span>
+          </div>
           <div class="stack-pills">
-            <span>VS Code</span><span>React</span><span>Python</span><span>Git &amp; GitHub</span><span>Vercel</span><span>ChatGPT</span><span>Streamlit</span><span>Firebase</span>
+            <span class="stack-pill"><span class="material-symbols-outlined">terminal</span>VS Code</span><span class="stack-pill"><span class="material-symbols-outlined">widgets</span>React</span><span class="stack-pill"><span class="material-symbols-outlined">code</span>Python</span><span class="stack-pill"><span class="material-symbols-outlined">source</span>Git &amp; GitHub</span><span class="stack-pill"><span class="material-symbols-outlined">rocket_launch</span>Vercel</span><span class="stack-pill"><span class="material-symbols-outlined">auto_awesome</span>ChatGPT</span><span class="stack-pill"><span class="material-symbols-outlined">bar_chart</span>Streamlit</span><span class="stack-pill"><span class="material-symbols-outlined">database</span>Firebase</span>
           </div>
         </div>
       </div>
@@ -295,19 +328,45 @@
     <!-- GitHub profile card -->
     <div class="gh-card fade-in" id="gh-card">
       <div class="gh-top-row">
-        <img class="gh-avatar" id="gh-avatar" alt="Yatin Sharma" src="https://avatars.githubusercontent.com/u/85959016?v=4"/>
+        <div class="gh-avatar-wrap">
+          <img class="gh-avatar" id="gh-avatar" alt="Yatin Sharma" src="https://avatars.githubusercontent.com/u/85959016?v=4"/>
+          <span class="gh-avatar-ring"></span>
+        </div>
         <div class="gh-info">
           <div class="gh-name" id="gh-name">Yatin Sharma</div>
-          <div class="gh-handle">@YatinSharma1303 · GitHub</div>
-          <div class="gh-loc">Agra, India · React · Python · AI</div>
-          <div class="gh-stats">
-            <div class="gh-stat"><span id="gh-repos">—</span><label>Repos</label></div>
-            <div class="gh-stat"><span id="gh-followers">—</span><label>Followers</label></div>
-            <div class="gh-stat"><span id="gh-following">—</span><label>Following</label></div>
-          </div>
-          <a class="btn-ghost sm" href="https://github.com/YatinSharma1303" target="_blank" rel="noopener">Visit GitHub ↗</a>
+          <div class="gh-handle">@YatinSharma1303</div>
+          <div class="gh-loc"><span class="material-symbols-outlined gh-loc-icon">location_on</span>Agra, India</div>
         </div>
       </div>
+      <div class="gh-stats-row">
+        <div class="gh-stat-item">
+          <span class="gh-stat-icon material-symbols-outlined">folder_open</span>
+          <div class="gh-stat-body">
+            <span class="gh-stat-val" id="gh-repos">—</span>
+            <span class="gh-stat-label">Repositories</span>
+          </div>
+        </div>
+        <div class="gh-stat-divider"></div>
+        <div class="gh-stat-item">
+          <span class="gh-stat-icon material-symbols-outlined">group</span>
+          <div class="gh-stat-body">
+            <span class="gh-stat-val" id="gh-followers">—</span>
+            <span class="gh-stat-label">Followers</span>
+          </div>
+        </div>
+        <div class="gh-stat-divider"></div>
+        <div class="gh-stat-item">
+          <span class="gh-stat-icon material-symbols-outlined">person_add</span>
+          <div class="gh-stat-body">
+            <span class="gh-stat-val" id="gh-following">—</span>
+            <span class="gh-stat-label">Following</span>
+          </div>
+        </div>
+      </div>
+      <a class="gh-cta" href="https://github.com/YatinSharma1303" target="_blank" rel="noopener">
+        <span class="material-symbols-outlined">arrow_forward</span>
+        Visit GitHub
+      </a>
       <div class="gh-langs-wrap">
         <div class="gh-lang-chart" id="gh-lang-chart"></div>
         <div class="gh-lang-legend" id="gh-lang-legend"></div>
@@ -323,22 +382,37 @@
 
     <!-- I. Day in the Life Timeline -->
     <div class="timeline-section fade-in">
-      <div class="timeline-title">A day in the life</div>
+      <div class="timeline-head">
+        <span class="material-symbols-outlined timeline-head-icon">schedule</span>
+        <span class="timeline-title">A day in the life</span>
+      </div>
       <div class="timeline-track">
         <div class="timeline-item">
-          <div class="timeline-dot">☕</div>
+          <div class="timeline-node">
+            <span class="material-symbols-outlined">local_cafe</span>
+          </div>
           <div class="timeline-time">Morning</div>
-          <div class="timeline-desc">Deep work on Python ML models & backend APIs.</div>
+          <div class="timeline-card">
+            <p class="timeline-desc">Deep work on Python ML models & backend APIs.</p>
+          </div>
         </div>
         <div class="timeline-item">
-          <div class="timeline-dot">💻</div>
+          <div class="timeline-node">
+            <span class="material-symbols-outlined">code</span>
+          </div>
           <div class="timeline-time">Afternoon</div>
-          <div class="timeline-desc">Building React frontends, fixing bugs, deploying to Vercel.</div>
+          <div class="timeline-card">
+            <p class="timeline-desc">Building React frontends, fixing bugs, deploying to Vercel.</p>
+          </div>
         </div>
         <div class="timeline-item">
-          <div class="timeline-dot">🎬</div>
+          <div class="timeline-node">
+            <span class="material-symbols-outlined">nightlight</span>
+          </div>
           <div class="timeline-time">Night</div>
-          <div class="timeline-desc">Watching anime, cooking, and exploring new tech ideas.</div>
+          <div class="timeline-card">
+            <p class="timeline-desc">Watching anime, cooking, and exploring new tech ideas.</p>
+          </div>
         </div>
       </div>
     </div>
@@ -425,7 +499,7 @@
       <div class="wt-head">
         <span class="material-symbols-outlined wt-icon">timer</span>
         <div>
-          <div class="wt-title">WakaTime</div>
+          <div class="wt-title">Coding Stats</div>
           <div class="wt-sub" id="wt-range-label">last 7 days</div>
         </div>
         <span class="wt-total" id="wt-total">
@@ -515,8 +589,14 @@
     <div class="lastfm-card glass-card fade-in">
       <div class="lfm-head">
         <img class="lfm-avatar" id="lfm-avatar" alt="Last.fm avatar" src=""/>
-        <div><div class="lfm-title">YATINSHARMA</div><div class="lfm-statstrip" id="lfm-statstrip">Last.fm · scrobbler</div></div>
-        <a class="lfm-link" href="https://www.last.fm/user/YATINSHARMA" target="_blank" rel="noopener">View ↗</a>
+        <div class="lfm-head-text">
+          <div class="lfm-title">Yatin's Music Dashboard</div>
+          <div class="lfm-stats" id="lfm-stats">
+            <span class="lfm-stat-pill"><span class="material-symbols-outlined">headphones</span> <b id="lfm-sc">—</b> Scrobbles</span>
+            <span class="lfm-stat-pill"><span class="material-symbols-outlined">mic</span> <b id="lfm-ac">—</b> Artists</span>
+            <span class="lfm-stat-pill"><span class="material-symbols-outlined">album</span> <b id="lfm-alc">—</b> Albums</span>
+          </div>
+        </div>
       </div>
 
       <div class="lfm-nowplaying" id="lfm-nowplaying">
@@ -545,7 +625,7 @@
 
       <div class="lfm-columns">
         <div class="lfm-col">
-          <div class="lfm-col-title">TOP TRACKS</div>
+          <div class="lfm-col-title"><span class="material-symbols-outlined">music_note</span> TOP TRACKS</div>
           <div class="lfm-tracks" id="lfm-tracks">
             <div class="lfm-track"><div class="skeleton" style="width:40px;height:40px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="width:80%;height:12px;margin-bottom:4px"></div><div class="skeleton" style="width:50%;height:10px"></div></div></div>
             <div class="lfm-track"><div class="skeleton" style="width:40px;height:40px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="width:70%;height:12px;margin-bottom:4px"></div><div class="skeleton" style="width:40%;height:10px"></div></div></div>
@@ -553,7 +633,7 @@
           </div>
         </div>
         <div class="lfm-col">
-          <div class="lfm-col-title">TOP ARTISTS</div>
+          <div class="lfm-col-title"><span class="material-symbols-outlined">person</span> TOP ARTISTS</div>
           <div class="lfm-artists" id="lfm-artists">
             <div class="lfm-artist"><div class="skeleton" style="width:40px;height:40px;border-radius:50%;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:12px"></div></div>
             <div class="lfm-artist"><div class="skeleton" style="width:40px;height:40px;border-radius:50%;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:12px"></div></div>
@@ -563,7 +643,7 @@
       </div>
 
       <div class="lfm-recent-wrap">
-        <div class="lfm-col-title">RECENTLY PLAYED</div>
+        <div class="lfm-col-title"><span class="material-symbols-outlined">schedule</span> RECENTLY PLAYED</div>
         <div class="lfm-recent" id="lfm-recent"></div>
       </div>
     </div>
@@ -579,8 +659,10 @@
     <div class="anilist-card glass-card fade-in" id="anilist-card">
       <div class="al-head">
         <img class="al-avatar" id="al-avatar" alt="AniList avatar" src="https://s4.anilist.co/file/anilistcdn/user/avatar/large/default.png"/>
-        <div><div class="al-title"><span class="al-online-dot"></span> YatinSharma1303</div><div class="al-sub" id="al-sub">AniList · anime list</div></div>
-        <a class="al-link" href="https://anilist.co/user/YatinSharma1303/" target="_blank" rel="noopener">View Profile ↗</a>
+        <div class="al-head-text">
+          <div class="al-title">Yatin's Anime &amp; Manga Vault</div>
+          <div class="al-sub" id="al-sub"><span class="material-symbols-outlined">movie</span> Personal collection &amp; watchlist</div>
+        </div>
         <button class="ama-refresh-btn al-refresh-btn" id="al-refresh" title="Refresh AniList" aria-label="Refresh AniList"><span class="material-symbols-outlined">refresh</span></button>
       </div>
       <div class="al-media" id="al-media" role="tablist" aria-label="Media type">
@@ -638,10 +720,9 @@
   <section class="section" id="ama">
     <div class="section-head">
       <span class="section-label">09 / ask</span>
-      <h2 class="section-title">Got a <em>question?</em></h2>
+      <h2 class="section-title">Got a <em>question?</em> <span class="ama-deco-icon material-symbols-outlined">forum</span></h2>
       <p class="section-desc">Drop a question, collab idea, or project request. I read every one.</p>
     </div>
-    <div class="ama-deco"><span class="material-symbols-outlined">forum</span></div>
 
     <div class="ama-card glass-card fade-in">
       <div class="ama-counter"><span id="ama-count">0</span>/20 today</div>
@@ -699,9 +780,9 @@
       <div class="footer-line"></div>
       <div class="footer-content">
         <div class="footer-left">
-          <span class="footer-logo">Y</span>
+          <span class="footer-logo"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M3.5 2.5L10.5 10H8L3.5 5.5Z"/><path d="M20.5 2.5L13.5 10H16L20.5 6Z"/><path d="M12 10L14 13L12 16L10 13Z"/><path d="M10.5 17H13.5V22H10.5Z"/></svg></span>
           <span class="footer-brand">Yatin Sharma</span>
-          <span class="footer-copy">© <span id="year"></span> All rights reserved.</span>
+          <span class="footer-copy">© <span id="year"></span></span>
         </div>
         <div class="footer-center">
           <nav class="footer-nav">
