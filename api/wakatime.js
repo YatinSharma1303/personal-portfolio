@@ -94,6 +94,31 @@ function shortTime(seconds) {
   return m + 'm';
 }
 
+function buildLangsFromStats(langArr) {
+  let colorIdx = 0;
+  return (langArr || [])
+    .sort((a, b) => (b.total_seconds || 0) - (a.total_seconds || 0))
+    .slice(0, 8)
+    .map(l => {
+      const color = getLangColor(l.name) || FALLBACK_PALETTE[colorIdx++ % FALLBACK_PALETTE.length];
+      return { name: l.name, time: formatTime(l.total_seconds || 0), seconds: l.total_seconds || 0, percent: l.percent || Math.round(l.digital || 0), color };
+    });
+}
+
+function buildEditorsFromStats(editorArr) {
+  return (editorArr || [])
+    .sort((a, b) => (b.total_seconds || 0) - (a.total_seconds || 0))
+    .slice(0, 4)
+    .map(e => ({ name: e.name, percent: e.percent || 0, time: formatTime(e.total_seconds || 0) }));
+}
+
+function buildProjectsFromStats(projectArr) {
+  return (projectArr || [])
+    .sort((a, b) => (b.total_seconds || 0) - (a.total_seconds || 0))
+    .slice(0, 5)
+    .map(p => ({ name: p.name, time: formatTime(p.total_seconds || 0), percent: p.percent || 0 }));
+}
+
 function buildLangs(langMap, totalSeconds) {
   let colorIdx = 0;
   return Object.entries(langMap)
@@ -153,7 +178,7 @@ module.exports = async function handler(req, res) {
     if (rangeKey === '1y') {
       // --- 1 YEAR: Use stats API (aggregated, fast) + 7d summaries for heatmap ---
       const [statsData, weekData] = await Promise.all([
-        fetchWithAuth('https://wakatime.com/api/v1/users/current/stats?range=' + rangeParam, auth, 8000),
+        fetchWithAuth('https://wakatime.com/api/v1/users/current/stats?range=last_year', auth, 8000),
         fetchWithAuth('https://wakatime.com/api/v1/users/current/summaries?range=Last%207%20days', auth, 6000)
       ]);
 
@@ -165,23 +190,12 @@ module.exports = async function handler(req, res) {
       const totalSeconds = sd.total_seconds || 0;
       const totalDays = sd.days_including_holidays || 365;
       const daysActiveCoded = sd.days_with_more_than_0_seconds || 0;
-      const daysActive = sd.days_including_holidays || 0;
       const dailyAvg = totalDays > 0 ? totalSeconds / totalDays : 0;
 
-      // Languages from stats (each has .total_seconds as a number)
-      const langMap = {};
-      (sd.languages || []).forEach(l => { langMap[l.name] = (l.total_seconds || 0); });
-      const topLangs = buildLangs(langMap, totalSeconds);
-
-      // Editors from stats
-      const editorMap = {};
-      (sd.editors || []).forEach(e => { editorMap[e.name] = (e.total_seconds || 0); });
-      const topEditors = buildEditors(editorMap, totalSeconds);
-
-      // Projects from stats
-      const projectMap = {};
-      (sd.projects || []).forEach(p => { projectMap[p.name] = (p.total_seconds || 0); });
-      const topProjects = buildProjects(projectMap, totalSeconds);
+      // Use pre-computed percentages from stats API (avoids >100% rounding errors)
+      const topLangs = buildLangsFromStats(sd.languages);
+      const topEditors = buildEditorsFromStats(sd.editors);
+      const topProjects = buildProjectsFromStats(sd.projects);
 
       // Heatmap from 7d summaries
       const heatmapDays = [];
