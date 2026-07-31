@@ -1289,7 +1289,20 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .skill-panel-head { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
 .build-icon { font-family: 'Material Symbols Outlined', var(--mono); font-size: 22px; color: var(--accent); }
 .skill-panel-title { font-weight: 700; font-size: 16px; }
-.skill-panel-sub { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); }
+.skill-panel-tags { display: flex; align-items: center; gap: 5px; margin-top: 3px; }
+.skill-role-pill {
+  font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+  padding: 2px 9px; border-radius: 999px;
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent-solid) 25%, transparent);
+  background: color-mix(in srgb, var(--accent-solid) 8%, transparent);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+.skill-role-pill:hover {
+  background: color-mix(in srgb, var(--accent-solid) 18%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent-solid) 20%, transparent);
+}
+.skill-sep { color: var(--gray-dim); font-size: 11px; }
 .skill-count { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--accent); padding: 3px 10px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--accent-solid) 25%, transparent); background: color-mix(in srgb, var(--accent-solid) 6%, transparent); }
 
 .skill-tabs { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -3017,6 +3030,8 @@ html.light .skill-tab { color: var(--gray-dim); border-color: var(--border); }
 html.light .skill-tab.active { background: var(--white); color: #fff; }
 html.light .skill-item { background: rgba(0,0,0,0.02); }
 html.light .skill-item:hover { background: rgba(0,0,0,0.05); }
+html.light .skill-role-pill { color: #0e7490; border-color: rgba(6,182,212,0.25); background: rgba(6,182,212,0.08); }
+html.light .skill-role-pill:hover { background: rgba(6,182,212,0.16); box-shadow: 0 0 12px rgba(6,182,212,0.15); }
 
 /* Project cards */
 html.light .project-card { background: rgba(255,255,255,0.6); }
