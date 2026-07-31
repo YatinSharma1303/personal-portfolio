@@ -1442,13 +1442,17 @@ html.light .lastfm-card .skeleton { background: linear-gradient(90deg, rgba(0,0,
 .al-ov-genres { display: flex; flex-wrap: wrap; gap: 4px; }
 .al-ov-genres span { font-family: var(--mono); font-size: 9px; padding: 2px 6px; border-radius: 6px; background: rgba(255,255,255,0.14); color: #fff; }
 .al-ov-desc { font-size: 10px; line-height: 1.4; color: rgba(255,255,255,0.85); }
-.al-item-info { padding: 8px 10px; }
-.al-item-name { font-size: 12px; font-weight: 600; line-height: 1.3; }
-.al-item-score { font-family: var(--mono); font-size: 10px; color: var(--gray-dim); }
+.al-item-info { padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+.al-item-name { font-size: 12px; font-weight: 700; line-height: 1.3; letter-spacing: 0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.al-item-score { display: inline-flex; align-items: center; gap: 3px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.02em; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--accent-solid) 6%, transparent); border: 1px solid color-mix(in srgb, var(--accent-solid) 12%, transparent); color: var(--gray); width: fit-content; }
+.al-item-score b { color: var(--white); font-weight: 700; }
 .al-item-score.al-score-high { color: #34d399; }
+.al-item-score.al-score-high b { color: #34d399; }
 .al-item-score.al-score-mid { color: #f59e0b; }
+.al-item-score.al-score-mid b { color: #f59e0b; }
 .al-item-score.al-score-low { color: #f87171; }
-.al-item-bar { position: relative; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.07); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04); margin-top: 8px; }
+.al-item-score.al-score-low b { color: #f87171; }
+.al-item-bar { position: relative; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.07); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04); }
 .al-item-bar i { position: relative; display: block; height: 100%; min-width: 5px; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent2)); box-shadow: 0 0 8px color-mix(in srgb, var(--accent-solid) 45%, transparent); transition: width 0.5s cubic-bezier(.22,1,.36,1); }
 /* Glowing playhead dot with a gentle, GPU-composited pulse (transform only,
    so it stays perfectly smooth). No traveling shimmer — that repainted every
@@ -1573,7 +1577,14 @@ html.light .anilist-card .skeleton { background: linear-gradient(90deg, rgba(0,0
 /* #14 Per-page control */
 .al-perpage {
   display: flex; align-items: center; gap: 4px;
-  font-family: var(--mono); font-size: 10px; color: var(--gray-dim);
+}
+.al-perpage-label {
+  display: inline-flex; align-items: center;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.02em;
+  padding: 3px 10px; border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-solid) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-solid) 12%, transparent);
+  color: var(--gray); margin-right: 2px;
 }
 .al-perpage-btn {
   padding: 4px 8px; border-radius: 6px;
@@ -2861,6 +2872,8 @@ html.light .al-genre-pill.active { color: #fff; }
 html.light .al-stat-nums b { color: var(--white); }
 html.light .al-item-bar { background: rgba(0,0,0,0.07); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.04); }
 html.light .al-item-bar i { box-shadow: 0 0 8px rgba(0,120,200,0.35); }
+html.light .al-item-score { background: color-mix(in srgb, var(--accent-solid) 8%, rgba(0,0,0,0.03)); border-color: color-mix(in srgb, var(--accent-solid) 14%, rgba(0,0,0,0.06)); }
+html.light .al-perpage-label { background: color-mix(in srgb, var(--accent-solid) 8%, rgba(0,0,0,0.03)); border-color: color-mix(in srgb, var(--accent-solid) 14%, rgba(0,0,0,0.06)); }
 @media (prefers-reduced-motion: reduce) { .al-item-bar i::after { animation: none; } .al-item-bar i { transition: none; } }
 html.light .al-page-btn { border-color: var(--border); color: var(--gray); }
 html.light .al-page-btn.active { background: var(--white); color: #fff; border-color: var(--white); }

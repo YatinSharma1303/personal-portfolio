@@ -1202,7 +1202,7 @@
           '</div>' +
           '<button class="al-score-toggle" id="al-score-toggle" title="Toggle score"><span class="material-symbols-outlined">swap_horiz</span>Score</button>' +
           '<div class="al-view-toggle" id="al-view-toggle"><button class="al-view-btn active" data-view="grid" title="Grid"><span class="material-symbols-outlined">grid_view</span></button><button class="al-view-btn" data-view="list" title="List"><span class="material-symbols-outlined">view_list</span></button></div>' +
-          '<div class="al-perpage" id="al-perpage">Per page:<button class="al-perpage-btn" data-pp="6">6</button><button class="al-perpage-btn active" data-pp="12">12</button><button class="al-perpage-btn" data-pp="24">24</button><button class="al-perpage-btn" data-pp="48">48</button></div>';
+          '<div class="al-perpage" id="al-perpage"><span class="al-perpage-label">Per page</span><button class="al-perpage-btn" data-pp="6">6</button><button class="al-perpage-btn active" data-pp="12">12</button><button class="al-perpage-btn" data-pp="24">24</button><button class="al-perpage-btn" data-pp="48">48</button></div>';
         list.parentNode.insertBefore(controlsBar, list);
         const si = controlsBar.querySelector('#al-search'), sc = controlsBar.querySelector('#al-search-clear');
         var searchTimer = null;
@@ -1502,7 +1502,7 @@
         const st = String(e._status || '').toUpperCase();
         const eps = totalUnits(m);
         const prog = e.progress || 0;
-        const progText = prog ? prog + (eps ? '/' + eps : '') + ' ' + unitShort() : (st === 'COMPLETED' ? 'completed' : '');
+        const progText = prog ? '<b>' + prog + (eps ? '/' + eps : '') + '</b> ' + unitShort() : (st === 'COMPLETED' ? '<b>done</b>' : '');
         const userScore = e.score ? '★ ' + e.score : '';
         const mean = m.meanScore || 0;
         const meanText = mean ? 'avg ' + (mean / 10).toFixed(1) : '';
@@ -1535,7 +1535,7 @@
           '</div>' +
           '<div class="al-item-info">' +
             '<div class="al-item-name">' + nameHtml + '</div>' +
-            '<div class="al-item-score ' + scoreClass(mean) + '">' + esc(scoreLine) + '</div>' +
+            '<div class="al-item-score ' + scoreClass(mean) + '">' + scoreLine + '</div>' +
             (showBar ? '<div class="al-item-bar"><i style="width:' + pct + '%"></i></div>' : '') +
           '</div>' +
         '</div>';
