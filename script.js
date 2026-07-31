@@ -1253,7 +1253,7 @@
 
     function buildListQuery(type) {
       const progressFields = type === 'MANGA' ? 'chapters volumes' : 'episodes duration';
-      return `query{user:MediaListCollection(userName:"${CONFIG.anilistUser}",type:${type}){lists{name status entries{media{id title{romaji english}coverImage{extraLarge large medium}${progressFields} meanScore genres format description(asHtml:false) startDate{year month day} endDate{year month day}}score progress updatedAt}}}}`;
+      return `query{user:MediaListCollection(userName:"${CONFIG.anilistUser}",type:${type}){lists{name status entries{media{id title{romaji english}coverImage{extraLarge large medium}${progressFields} meanScore genres format description(asHtml:false) startDate{year month day} endDate{year month day}}score progress updatedAt startedAt{year month day} completedAt{year month day}}}}`;
     }
     // Fetch a media list (anime or manga) on demand. Anime falls back to a local list on failure.
     function loadMedia(type) {
@@ -1523,15 +1523,14 @@
         const desc = m.description ? esc(String(m.description).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()).slice(0, 180) : '';
         const fmt = m.format ? String(m.format).replace(/_/g, ' ') : '';
         const sd = m.startDate, ed = m.endDate;
-        const dateStr = (function() {
-          const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-          function fmtD(d) { if (!d || !d.year) return ''; if (d.month && d.day) return MONTHS[(d.month-1)] + ' ' + d.day + ', ' + d.year; if (d.month) return MONTHS[(d.month-1)] + ' ' + d.year; return '' + d.year; }
-          const s = fmtD(sd), e = fmtD(ed);
-          if (s && e && s !== e) return s + ' → ' + e;
-          if (s) return s;
-          return '';
-        })();
-        const dateInfo = dateStr ? '<div class="al-item-date"><span class="material-symbols-outlined">schedule</span>' + esc(dateStr) + '</div>' : '';
+        const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        function fmtD(d) { if (!d || !d.year) return ''; if (d.month && d.day) return MONTHS[(d.month-1)] + ' ' + d.day + ', ' + d.year; if (d.month) return MONTHS[(d.month-1)] + ' ' + d.year; return '' + d.year; }
+        const airStr = (function() { const s = fmtD(sd), ee = fmtD(ed); if (s && ee && s !== ee) return s + ' → ' + ee; return s || ''; })();
+        const wdS = fmtD(e.startedAt), wdE = fmtD(e.completedAt);
+        const watchStr = (function() { if (wdS && wdE && wdS !== wdE) return wdS + ' → ' + wdE; if (wdS) return wdS; return ''; })();
+        var dateInfo = '';
+        if (airStr) dateInfo += '<div class="al-item-date"><span class="material-symbols-outlined">tv_gen</span><span>' + esc(airStr) + '</span></div>';
+        if (watchStr) dateInfo += '<div class="al-item-date"><span class="material-symbols-outlined">schedule</span><span>' + esc(watchStr) + '</span></div>';
         const overlay = (genres.length || desc || fmt) ?
           '<div class="al-item-overlay">' +
             (fmt ? '<div class="al-ov-fmt">' + esc(fmt) + '</div>' : '') +
