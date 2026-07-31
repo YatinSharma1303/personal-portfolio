@@ -1240,12 +1240,12 @@
     }
     function loadFallbackAnime() {
       datasets.ANIME = [
-        { _status: 'CURRENT', progress: 52, score: 0, updatedAt: Date.now()/1000, media: { id: 20, title: { romaji: 'NARUTO', english: 'Naruto' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20-CXyit3VSQwF4.png' }, episodes: 220, duration: 23, meanScore: 79, genres: ['Action', 'Adventure'], format: 'TV' } },
-        { _status: 'COMPLETED', progress: 64, score: 0, updatedAt: Date.now()/1000 - 10, media: { id: 5114, title: { romaji: 'FULLMETAL ALCHEMIST: BROTHERHOOD', english: 'Fullmetal Alchemist: Brotherhood' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/nx5114-CXyit3VSQwF4.png' }, episodes: 64, duration: 25, meanScore: 92, genres: ['Action', 'Adventure', 'Drama'], format: 'TV' } },
-        { _status: 'COMPLETED', progress: 37, score: 0, updatedAt: Date.now()/1000 - 20, media: { id: 1535, title: { romaji: 'DEATH NOTE', english: 'Death Note' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/nx1535-CXyit3VSQwF4.png' }, episodes: 37, duration: 23, meanScore: 87, genres: ['Mystery', 'Psychological', 'Thriller'], format: 'TV' } },
-        { _status: 'COMPLETED', progress: 75, score: 0, updatedAt: Date.now()/1000 - 30, media: { id: 16498, title: { romaji: 'SHINGEKI NO KYOJIN', english: 'Attack on Titan' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx16498-CXyit3VSQwF4.png' }, episodes: 75, duration: 24, meanScore: 86, genres: ['Action', 'Drama'], format: 'TV' } },
-        { _status: 'COMPLETED', progress: 26, score: 0, updatedAt: Date.now()/1000 - 40, media: { id: 21, title: { romaji: 'ONE PIECE', english: 'One Piece' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21-CXyit3VSQwF4.png' }, episodes: 26, duration: 24, meanScore: 87, genres: ['Action', 'Adventure', 'Comedy'], format: 'TV' } },
-        { _status: 'PLANNING', progress: 0, score: 0, updatedAt: Date.now()/1000 - 50, media: { id: 1, title: { romaji: 'COWBOY BEBOP', english: 'Cowboy Bebop' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx1-CXyit3VSQwF4.png' }, episodes: 26, duration: 24, meanScore: 88, genres: ['Action', 'Sci-Fi'], format: 'TV' } }
+        { _status: 'CURRENT', progress: 52, score: 0, updatedAt: Date.now()/1000, media: { id: 20, title: { romaji: 'NARUTO', english: 'Naruto' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/img/anime/cover/medium/bx20-CXyit3VSQwF4.jpg' }, episodes: 220, duration: 23, meanScore: 79, genres: ['Action', 'Adventure'], format: 'TV' } },
+        { _status: 'COMPLETED', progress: 64, score: 0, updatedAt: Date.now()/1000 - 10, media: { id: 5114, title: { romaji: 'FULLMETAL ALCHEMIST: BROTHERHOOD', english: 'Fullmetal Alchemist: Brotherhood' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/img/anime/cover/medium/nx5114-CXyit3VSQwF4.jpg' }, episodes: 64, duration: 25, meanScore: 92, genres: ['Action', 'Adventure', 'Drama'], format: 'TV' } },
+        { _status: 'COMPLETED', progress: 37, score: 0, updatedAt: Date.now()/1000 - 20, media: { id: 1535, title: { romaji: 'DEATH NOTE', english: 'Death Note' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/img/anime/cover/medium/nx1535-CXyit3VSQwF4.jpg' }, episodes: 37, duration: 23, meanScore: 87, genres: ['Mystery', 'Psychological', 'Thriller'], format: 'TV' } },
+        { _status: 'COMPLETED', progress: 75, score: 0, updatedAt: Date.now()/1000 - 30, media: { id: 16498, title: { romaji: 'SHINGEKI NO KYOJIN', english: 'Attack on Titan' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/img/anime/cover/medium/bx16498-CXyit3VSQwF4.jpg' }, episodes: 75, duration: 24, meanScore: 86, genres: ['Action', 'Drama'], format: 'TV' } },
+        { _status: 'COMPLETED', progress: 26, score: 0, updatedAt: Date.now()/1000 - 40, media: { id: 21, title: { romaji: 'ONE PIECE', english: 'One Piece' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/img/anime/cover/medium/bx21-CXyit3VSQwF4.jpg' }, episodes: 26, duration: 24, meanScore: 87, genres: ['Action', 'Adventure', 'Comedy'], format: 'TV' } },
+        { _status: 'PLANNING', progress: 0, score: 0, updatedAt: Date.now()/1000 - 50, media: { id: 1, title: { romaji: 'COWBOY BEBOP', english: 'Cowboy Bebop' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/img/anime/cover/medium/bx1-CXyit3VSQwF4.jpg' }, episodes: 26, duration: 24, meanScore: 88, genres: ['Action', 'Sci-Fi'], format: 'TV' } }
       ];
       loaded.ANIME = true;
       if (activeMedia === 'ANIME') { allEntries = datasets.ANIME; refreshAll(); }
@@ -1259,7 +1259,7 @@
     function loadMedia(type) {
       if (loaded[type] || loading[type]) return;
       loading[type] = true;
-      fetch('https://graphql.anilist.co?_=' + Date.now(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: buildListQuery(type) }) })
+      fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ query: buildListQuery(type) }) })
         .then(r => { if (!r.ok) throw new Error('AniList HTTP ' + r.status); return r.json(); }).then(d => {
           if (d.errors) throw new Error(d.errors[0]?.message || 'AniList GraphQL error');
           const lists = (d.data && d.data.user && d.data.user.lists) || [];
@@ -1270,9 +1270,25 @@
           if (activeMedia === type) { allEntries = datasets[type]; refreshAll(); }
         }).catch((err) => {
           loading[type] = false;
-          console.warn('AniList ' + type + ' load failed:', err);
-          if (type === 'ANIME') loadFallbackAnime();
-          else if (activeMedia === 'MANGA') { list.innerHTML = '<div class="al-empty">Couldn’t load manga list right now.</div>'; }
+          console.warn('AniList ' + type + ' load failed (retrying in 2s):', err);
+          setTimeout(() => {
+            if (loaded[type]) return;
+            fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ query: buildListQuery(type) }) })
+              .then(r => { if (!r.ok) throw new Error('AniList HTTP ' + r.status); return r.json(); }).then(d => {
+                if (d.errors) throw new Error(d.errors[0]?.message || 'AniList GraphQL error');
+                const lists = (d.data && d.data.user && d.data.user.lists) || [];
+                const entries = [];
+                lists.forEach(l => (l.entries || []).forEach(e => { if (e && e.media) { e._status = l.status; entries.push(e); } }));
+                if (!entries.length) throw new Error('AniList list empty');
+                datasets[type] = entries; loaded[type] = true; loading[type] = false;
+                if (activeMedia === type) { allEntries = datasets[type]; refreshAll(); }
+              }).catch((err2) => {
+                loading[type] = false;
+                console.warn('AniList ' + type + ' retry also failed, using fallback:', err2);
+                if (type === 'ANIME') loadFallbackAnime();
+                else if (activeMedia === 'MANGA') { list.innerHTML = '<div class="al-empty">Couldn\'t load manga list right now.</div>'; }
+              });
+          }, 2000);
         });
     }
 
