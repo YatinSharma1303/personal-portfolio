@@ -1253,7 +1253,7 @@
 
     function buildListQuery(type) {
       const progressFields = type === 'MANGA' ? 'chapters volumes' : 'episodes duration';
-      return `query{user:MediaListCollection(userName:"${CONFIG.anilistUser}",type:${type}){lists{name status entries{media{id title{romaji english}coverImage{extraLarge large medium}${progressFields} meanScore genres format description(asHtml:false) startDate{year month day} endDate{year month day}}score progress updatedAt startedAt{year month day} completedAt{year month day}}}}`;
+      return `query{user:MediaListCollection(userName:"${CONFIG.anilistUser}",type:${type}){lists{name status entries{media{id title{romaji english}coverImage{extraLarge large medium}${progressFields} meanScore genres format description(asHtml:false) startDate{year month day} endDate{year month day}}score progress updatedAt startedAt{year month day} completedAt{year month day}}}}}`;
     }
     // Fetch a media list (anime or manga) on demand. Anime falls back to a local list on failure.
     function loadMedia(type) {
@@ -1270,25 +1270,9 @@
           if (activeMedia === type) { allEntries = datasets[type]; refreshAll(); }
         }).catch((err) => {
           loading[type] = false;
-          console.warn('AniList ' + type + ' load failed (retrying in 2s):', err);
-          setTimeout(() => {
-            if (loaded[type]) return;
-            fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ query: buildListQuery(type) }) })
-              .then(r => { if (!r.ok) throw new Error('AniList HTTP ' + r.status); return r.json(); }).then(d => {
-                if (d.errors) throw new Error(d.errors[0]?.message || 'AniList GraphQL error');
-                const lists = (d.data && d.data.user && d.data.user.lists) || [];
-                const entries = [];
-                lists.forEach(l => (l.entries || []).forEach(e => { if (e && e.media) { e._status = l.status; entries.push(e); } }));
-                if (!entries.length) throw new Error('AniList list empty');
-                datasets[type] = entries; loaded[type] = true; loading[type] = false;
-                if (activeMedia === type) { allEntries = datasets[type]; refreshAll(); }
-              }).catch((err2) => {
-                loading[type] = false;
-                console.warn('AniList ' + type + ' retry also failed, using fallback:', err2);
-                if (type === 'ANIME') loadFallbackAnime();
-                else if (activeMedia === 'MANGA') { list.innerHTML = '<div class="al-empty">Couldn\'t load manga list right now.</div>'; }
-              });
-          }, 2000);
+          console.warn('AniList ' + type + ' load failed:', err);
+          if (type === 'ANIME') loadFallbackAnime();
+          else if (activeMedia === 'MANGA') { list.innerHTML = '<div class="al-empty">Couldn\u2019t load manga list right now.</div>'; }
         });
     }
 
