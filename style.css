@@ -2235,7 +2235,7 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
 .al-genre-tag::before {
   content: ''; position: absolute; left: 0; top: 0; bottom: 0;
   width: var(--fill, 0%); border-radius: 8px;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--accent-solid) 10%, transparent), transparent);
+  background: var(--accent);
   transition: width 0.4s ease;
 }
 .al-gt-name { position: relative; z-index: 1; color: var(--white); font-weight: 500; }
@@ -3032,7 +3032,7 @@ html.light .al-sc-val { color: var(--gray); }
 html.light .al-sc-accent { border-color: rgba(16,185,129,0.25); background: rgba(16,185,129,0.06); }
 html.light .al-sc-accent .al-sc-val { color: #059669; }
 html.light .al-genre-tag { border-color: var(--border); background: rgba(0,0,0,0.02); }
-html.light .al-genre-tag::before { background: linear-gradient(90deg, rgba(0,120,255,0.08), transparent); }
+html.light .al-genre-tag::before { background: var(--accent); }
 html.light .al-gt-name { color: var(--gray); }
 html.light .al-item-bar { background: rgba(0,0,0,0.07); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.04); }
 html.light .al-item-bar i { box-shadow: 0 0 8px rgba(0,120,200,0.35); }
