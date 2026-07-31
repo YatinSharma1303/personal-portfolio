@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="color-scheme" content="dark light"/>
+  <meta name="theme-color" content="#00c8ff"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <title>Yatin Sharma — Full-Stack Developer</title>
+  <meta name="description" content="Yatin Sharma — full-stack web developer. AI apps, web platforms, React, Python, and everything end to end."/>
+  <meta name="keywords" content="Yatin Sharma, full-stack developer, React, Python, AI, machine learning, web developer, Agra"/>
+  <meta property="og:title" content="Yatin Sharma — Building software end to end."/>
+  <meta property="og:description" content="Full-stack web developer crafting dense interfaces, interactive widgets, and polished frontend experiences."/>
+  <meta property="og:image" content="https://avatars.githubusercontent.com/u/85959016?v=4"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:url" content="https://portfolio.yatinsharma.me"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="Yatin Sharma — Building software end to end."/>
+  
+  <!-- O. Preconnect for faster API loading -->
+  <link rel="preconnect" href="https://api.github.com"/>
+  <link rel="preconnect" href="https://graphql.anilist.co"/>
+  <!-- Last.fm calls now go through /api/lastfm proxy, no direct preconnect needed -->
+  
+  <!-- A. Animated SVG Favicon -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%2305050a'/%3E%3Ctext x='50' y='70' font-size='60' font-family='sans-serif' font-weight='bold' text-anchor='middle' fill='%2300c8ff'%3EY%3C/text%3E%3C/svg%3E"/>
+
+  <!-- E. SEO STRUCTURED DATA (JSON-LD) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": "Yatin Sharma",
+    "url": "https://portfolio.yatinsharma.me",
+    "image": "https://avatars.githubusercontent.com/u/85959016?v=4",
+    "jobTitle": "Full-Stack Developer",
+    "worksFor": {
+      "@type": "Organization",
+      "name": "Freelance / Open Source"
+    },
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Agra",
+      "addressRegion": "Uttar Pradesh",
+      "addressCountry": "India"
+    },
+    "sameAs": [
+      "https://github.com/YatinSharma1303",
+      "https://www.last.fm/user/YATINSHARMA",
+      "https://anilist.co/user/YatinSharma1303/"
+    ]
+  }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+  <link rel="dns-prefetch" href="https://graphql.anilist.co"/>
+  <!-- Last.fm now proxied via /api/lastfm, no direct DNS prefetch needed -->
+  <link rel="dns-prefetch" href="https://api.github.com"/>
+  <link rel="dns-prefetch" href="https://www.youtube.com"/>
+  <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml"/>
+  <link rel="stylesheet" href="style.css?v=10.2"/>
+</head>
+<body>
+
+  <!-- ============ BACKGROUND LAYERS ============ -->
+  <div class="grid-bg"></div>
+  <div class="hero-gradient-orb"></div>
+  <canvas class="site-particles" id="hero-particles"></canvas>
+  <div class="click-splash" id="click-splash"></div>
+  <div class="click-splash-inner" id="click-splash-inner"></div>
+
+  <!-- Contribution graph tooltip -->
+  <div class="contrib-tip" id="contrib-tip"></div>
+
+  <!-- ============ CURSOR GLOW TRAIL ============ -->
+  <div class="cursor-glow" id="cursor-glow"></div>
+  <canvas class="cursor-trail" id="cursor-trail"></canvas>
+
+  <!-- ============ SCROLL PROGRESS BAR ============ -->
+  <div class="scroll-progress" id="scroll-progress"></div>
+
+  <!-- ============ BACK TO TOP ============ -->
+  <button class="back-to-top" id="back-to-top" aria-label="Back to top">
+    <svg viewBox="0 0 24 24"><path d="M12 5l-7 7 1.4 1.4L11 8.8V19h2V8.8l4.6 4.6L19 12z"/></svg>
+  </button>
+
+  <!-- ============ INTRO / PRELOADER OVERLAY ============ -->
+  <div class="intro-overlay" id="intro-overlay">
+    <div class="intro-topbar">
+      <span class="intro-status"><span class="intro-dot"></span> <span id="intro-status-text">compiling portfolio</span></span>
+      <span class="intro-tag">v4.2 · <span id="intro-time"></span></span>
+    </div>
+
+    <div class="intro-center">
+      <div class="intro-name" id="intro-name">
+        <span class="intro-char" data-i="0">Y</span>
+        <span class="intro-char" data-i="1">A</span>
+        <span class="intro-char" data-i="2">T</span>
+        <span class="intro-char" data-i="3">I</span>
+        <span class="intro-char" data-i="4">N</span>
+      </div>
+      <div class="intro-progress-wrap">
+        <div class="intro-progress-bar"><div class="intro-progress-fill" id="intro-progress-fill"></div></div>
+        <span class="intro-percent" id="intro-percent">0%</span>
+      </div>
+      <div class="intro-designed" id="intro-designed">designed by <b>yatin</b></div>
+    </div>
+
+    <div class="intro-swipe-hint" id="intro-swipe-hint">
+      <div class="swipe-icon">↑</div>
+      <span>swipe up to enter</span>
+    </div>
+  </div>
+
+  <!-- ============ FLOATING TOPBAR PILL ============ -->
+  <div class="topbar-container">
+    <nav class="topbar-pill" aria-label="Primary">
+      <!-- Music widget (left) -->
+      <button class="topbar-music-widget" id="topbar-music-icon" title="Toggle music player" aria-label="Toggle music player">
+        <span class="tb-eq-icon" id="tb-eq-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+        <span class="tb-music-tooltip" id="tb-music-tooltip">Tap to play</span>
+      </button>
+
+      <span class="topbar-divider"></span>
+
+      <!-- Nav icons -->
+      <div class="topbar-nav-icons">
+        <a class="tb-icon-btn" href="#about" title="About" aria-label="About"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></a>
+        <a class="tb-icon-btn" href="#skills" title="Skills" aria-label="Skills"><svg viewBox="0 0 24 24"><path d="M12 2l9 5v10l-9 5-9-5V7z M12 2v20 M3 7l9 5 9-5"/></svg></a>
+        <a class="tb-icon-btn" href="#projects" title="Projects" aria-label="Projects"><svg viewBox="0 0 24 24"><path d="M3 7h18v12H3z M8 7V4h8v3"/></svg></a>
+        <a class="tb-icon-btn" href="#ama" title="Ask" aria-label="Ask Me Anything"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z"/></svg></a>
+        <a class="tb-icon-btn" href="#playground" title="Playground" aria-label="Playground"><svg viewBox="0 0 24 24"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M7 3v18 M9 8h8 M9 12h6 M9 16h8"/></svg></a>
+      </div>
+
+      <span class="topbar-divider"></span>
+
+      <!-- Theme toggle -->
+      <button class="tb-icon-btn theme-toggle mode-auto" id="theme-toggle-btn" title="Toggle theme" aria-label="Toggle theme">
+        <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2 M12 20v2 M2 12h2 M20 12h2 M5 5l1.5 1.5 M17.5 17.5L19 19 M19 5l-1.5 1.5 M6.5 17.5L5 19"/></svg>
+        <svg class="icon-auto" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2v16a8 8 0 0 1 0-16z"/></svg>
+      </button>
+
+      <!-- Accent color picker -->
+      <button class="tb-icon-btn accent-toggle" id="accent-btn" title="Accent color" aria-label="Change accent color" aria-haspopup="true" aria-expanded="false">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18 3 3 0 0 0 0-6 1.5 1.5 0 0 1 0-3 3 3 0 0 0 0-6z"/><circle cx="8" cy="9" r="1"/><circle cx="16" cy="9" r="1"/><circle cx="8.5" cy="14" r="1"/></svg>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Accent color popover -->
+  <div class="accent-popover" id="accent-popover" role="menu" aria-label="Accent colors" hidden></div>
+
+  <!-- ============ MINI MUSIC PLAYER (Synthwave glass dock — theme-aware) ============ -->
+  <div class="mini-player" id="mini-player" aria-hidden="true">
+    <div class="mp-glass">
+      <div class="mp-backdrop" id="mp-backdrop"></div>
+
+      <div class="mp-head">
+        <div class="mp-eq" id="mp-eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="mp-now-label"><span class="mp-dot"></span>NOW PLAYING</div>
+        <div class="mp-head-sp"></div>
+        <button class="mp-btn mp-mini-btn mp-expand" id="mp-expand" aria-label="Expand" title="Expand">
+          <svg viewBox="0 0 24 24"><path d="M12 8l6 6-1.4 1.4L12 10.8 7.4 15.4 6 14z"/></svg>
+        </button>
+        <button class="mp-btn mp-mini-btn mp-close" id="mp-close" aria-label="Close player" title="Close">✕</button>
+      </div>
+
+      <div class="mp-expand-panel">
+        <div class="mp-big-art" id="mp-big-art"></div>
+        <div class="mp-big-title" id="mp-big-title">YouTube Music</div>
+        <div class="mp-big-artist" id="mp-big-artist">Playlist</div>
+      </div>
+
+      <div class="mp-track">
+        <div class="mp-thumb" id="mp-thumb"></div>
+        <div class="mp-bar-main">
+          <div class="mp-title" id="mp-title">YouTube Music</div>
+          <div class="mp-artist" id="mp-artist">Playlist</div>
+        </div>
+      </div>
+
+      <div class="mp-seek-row">
+        <span class="mp-time" id="mp-cur">0:00</span>
+        <div class="mp-seek-bar" id="mp-seek-bar"><div class="mp-seek-fill" id="mp-seek-fill"></div></div>
+        <span class="mp-time mp-time-r" id="mp-dur">0:00</span>
+      </div>
+
+      <div class="mp-controls">
+        <button class="mp-btn mp-sec mp-shuffle" id="mp-shuffle" aria-label="Shuffle" title="Shuffle"><span class="material-symbols-outlined">shuffle</span></button>
+        <button class="mp-btn mp-prev" id="mp-prev" aria-label="Previous" title="Previous"><svg viewBox="0 0 24 24"><path d="M6 19V5h2v14H6zm3.5-7L18 5v14L9.5 12z"/></svg></button>
+        <button class="mp-btn mp-play" id="mp-play" aria-label="Play / Pause">
+          <svg class="mp-icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <svg class="mp-icon-pause" viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+        </button>
+        <button class="mp-btn mp-next" id="mp-next" aria-label="Next" title="Next"><svg viewBox="0 0 24 24"><path d="M6 19V5l8.5 7L6 19zm10.5-14h2v14h-2z"/></svg></button>
+        <button class="mp-btn mp-sec mp-repeat" id="mp-repeat" aria-label="Repeat" title="Repeat"><span class="material-symbols-outlined">repeat</span></button>
+      </div>
+
+      <div class="mp-bottom">
+        <span class="material-symbols-outlined mp-vol-ic" id="mp-vol-icon">volume_up</span>
+        <input type="range" id="mp-vol" class="mp-vol-range" min="0" max="100" value="70" aria-label="Volume"/>
+        <a class="mp-btn mp-yt" id="mp-yt" href="https://music.youtube.com/playlist?list=OLAK5uy_mjNB8hu_s5goDncwoopQoSRXjmRjEPq54" target="_blank" rel="noopener" aria-label="Open on YouTube"><span class="material-symbols-outlined">open_in_new</span></a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ HIDDEN YOUTUBE HOST (outside the panel so it initializes) ============ -->
+  <div class="yt-host" id="yt-music-iframe"></div>
+
+  <!-- ============ HERO ============ -->
+  <header class="hero" id="hero">
+    <div class="hero-inner">
+      <div class="hero-reveal" style="--d:0">
+        <div class="hero-status-badge"><span class="status-dot"></span> Available for work &amp; collabs</div>
+      </div>
+      <div class="hero-label hero-reveal" style="--d:1"><span class="hero-label-hash">&#9670;</span> full-stack dev <span class="hero-label-sep">·</span> ui engineer <span class="hero-label-sep">·</span> shipping since 2023</div>
+      <h1 class="hero-h1 hero-reveal" style="--d:2">Building software <span class="hero-h1-grad">end to end.</span></h1>
+      <p class="hero-sub hero-reveal" style="--d:3">Shipping full-stack web experiences — from clean front-ends to the models and APIs behind them.</p>
+      <!-- Terminal typing effect -->
+      <div class="hero-terminal hero-reveal" style="--d:4">
+        <div class="term-dots"><i></i><i></i><i></i></div>
+        <div class="term-body"><span class="term-line" id="term-line"></span><span class="term-caret">▌</span></div>
+      </div>
+      <div class="hero-tags hero-reveal" style="--d:5">
+        <span class="tag">AI Apps</span>
+        <span class="tag">Web Platforms</span>
+        <span class="tag">React</span>
+        <span class="tag">Python</span>
+      </div>
+      <div class="hero-actions hero-reveal" style="--d:6">
+        <a class="btn-primary magnetic" href="#projects">View Projects</a>
+        <a class="btn-ghost magnetic" href="https://github.com/YatinSharma1303" target="_blank" rel="noopener">GitHub ↗</a>
+      </div>
+      <div class="hero-scroll-hint hero-reveal" style="--d:7">⌄</div>
+    </div>
+  </header>
+
+  <!-- ============ ABOUT ============ -->
+  <section class="section" id="about">
+    <div class="section-head">
+      <span class="section-label">01 / about</span>
+      <h2 class="section-title">Owning the <em>whole stack.</em></h2>
+    </div>
+
+    <div class="about-grid">
+      <div class="about-text fade-in">
+        <p>I'm <strong>Yatin Sharma</strong> — a <strong>full-stack</strong> web developer who likes owning a product from the database to the pixel. I build <strong>AI</strong>-powered apps, web platforms, and automation bots, and I care about things that actually ship and work.</p>
+        <p>Lately I work across <strong>React</strong> and modern JavaScript on the front end, with <strong>Python</strong>, machine learning, and Streamlit driving the intelligence underneath. From a 41-disease diagnosis platform to a custom GPT app, I like turning ambitious ideas into things people can use.</p>
+        <p>Off the keyboard I'm usually watching movies and anime, cooking something, or chasing the next thing I haven't tried yet.</p>
+      </div>
+
+      <div class="about-side">
+        <div class="glass-card quote-card fade-in">
+          <div class="quote-label">Random Quote <button class="quote-swap" id="quote-swap" title="Swap quote" aria-label="Swap quote"><span class="material-symbols-outlined">autorenew</span></button></div>
+          <div class="quote-body"><blockquote id="quote-text">Talk is cheap. Show me the code.</blockquote><cite id="quote-author">— Linus Torvalds</cite></div>
+        </div>
+
+        <div class="glass-card bio-card fade-in">
+          <div class="bio-grid">
+            <div class="bio-item">
+              <span class="bio-icon material-symbols-outlined">location_on</span>
+              <div class="bio-content">
+                <span class="bio-label">Location</span>
+                <span class="bio-value">Agra, India</span>
+              </div>
+            </div>
+            <div class="bio-item">
+              <span class="bio-icon material-symbols-outlined">center_focus_strong</span>
+              <div class="bio-content">
+                <span class="bio-label">Focus</span>
+                <span class="bio-value bio-chips"><i class="chip chip-accent">Full Stack</i><i class="chip chip-muted">+</i><i class="chip chip-accent">AI</i></span>
+              </div>
+            </div>
+            <div class="bio-item">
+              <span class="bio-icon material-symbols-outlined">mail</span>
+              <div class="bio-content">
+                <span class="bio-label">Email</span>
+                <div class="email-wrap"><span class="bio-value bio-email" id="email-display"></span><button class="copy-btn material-symbols-outlined" id="copy-email" title="Copy email">content_copy</button></div>
+              </div>
+            </div>
+            <div class="bio-item">
+              <span class="bio-icon bio-status-dot"></span>
+              <div class="bio-content">
+                <span class="bio-label">Status</span>
+                <span class="bio-value bio-status"><span class="status-dot"></span>now · building · shipping</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card time-card fade-in">
+          <div class="time-header">
+            <span class="time-icon material-symbols-outlined">schedule</span>
+            <span class="time-label">Time Link</span>
+          </div>
+          <div class="time-grid">
+            <div class="time-col">
+              <div class="time-zone"><span class="material-symbols-outlined tz-icon">flag</span>India</div>
+              <div class="time-value" id="time-india">—</div>
+              <div class="time-sub">GMT+5:30 · my time</div>
+            </div>
+            <div class="time-divider">
+              <span class="material-symbols-outlined">sync_alt</span>
+            </div>
+            <div class="time-col">
+              <div class="time-zone"><span class="material-symbols-outlined tz-icon">person</span>Visitor</div>
+              <div class="time-value" id="time-visitor">—</div>
+              <div class="time-sub" id="time-visitor-sub">your time</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card stack-card fade-in">
+          <div class="stack-header">
+            <span class="stack-icon material-symbols-outlined">code_blocks</span>
+            <span class="stack-label">Daily Stack</span>
+          </div>
+          <div class="stack-pills">
+            <span class="stack-pill"><span class="material-symbols-outlined">terminal</span>VS Code</span><span class="stack-pill"><span class="material-symbols-outlined">widgets</span>React</span><span class="stack-pill"><span class="material-symbols-outlined">code</span>Python</span><span class="stack-pill"><span class="material-symbols-outlined">source</span>Git &amp; GitHub</span><span class="stack-pill"><span class="material-symbols-outlined">rocket_launch</span>Vercel</span><span class="stack-pill"><span class="material-symbols-outlined">auto_awesome</span>ChatGPT</span><span class="stack-pill"><span class="material-symbols-outlined">bar_chart</span>Streamlit</span><span class="stack-pill"><span class="material-symbols-outlined">database</span>Firebase</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GitHub profile card -->
+    <div class="gh-card fade-in" id="gh-card">
+      <div class="gh-top-row">
+        <div class="gh-avatar-wrap">
+          <img class="gh-avatar" id="gh-avatar" alt="Yatin Sharma" src="https://avatars.githubusercontent.com/u/85959016?v=4"/>
+          <span class="gh-avatar-ring"></span>
+        </div>
+        <div class="gh-info">
+          <div class="gh-name" id="gh-name">Yatin Sharma</div>
+          <div class="gh-handle">@YatinSharma1303</div>
+          <div class="gh-loc"><span class="material-symbols-outlined gh-loc-icon">location_on</span>Agra, India</div>
+        </div>
+      </div>
+      <div class="gh-stats-row">
+        <div class="gh-stat-item">
+          <span class="gh-stat-icon material-symbols-outlined">folder_open</span>
+          <div class="gh-stat-body">
+            <span class="gh-stat-val" id="gh-repos">—</span>
+            <span class="gh-stat-label">Repositories</span>
+          </div>
+        </div>
+        <div class="gh-stat-divider"></div>
+        <div class="gh-stat-item">
+          <span class="gh-stat-icon material-symbols-outlined">group</span>
+          <div class="gh-stat-body">
+            <span class="gh-stat-val" id="gh-followers">—</span>
+            <span class="gh-stat-label">Followers</span>
+          </div>
+        </div>
+        <div class="gh-stat-divider"></div>
+        <div class="gh-stat-item">
+          <span class="gh-stat-icon material-symbols-outlined">person_add</span>
+          <div class="gh-stat-body">
+            <span class="gh-stat-val" id="gh-following">—</span>
+            <span class="gh-stat-label">Following</span>
+          </div>
+        </div>
+      </div>
+      <a class="gh-cta" href="https://github.com/YatinSharma1303" target="_blank" rel="noopener">
+        <span class="material-symbols-outlined">arrow_forward</span>
+        Visit GitHub
+      </a>
+      <div class="gh-langs-wrap">
+        <div class="gh-lang-chart" id="gh-lang-chart"></div>
+        <div class="gh-lang-legend" id="gh-lang-legend"></div>
+      </div>
+    </div>
+    <!-- Tech stack orbit -->
+    <div class="orbit-section fade-in">
+      <div class="orbit-wrap">
+        <div class="orbit-core material-symbols-outlined">code</div>
+        <div class="orbit-ring" id="orbit-ring"></div>
+      </div>
+    </div>
+
+    <!-- I. Day in the Life Timeline -->
+    <div class="timeline-section fade-in">
+      <div class="timeline-head">
+        <span class="material-symbols-outlined timeline-head-icon">schedule</span>
+        <span class="timeline-title">A day in the life</span>
+      </div>
+      <div class="timeline-track">
+        <div class="timeline-item">
+          <div class="timeline-node">
+            <span class="material-symbols-outlined">local_cafe</span>
+          </div>
+          <div class="timeline-time">Morning</div>
+          <div class="timeline-card">
+            <p class="timeline-desc">Deep work on Python ML models & backend APIs.</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-node">
+            <span class="material-symbols-outlined">code</span>
+          </div>
+          <div class="timeline-time">Afternoon</div>
+          <div class="timeline-card">
+            <p class="timeline-desc">Building React frontends, fixing bugs, deploying to Vercel.</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-node">
+            <span class="material-symbols-outlined">nightlight</span>
+          </div>
+          <div class="timeline-time">Night</div>
+          <div class="timeline-card">
+            <p class="timeline-desc">Watching anime, cooking, and exploring new tech ideas.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SKILLS ============ -->
+  <section class="section" id="skills">
+    <div class="section-head">
+      <span class="section-label">02 / skills</span>
+      <h2 class="section-title">What I build <em>with.</em></h2>
+    </div>
+
+    <div class="skill-panel glass-card">
+      <div class="skill-panel-head">
+        <span class="build-icon">build</span>
+        <div><div class="skill-panel-title">Skill Set</div><div class="skill-panel-sub">yatin · full-stack &amp; ai</div></div>
+        <div class="skill-count" id="skill-count">20 skills</div>
+      </div>
+      <div class="skill-tabs" id="skill-tabs">
+        <button class="skill-tab active" data-cat="ALL">ALL</button>
+        <button class="skill-tab" data-cat="FRONTEND">FRONTEND</button>
+        <button class="skill-tab" data-cat="BACKEND">BACKEND</button>
+        <button class="skill-tab" data-cat="AI/ML">AI/ML</button>
+        <button class="skill-tab" data-cat="TOOLS">TOOLS</button>
+      </div>
+      <button class="skill-toggle" id="skill-toggle">
+        <span class="skill-toggle-text">Show All Skills</span>
+        <span class="material-symbols-outlined skill-toggle-arrow">expand_more</span>
+      </button>
+      <div class="skill-list" id="skill-list"><!-- populated by JS --></div>
+    </div>
+  </section>
+
+  <!-- ============ GITHUB CONTRIBUTIONS ============ -->
+  <section class="section" id="contributions">
+    <div class="section-head">
+      <span class="section-label">03 / contributions</span>
+      <h2 class="section-title">Commit <em>activity.</em></h2>
+    </div>
+    <div class="contrib-card glass-card fade-in">
+      <!-- Header -->
+      <div class="contrib-header">
+        <span id="contrib-total" class="contrib-total"><span class="skeleton" style="width:60px;height:28px;display:inline-block;border-radius:4px"></span></span>
+        <span class="contrib-label">contributions in the last year</span>
+        <span id="contrib-streak" class="contrib-streak"><span class="skeleton" style="width:100px;height:14px;display:inline-block;border-radius:4px"></span></span>
+      </div>
+
+      <!-- Summary bar -->
+      <div class="contrib-summary" id="contrib-summary">
+        <div class="contrib-stat"><span class="skeleton" style="width:30px;height:18px;display:inline-block;border-radius:4px"></span><span class="contrib-stat-label">this month</span></div>
+        <div class="contrib-stat"><span class="skeleton" style="width:20px;height:18px;display:inline-block;border-radius:4px"></span><span class="contrib-stat-label">this week</span></div>
+        <div class="contrib-stat"><span class="skeleton" style="width:50px;height:12px;display:inline-block;border-radius:4px"></span><span class="contrib-stat-label">best day</span></div>
+        <div class="contrib-stat"><span class="skeleton" style="width:50px;height:12px;display:inline-block;border-radius:4px"></span><span class="contrib-stat-label">busiest month</span></div>
+      </div>
+
+      <!-- Scrollable graph area -->
+      <div class="contrib-scroll" id="contrib-scroll">
+        <!-- Month labels -->
+        <div class="contrib-months" id="contrib-months"></div>
+
+        <!-- Grid -->
+        <div class="contrib-grid" id="contrib-grid"><div class="contrib-skeleton-grid" id="contrib-skeleton"></div></div>
+      </div>
+
+      <!-- Legend -->
+      <div class="contrib-legend">
+        <span>Less</span>
+        <div class="contrib-legend-boxes">
+          <i style="opacity:0.15"></i><i style="opacity:0.4"></i><i style="opacity:0.65"></i><i style="opacity:0.85"></i><i style="opacity:1"></i>
+        </div>
+        <span>More</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ WAKATIME ============ -->
+  <section class="section" id="wakatime">
+    <div class="section-head">
+      <span class="section-label">04 / coding</span>
+      <h2 class="section-title">Coding <em>stats.</em></h2>
+    </div>
+    <div class="wakatime-card glass-card fade-in" id="wakatime-card">
+      <!-- Header row -->
+      <div class="wt-head">
+        <span class="material-symbols-outlined wt-icon">timer</span>
+        <div>
+          <div class="wt-title">Coding Stats</div>
+          <div class="wt-sub" id="wt-range-label">last 7 days</div>
+        </div>
+        <span class="wt-total" id="wt-total">
+          <span class="skeleton" style="width:80px;height:22px;display:inline-block;border-radius:4px"></span>
+        </span>
+        <span class="wt-daily" id="wt-daily">
+          <span class="skeleton" style="width:60px;height:12px;display:inline-block;border-radius:4px"></span>
+        </span>
+      </div>
+
+      <!-- Range selector -->
+      <div class="wt-range-selector" id="wt-range-selector">
+        <button class="wt-range-btn active" data-range="7d">7 days</button>
+        <button class="wt-range-btn" data-range="30d">30 days</button>
+        <button class="wt-range-btn" data-range="1y">1 year</button>
+      </div>
+
+      <!-- Days active streak -->
+      <div class="wt-streak" id="wt-streak">
+        <span class="skeleton" style="width:120px;height:14px;display:inline-block;border-radius:4px"></span>
+      </div>
+
+      <!-- Daily activity heatmap -->
+      <div class="wt-heatmap-section">
+        <div class="wt-heatmap-label">daily activity</div>
+        <div class="wt-heatmap" id="wt-heatmap">
+          <div class="wt-heatmap-bar"><div class="skeleton" style="width:100%;height:100%;border-radius:4px"></div></div>
+          <div class="wt-heatmap-bar"><div class="skeleton" style="width:100%;height:100%;border-radius:4px"></div></div>
+          <div class="wt-heatmap-bar"><div class="skeleton" style="width:100%;height:100%;border-radius:4px"></div></div>
+          <div class="wt-heatmap-bar"><div class="skeleton" style="width:100%;height:100%;border-radius:4px"></div></div>
+          <div class="wt-heatmap-bar"><div class="skeleton" style="width:100%;height:100%;border-radius:4px"></div></div>
+          <div class="wt-heatmap-bar"><div class="skeleton" style="width:100%;height:100%;border-radius:4px"></div></div>
+          <div class="wt-heatmap-bar"><div class="skeleton" style="width:100%;height:100%;border-radius:4px"></div></div>
+        </div>
+        <div class="wt-heatmap-days" id="wt-heatmap-days">
+          <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+        </div>
+      </div>
+
+      <!-- Languages -->
+      <div class="wt-languages" id="wt-languages">
+        <div class="wt-lang"><div class="skeleton" style="width:90px;height:13px;border-radius:4px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="width:100%;height:8px;border-radius:4px;margin-bottom:6px"></div></div><div class="skeleton" style="width:50px;height:11px;border-radius:4px;flex-shrink:0"></div></div>
+        <div class="wt-lang"><div class="skeleton" style="width:80px;height:13px;border-radius:4px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="width:75%;height:8px;border-radius:4px;margin-bottom:6px"></div></div><div class="skeleton" style="width:50px;height:11px;border-radius:4px;flex-shrink:0"></div></div>
+        <div class="wt-lang"><div class="skeleton" style="width:70px;height:13px;border-radius:4px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="width:55%;height:8px;border-radius:4px;margin-bottom:6px"></div></div><div class="skeleton" style="width:50px;height:11px;border-radius:4px;flex-shrink:0"></div></div>
+        <div class="wt-lang"><div class="skeleton" style="width:85px;height:13px;border-radius:4px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="width:40%;height:8px;border-radius:4px;margin-bottom:6px"></div></div><div class="skeleton" style="width:50px;height:11px;border-radius:4px;flex-shrink:0"></div></div>
+      </div>
+
+      <!-- Editors with progress -->
+      <div class="wt-section-title">Editors</div>
+      <div class="wt-editors" id="wt-editors">
+        <div class="wt-editor"><div class="skeleton" style="width:70px;height:12px;border-radius:4px;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:6px;border-radius:3px"></div><div class="skeleton" style="width:40px;height:12px;border-radius:4px;flex-shrink:0"></div></div>
+        <div class="wt-editor"><div class="skeleton" style="width:60px;height:12px;border-radius:4px;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:6px;border-radius:3px"></div><div class="skeleton" style="width:40px;height:12px;border-radius:4px;flex-shrink:0"></div></div>
+      </div>
+
+      <!-- Top Projects -->
+      <div class="wt-section-title">Top Projects</div>
+      <div class="wt-projects" id="wt-projects">
+        <div class="wt-project"><div class="skeleton" style="width:120px;height:12px;border-radius:4px;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:6px;border-radius:3px"></div><div class="skeleton" style="width:50px;height:11px;border-radius:4px;flex-shrink:0"></div></div>
+        <div class="wt-project"><div class="skeleton" style="width:100px;height:12px;border-radius:4px;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:6px;border-radius:3px"></div><div class="skeleton" style="width:50px;height:11px;border-radius:4px;flex-shrink:0"></div></div>
+        <div class="wt-project"><div class="skeleton" style="width:90px;height:12px;border-radius:4px;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:6px;border-radius:3px"></div><div class="skeleton" style="width:50px;height:11px;border-radius:4px;flex-shrink:0"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PROJECTS ============ -->
+  <section class="section" id="projects">
+    <div class="section-head">
+      <span class="section-label">05 / projects</span>
+      <h2 class="section-title">Things I've <em>built.</em></h2>
+    </div>
+
+    <div class="projects-grid stagger-children fade-in" id="projects-grid"><!-- populated by JS --></div>
+
+    <div class="gh-live">
+      <div class="gh-live-label">Live from GitHub</div>
+      <div class="gh-live-list stagger-children fade-in" id="gh-repos-list"><!-- populated by JS --></div>
+    </div>
+  </section>
+
+  <!-- ============ MUSIC (Last.fm) ============ -->
+  <section class="section" id="music">
+    <div class="section-head">
+      <span class="section-label">06 / music</span>
+      <h2 class="section-title">On <em>repeat.</em></h2>
+    </div>
+
+    <div class="lastfm-card glass-card fade-in">
+      <div class="lfm-head">
+        <img class="lfm-avatar" id="lfm-avatar" alt="Last.fm avatar" src=""/>
+        <div class="lfm-head-text">
+          <div class="lfm-title">Yatin's Music Dashboard</div>
+          <div class="lfm-stats" id="lfm-stats">
+            <span class="lfm-stat-pill"><span class="material-symbols-outlined">headphones</span> <b id="lfm-sc">—</b> Scrobbles</span>
+            <span class="lfm-stat-pill"><span class="material-symbols-outlined">mic</span> <b id="lfm-ac">—</b> Artists</span>
+            <span class="lfm-stat-pill"><span class="material-symbols-outlined">album</span> <b id="lfm-alc">—</b> Albums</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="lfm-nowplaying" id="lfm-nowplaying">
+        <div class="lfm-np-bg" id="lfm-np-bg"></div>
+        <div class="lfm-np-art-wrap">
+          <div class="lfm-np-art" id="lfm-np-art"></div>
+          <div class="lfm-np-eq" id="lfm-np-eq"><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="lfm-np-info">
+          <div class="lfm-np-label" id="lfm-np-label">NOW PLAYING</div>
+          <div class="lfm-np-track" id="lfm-np-track">—</div>
+          <div class="lfm-np-artist" id="lfm-np-artist">—</div>
+          <div class="lfm-np-album" id="lfm-np-album"></div>
+        </div>
+        <div class="lfm-np-progress"><div class="lfm-np-progress-bar" id="lfm-np-progress-bar"></div></div>
+      </div>
+
+      <div class="lfm-activity" id="lfm-activity"></div>
+
+      <div class="lfm-period-tabs" id="lfm-period-tabs">
+        <button class="lfm-period-tab" data-period="7day">7D</button>
+        <button class="lfm-period-tab active" data-period="1month">1M</button>
+        <button class="lfm-period-tab" data-period="3month">3M</button>
+        <button class="lfm-period-tab" data-period="overall">ALL</button>
+      </div>
+
+      <div class="lfm-columns">
+        <div class="lfm-col">
+          <div class="lfm-col-title"><span class="material-symbols-outlined">music_note</span> TOP TRACKS</div>
+          <div class="lfm-tracks" id="lfm-tracks">
+            <div class="lfm-track"><div class="skeleton" style="width:40px;height:40px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="width:80%;height:12px;margin-bottom:4px"></div><div class="skeleton" style="width:50%;height:10px"></div></div></div>
+            <div class="lfm-track"><div class="skeleton" style="width:40px;height:40px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="width:70%;height:12px;margin-bottom:4px"></div><div class="skeleton" style="width:40%;height:10px"></div></div></div>
+            <div class="lfm-track"><div class="skeleton" style="width:40px;height:40px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="width:90%;height:12px;margin-bottom:4px"></div><div class="skeleton" style="width:60%;height:10px"></div></div></div>
+          </div>
+        </div>
+        <div class="lfm-col">
+          <div class="lfm-col-title"><span class="material-symbols-outlined">person</span> TOP ARTISTS</div>
+          <div class="lfm-artists" id="lfm-artists">
+            <div class="lfm-artist"><div class="skeleton" style="width:40px;height:40px;border-radius:50%;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:12px"></div></div>
+            <div class="lfm-artist"><div class="skeleton" style="width:40px;height:40px;border-radius:50%;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:12px"></div></div>
+            <div class="lfm-artist"><div class="skeleton" style="width:40px;height:40px;border-radius:50%;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:12px"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lfm-recent-wrap">
+        <div class="lfm-col-title"><span class="material-symbols-outlined">schedule</span> RECENTLY PLAYED</div>
+        <div class="lfm-recent" id="lfm-recent"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ANIME (AniList) ============ -->
+  <section class="section" id="anime">
+    <div class="section-head">
+      <span class="section-label">07 / anime</span>
+      <h2 class="section-title">On my <em>list.</em></h2>
+    </div>
+
+    <div class="anilist-card glass-card fade-in" id="anilist-card">
+      <div class="al-head">
+        <img class="al-avatar" id="al-avatar" alt="AniList avatar" src="https://s4.anilist.co/file/anilistcdn/user/avatar/large/default.png"/>
+        <div class="al-head-text">
+          <div class="al-title">Yatin's Anime &amp; Manga Vault</div>
+          <div class="al-sub" id="al-sub"><span class="material-symbols-outlined">movie</span> Personal collection &amp; watchlist</div>
+        </div>
+        <button class="ama-refresh-btn al-refresh-btn" id="al-refresh" title="Refresh AniList" aria-label="Refresh AniList"><span class="material-symbols-outlined">refresh</span></button>
+      </div>
+      <div class="al-media" id="al-media" role="tablist" aria-label="Media type">
+        <button class="al-media-btn active" data-media="ANIME" role="tab" aria-selected="true">Anime</button>
+        <button class="al-media-btn" data-media="MANGA" role="tab" aria-selected="false">Manga</button>
+      </div>
+      <div class="al-banner" id="al-banner" style="display:none;"></div>
+      <div class="al-tabs" id="al-tabs">
+        <button class="al-tab active" data-status="ALL">ALL</button>
+        <button class="al-tab" data-status="CURRENT">WATCHING</button>
+        <button class="al-tab" data-status="COMPLETED">COMPLETED</button>
+        <button class="al-tab" data-status="REPEATING">REWATCHING</button>
+        <button class="al-tab" data-status="PLANNING">PLAN TO WATCH</button>
+        <button class="al-tab" data-status="PAUSED">ON HOLD</button>
+        <button class="al-tab" data-status="DROPPED">DROPPED</button>
+      </div>
+          <div class="al-list" id="al-list">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;width:100%">
+              <div><div class="skeleton" style="width:100%;aspect-ratio:3/4;border-radius:14px"></div><div class="skeleton" style="width:80%;height:12px;margin-top:8px"></div></div>
+              <div><div class="skeleton" style="width:100%;aspect-ratio:3/4;border-radius:14px"></div><div class="skeleton" style="width:70%;height:12px;margin-top:8px"></div></div>
+              <div><div class="skeleton" style="width:100%;aspect-ratio:3/4;border-radius:14px"></div><div class="skeleton" style="width:90%;height:12px;margin-top:8px"></div></div>
+              <div><div class="skeleton" style="width:100%;aspect-ratio:3/4;border-radius:14px"></div><div class="skeleton" style="width:60%;height:12px;margin-top:8px"></div></div>
+            </div>
+          </div>
+    </div>
+  </section>
+
+  <!-- ============ INTERESTS ============ -->
+  <section class="section" id="interests">
+    <div class="section-head">
+      <span class="section-label">08 / beyond</span>
+      <h2 class="section-title">Off the <em>keyboard.</em></h2>
+    </div>
+
+    <div class="interests-grid stagger-children fade-in">
+      <div class="interest-card fade-in">
+        <span class="interest-icon material-symbols-outlined">movie</span>
+        <h3>Movies &amp; Anime</h3>
+        <p>Great stories and great pacing — the same craft that makes good software makes good cinema.</p>
+      </div>
+      <div class="interest-card fade-in">
+        <span class="interest-icon material-symbols-outlined">restaurant</span>
+        <h3>Cooking</h3>
+        <p>Following a recipe is just debugging with better rewards. I like making something real with my hands.</p>
+      </div>
+      <div class="interest-card fade-in">
+        <span class="interest-icon material-symbols-outlined">explore</span>
+        <h3>Exploring New Things</h3>
+        <p>Endless curiosity — picking up new tools, ideas and hobbies is half the fun of building.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ASK ME ANYTHING ============ -->
+  <section class="section" id="ama">
+    <div class="section-head">
+      <span class="section-label">09 / ask</span>
+      <h2 class="section-title">Got a <em>question?</em> <span class="ama-deco-icon material-symbols-outlined">forum</span></h2>
+      <p class="section-desc">Drop a question, collab idea, or project request. I read every one.</p>
+    </div>
+
+    <div class="ama-card glass-card fade-in">
+      <div class="ama-counter"><span id="ama-count">0</span>/20 today</div>
+      <div class="ama-counter-bar"><div class="ama-counter-fill" id="ama-counter-fill"></div></div>
+      <div class="ama-input-wrap">
+        <span class="material-symbols-outlined ama-input-icon">person</span>
+        <input class="ama-name-input" id="ama-name-input" maxlength="60" placeholder="Your name (optional)" autocomplete="off" />
+      </div>
+      <div class="ama-textarea-wrap">
+        <span class="material-symbols-outlined ama-input-icon">chat_bubble</span>
+        <textarea class="ama-input" id="ama-input" maxlength="280" placeholder="Ask me anything…"></textarea>
+        <span class="ama-char-count"><span id="ama-char-count">0</span>/280</span>
+      </div>
+      <button class="btn-primary ama-send" id="ama-send"><span class="ama-send-text">Send</span><span class="material-symbols-outlined ama-send-icon">send</span><span class="ama-send-spinner" hidden></span></button>
+      <div class="ama-status" id="ama-status"></div>
+      <div class="ama-divider"></div>
+      <div class="ama-list-wrap" id="ama-list-wrap" hidden>
+        <div class="ama-featured" id="ama-featured" hidden></div>
+        <div class="ama-sort-label">Answered questions <button class="ama-refresh-btn" id="ama-refresh" title="Refresh answers"><span class="material-symbols-outlined">refresh</span></button></div>
+        <div class="ama-sort" id="ama-sort">
+          <button class="ama-sort-btn active" data-sort="top">Top</button>
+          <button class="ama-sort-btn" data-sort="recent">Recent</button>
+          <button class="ama-sort-btn" data-sort="oldest">Oldest</button>
+        </div>
+        <div class="ama-search-wrap">
+          <span class="material-symbols-outlined ama-search-icon">search</span>
+          <input type="text" class="ama-search-input" id="ama-search" maxlength="80" placeholder="Search answered questions…" autocomplete="off" aria-label="Search answered questions" />
+          <button class="ama-search-clear" id="ama-search-clear" hidden title="Clear search" aria-label="Clear search"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="ama-list" id="ama-list"></div>
+        <div class="ama-pager" id="ama-pager"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PLAYGROUND (GAMES) ============ -->
+  <section class="section" id="playground">
+    <div class="section-head">
+      <span class="section-label">10 / playground</span>
+      <h2 class="section-title">A little <em>playground.</em></h2>
+      <p class="section-desc">games. reflexes. questionable life choices. built in vanilla JS.</p>
+    </div>
+    <div class="pg-cards" id="pg-cards"></div>
+  </section>
+
+  <!-- ============ ONLINE PRESENCE ============ -->
+  <footer class="section" id="presence">
+    <div class="section-head">
+      <span class="section-label">11 / connect</span>
+      <h2 class="section-title">My online <em>presence.</em></h2>
+    </div>
+    <div class="presence-grid stagger-children fade-in" id="presence-grid"><!-- populated by JS --></div>
+
+    <div class="footer-bar">
+      <div class="footer-line"></div>
+      <div class="footer-content">
+        <div class="footer-left">
+          <span class="footer-logo"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M3.5 2.5L10.5 10H8L3.5 5.5Z"/><path d="M20.5 2.5L13.5 10H16L20.5 6Z"/><path d="M12 10L14 13L12 16L10 13Z"/><path d="M10.5 17H13.5V22H10.5Z"/></svg></span>
+          <span class="footer-brand">Yatin Sharma</span>
+          <span class="footer-copy">© <span id="year"></span></span>
+        </div>
+        <div class="footer-center">
+          <nav class="footer-nav">
+            <a href="#about">About</a>
+            <a href="#skills">Skills</a>
+            <a href="#projects">Projects</a>
+            <a href="#music">Music</a>
+            <a href="#ama">Ask</a>
+            <a href="#playground">Playground</a>
+          </nav>
+        </div>
+        <div class="footer-right">
+          <a class="footer-link" href="https://github.com/YatinSharma1303" target="_blank" rel="noopener" aria-label="GitHub">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"/></svg>
+          </a>
+          <a class="footer-link footer-mailto" id="footer-email-link" href="#" aria-label="Email">
+            <svg viewBox="0 0 24 24"><path class="envelope-body" d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path class="envelope-flap" d="M22 6l-10 7L2 6"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============ KEYBOARD SHORTCUT OVERLAY ============ -->
+  <div class="shortcut-overlay" id="shortcut-overlay">
+    <div class="shortcut-card">
+      <div class="shortcut-head">Keyboard Shortcuts <button class="shortcut-close" id="shortcut-close" aria-label="Close">✕</button></div>
+      <div class="shortcut-list">
+        <div><kbd>?</kbd> Toggle this menu</div>
+        <div><kbd>G</kbd> Go to GitHub section</div>
+        <div><kbd>P</kbd> Go to Projects</div>
+        <div><kbd>A</kbd> Go to Ask Me Anything</div>
+        <div><kbd>M</kbd> Toggle music player</div>
+        <div><kbd>T</kbd> Toggle dark/light theme</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ACHIEVEMENT TOAST ============ -->
+  <div class="achievement-toast" id="achievement-toast">
+    <div class="toast-icon">🏆</div>
+    <div class="toast-content">
+      <div class="toast-title" id="toast-title">Achievement Unlocked!</div>
+      <div class="toast-desc" id="toast-desc"></div>
+    </div>
+  </div>
+
+  <!-- ============ COMMAND PALETTE (Cmd+K) ============ -->
+  <div class="cmd-palette-overlay" id="cmd-overlay">
+    <div class="cmd-palette" id="cmd-palette">
+      <div class="cmd-input-wrap" id="cmd-input-wrap">
+        <button class="cmd-search-toggle" id="cmd-search-toggle" title="Search" aria-label="Expand search">
+          <span class="material-symbols-outlined">search</span>
+        </button>
+        <div class="cmd-input-bar" id="cmd-input-bar">
+          <input type="text" class="cmd-input" id="cmd-input" placeholder="Search commands..." autocomplete="off" spellcheck="false"/>
+          <button class="cmd-submit-btn" id="cmd-submit-btn" title="Show results" aria-label="Search">
+            <span class="material-symbols-outlined">manage_search</span>
+          </button>
+        </div>
+        <kbd class="cmd-esc-kbd">ESC</kbd>
+      </div>
+      <div class="cmd-results" id="cmd-results"></div>
+      <div class="cmd-footer">
+        <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+        <span><kbd>↵</kbd> Run</span>
+        <span class="cmd-hint">Powered by Yatin's Portfolio</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ASK-MY-PORTFOLIO AI CHATBOT (57) ============ -->
+  <button class="pchat-fab" id="pchat-fab" aria-label="Ask my portfolio" title="Ask my portfolio">
+    <span class="material-symbols-outlined">forum</span>
+    <span class="pchat-fab-badge" id="pchat-fab-badge" hidden></span>
+  </button>
+  <div class="pchat-panel" id="pchat-panel" role="dialog" aria-label="Ask my portfolio" aria-modal="false" hidden>
+    <div class="pchat-head">
+      <div class="pchat-title"><span class="pchat-dot"></span> Ask my portfolio <span class="pchat-status">AI Powered</span></div>
+      <div class="pchat-head-actions">
+        <button class="pchat-clear" id="pchat-clear" title="Clear chat" aria-label="Clear chat"><span class="material-symbols-outlined">delete_sweep</span><span>Clear</span></button>
+        <button class="pchat-close" id="pchat-close" aria-label="Close chat">✕</button>
+      </div>
+    </div>
+    <div class="pchat-log" id="pchat-log">
+      <div class="pchat-suggestions" id="pchat-suggestions">
+        <button class="pchat-suggest-chip" data-q="What are Yatin's main skills?">What are Yatin's skills?</button>
+        <button class="pchat-suggest-chip" data-q="Tell me about his projects">His projects</button>
+        <button class="pchat-suggest-chip" data-q="What tech stack does he use?">Tech stack</button>
+        <button class="pchat-suggest-chip" data-q="How can I contact Yatin?">Contact info</button>
+      </div>
+    </div>
+    <button class="pchat-scroll-btn" id="pchat-scroll-btn" hidden title="Scroll to bottom" aria-label="Scroll to bottom"><span class="material-symbols-outlined">keyboard_arrow_down</span></button>
+    <form class="pchat-form" id="pchat-form">
+      <input type="text" class="pchat-input" id="pchat-input" maxlength="1000" placeholder="Ask about Yatin's projects, skills…" autocomplete="off" aria-label="Your question"/>
+      <span class="pchat-char-count" id="pchat-char-count">0/1000</span>
+      <button type="submit" class="pchat-send" id="pchat-send" aria-label="Send"><span class="material-symbols-outlined">send</span></button>
+    </form>
+    <div class="pchat-foot">AI answers may be imperfect — for anything specific, use <a href="#ama">Ask Me Anything</a>.</div>
+  </div>
+
+  <script src="script.js?v=12"></script>
+  <script src="games.js"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a202415a8b5ed895',t:'MTc4NDg4OTA4Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
