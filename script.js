@@ -3122,7 +3122,11 @@
       if (editorsEl) editorsEl.innerHTML = Array.from({length:2}, () => '<div class="wt-editor"><div class="skeleton" style="width:70px;height:12px;border-radius:4px;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:6px;border-radius:3px"></div><div class="skeleton" style="width:40px;height:12px;border-radius:4px;flex-shrink:0"></div></div>').join('');
       if (projectsEl) projectsEl.innerHTML = Array.from({length:3}, () => '<div class="wt-project"><div class="skeleton" style="width:120px;height:12px;border-radius:4px;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:6px;border-radius:3px"></div><div class="skeleton" style="width:50px;height:11px;border-radius:4px;flex-shrink:0"></div></div>').join('');
 
-      fetch(url).then(r => r.json()).then(d => {
+      const wtTimeout = range === '1y' ? 20000 : 10000;
+      const wtController = new AbortController();
+      const wtTimer = setTimeout(() => wtController.abort(), wtTimeout);
+      fetch(url, { signal: wtController.signal }).then(r => r.json()).then(d => {
+        clearTimeout(wtTimer);
         if (d.error) {
           langsEl.innerHTML = '<div class="wt-loading">' + esc(d.error) + '</div>';
           return;
@@ -3190,8 +3194,9 @@
           projectsEl.innerHTML = '';
         }
 
-      }).catch(() => {
-        langsEl.innerHTML = '<div class="wt-loading">Could not load stats.</div>';
+      }).catch((err) => {
+        clearTimeout(wtTimer);
+        langsEl.innerHTML = '<div class="wt-loading">Could not load stats. Try a shorter range.</div>';
       });
     }
 

@@ -89,7 +89,7 @@ module.exports = async function handler(req, res) {
 
   try {
     const auth = Buffer.from(apiKey).toString('base64');
-    const timeout = rangeKey === '1y' ? 25000 : 10000;
+    const timeout = rangeKey === '1y' ? 15000 : 10000;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
     const response = await fetch('https://wakatime.com/api/v1/users/current/summaries?range=' + rangeParam, {
