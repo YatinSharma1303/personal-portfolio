@@ -1338,7 +1338,7 @@
           const gc = {}; allEntries.forEach(e => ((e.media && e.media.genres) || []).forEach(g => gc[g] = (gc[g] || 0) + 1));
           genres = Object.keys(gc).map(g => ({ genre: g, count: gc[g] }));
         }
-        if (!count) { statsPanel.innerHTML = ''; return; }
+        if (!count && !allEntries.length) { statsPanel.innerHTML = ''; return; }
         numbers = '<div class="al-stat-cards">' +
           '<div class="al-stat-card"><span class="al-sc-val">' + count.toLocaleString() + '</span><span class="al-sc-label">Manga</span></div>' +
           '<div class="al-stat-card"><span class="al-sc-val">' + chapters.toLocaleString() + '</span><span class="al-sc-label">Chapters</span></div>' +
@@ -1359,7 +1359,7 @@
           const gc = {}; allEntries.forEach(e => ((e.media && e.media.genres) || []).forEach(g => gc[g] = (gc[g] || 0) + 1));
           genres = Object.keys(gc).map(g => ({ genre: g, count: gc[g] }));
         }
-        if (!count) { statsPanel.innerHTML = ''; return; }
+        if (!count && !allEntries.length) { statsPanel.innerHTML = ''; return; }
         const days = (mins / 1440).toFixed(1);
         numbers = '<div class="al-stat-cards">' +
           '<div class="al-stat-card"><span class="al-sc-val">' + count.toLocaleString() + '</span><span class="al-sc-label">Anime</span></div>' +
