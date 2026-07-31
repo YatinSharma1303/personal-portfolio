@@ -1531,7 +1531,7 @@
           if (s) return s;
           return '';
         })();
-        const dateChip = dateStr ? '<span class="al-cover-date material-symbols-outlined">schedule</span><span class="al-cover-date-text">' + esc(dateStr) + '</span>' : '';
+        const dateInfo = dateStr ? '<div class="al-item-date"><span class="material-symbols-outlined">schedule</span>' + esc(dateStr) + '</div>' : '';
         const overlay = (genres.length || desc || fmt) ?
           '<div class="al-item-overlay">' +
             (fmt ? '<div class="al-ov-fmt">' + esc(fmt) + '</div>' : '') +
@@ -1550,12 +1550,12 @@
             (img ? '<img src="' + img + '" alt="' + esc(t) + '" loading="lazy" decoding="async">' : '') +
             scoreBadge + fmtChip +
             (isFav ? '<span class="al-fav" title="Favourite">♥</span>' : '') +
-            (dateChip ? '<div class="al-cover-dates">' + dateChip + '</div>' : '') +
             overlay +
           '</div>' +
           '<div class="al-item-info">' +
             '<div class="al-item-name">' + nameHtml + '</div>' +
             '<div class="al-item-score ' + scoreClass(mean) + '">' + scoreLine + '</div>' +
+            dateInfo +
             (showBar ? '<div class="al-item-bar"><i style="width:' + pct + '%"></i></div>' : '') +
           '</div>' +
         '</div>';
