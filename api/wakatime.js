@@ -162,15 +162,13 @@ module.exports = async function handler(req, res) {
       }
 
       const sd = statsData.data;
-      const totalSeconds = (sd.total_seconds && sd.total_seconds.total_seconds) || 0;
-      const totalDays = sd.total_seconds && sd.total_seconds.total_seconds > 0
-        ? Math.max(1, Math.ceil((sd.human_readable_total && sd.human_readable_total.includes('day')) ? 365 : 365))
-        : 365;
-      const daysActive = sd.days_including_holidays || 0;
+      const totalSeconds = sd.total_seconds || 0;
+      const totalDays = sd.days_including_holidays || 365;
       const daysActiveCoded = sd.days_with_more_than_0_seconds || 0;
+      const daysActive = sd.days_including_holidays || 0;
       const dailyAvg = totalDays > 0 ? totalSeconds / totalDays : 0;
 
-      // Languages from stats
+      // Languages from stats (each has .total_seconds as a number)
       const langMap = {};
       (sd.languages || []).forEach(l => { langMap[l.name] = (l.total_seconds || 0); });
       const topLangs = buildLangs(langMap, totalSeconds);
