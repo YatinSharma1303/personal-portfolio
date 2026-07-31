@@ -1,0 +1,2002 @@
+     1→/* ============================================================
+     2→   YATIN SHARMA — PORTFOLIO · script.js
+     3→   Vanilla JS · YouTube music · GitHub · Last.fm · AniList ·
+     4→   AMA (Firestore+Telegram+voting) · time · parallax · counters ·
+     5→   typewriter · scroll progress · active nav · back-to-top · copy email
+     6→   ============================================================ */
+     7→(function () {
+     8→  'use strict';
+     9→
+    10→  /* ── CONFIG ─────────────────────────────────────────── */
+    11→  const CONFIG = {
+    12→    githubUser: 'YatinSharma1303',
+    13→    lastfmUser: 'YATINSHARMA',
+    14→    anilistUser: 'YatinSharma1303',
+    15→    /* Last.fm API key is no longer exposed here — calls go through
+    16→       /api/lastfm proxy which injects the key server-side.
+    17→       Set LASTFM_API_KEY in Vercel environment variables. */
+    18→    lastfmKey: '',
+    19→    ytVideoId: 'XtwqzajH_8A', // legacy single-track fallback
+    20→    // YouTube Music playlist — the player loads this whole list and pulls
+    21→    // each track's title/artist/artwork from YouTube automatically.
+    22→    ytPlaylistId: 'OLAK5uy_mjNB8hu_s5goDncwoopQoSRXjmRjEPq54',
+    23→    playlist: [
+    24→      { id: 'XtwqzajH_8A', title: 'YouTube Music', artist: 'Playlist' }
+    25→    ],
+    26→    amaLimit: 20,
+    27→    firebase: {
+    28→      apiKey: 'AIzaSyBA2du9aSIi7xoDttbICzmEd-nq0W39zrU',
+    29→      projectId: 'portfolio-yatin'
+    30→    },
+    31→    amaCollection: 'amaQuestions',
+    32→    timezone: 'Asia/Kolkata'
+    33→  };
+    34→
+    35→  /* ── EMAIL (not in HTML to avoid Cloudflare obfuscation) ── */
+    36→  const EMAIL = ['yatinsharma1303','gmail.com'].join('@');
+    37→
+    38→  const $ = (id) => document.getElementById(id);
+    39→  const esc = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    40→
+    41→  /* ── 62. Shared search-input + filter-pill widgets (dedupes AMA / AniList / future) ── */
+    42→  const Widgets = {
+    43→    // Wire a search input (+ optional clear button). onChange(trimmedValue) fires on input, Escape and clear.
+    44→    bindSearch(opts) {
+    45→      const input = opts.input, clear = opts.clear, onChange = opts.onChange || function () {};
+    46→      if (!input) return { reset() {} };
+    47→      const sync = (v) => { if (clear) clear.hidden = !v; };
+    48→      input.addEventListener('input', () => { const v = input.value.trim(); sync(v); onChange(v); });
+    49→      input.addEventListener('keydown', (e) => { if (e.key === 'Escape' && input.value) { input.value = ''; sync(''); onChange(''); } });
+    50→      if (clear) clear.addEventListener('click', () => { input.value = ''; sync(''); onChange(''); input.focus(); });
+    51→      return { reset() { input.value = ''; sync(''); } };
+    52→    },
+    53→    // Delegated single-select pill group. onSelect(dataValue, btn) fires on click; manages the .active class.
+    54→    bindPills(opts) {
+    55→      const container = opts.container; if (!container) return;
+    56→      const sel = opts.selector || 'button';
+    57→      const attr = opts.attr || 'value';
+    58→      const onSelect = opts.onSelect || function () {};
+    59→      container.addEventListener('click', (e) => {
+    60→        const t = e.target.closest(sel); if (!t || !container.contains(t)) return;
+    61→        container.querySelectorAll(sel).forEach(b => b.classList.remove('active'));
+    62→        t.classList.add('active');
+    63→        onSelect(t.dataset[attr], t);
+    64→      });
+    65→    }
+    66→  };
+    67→
+    68→  // === Last.fm helpers (defined early so the intro can safely call fetchLastfm) ===
+    69→  /* All Last.fm calls now go through /api/lastfm proxy — the API key is
+    70→     injected server-side and never exposed to the browser. */
+    71→  const lfmAPI = '/api/lastfm';
+    72→  // Format play counts: 1423 → "1.4k", 23456 → "23.5k"
+    73→  function formatPlays(n) {
+    74→    n = parseInt(n, 10) || 0;
+    75→    if (n >= 10000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+    76→    if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+    77→    return n.toLocaleString();
+    78→  }
+    79→  // Relative time from unix timestamp
+    80→  function timeAgo(uts) {
+    81→    if (!uts) return '';
+    82→    const diff = Math.floor(Date.now() / 1000) - parseInt(uts, 10);
+    83→    if (diff < 60) return 'just now';
+    84→    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    85→    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    86→    if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+    87→    return Math.floor(diff / 604800) + 'w ago';
+    88→  }
+    89→
+    90→  // Build a {size: url} map of Last.fm images, dropping default placeholder art.
+    91→  function lfmImgMap(images) {
+    92→    const map = {};
+    93→    if (!images || !images.length) return map;
+    94→    // Last.fm's default missing-art image hashes (solid white/grey placeholders)
+    95→    const defaultHashes = ['2a96cbd8b46e442fc41c2b86b821562f', 'c6f59c1e5e7240a4c0d427abd71f3dbb', '4128a6eb29f94943c9d206c08e025042'];
+    96→    images.forEach(function (im) {
+    97→      const url = (im && (im['#text'] || im['text'])) || '';
+    98→      if (url && !defaultHashes.some(h => url.includes(h))) map[im.size] = url;
+    99→    });
+   100→    return map;
+   101→  }
+   102→  function lfmImg(images) {
+   103→    const map = lfmImgMap(images);
+   104→    const sizes = ['mega', 'extralarge', 'large', 'medium', 'small'];
+   105→    for (let i = 0; i < sizes.length; i++) { if (map[sizes[i]]) return map[sizes[i]]; }
+   106→    return '';
+   107→  }
+   108→  // Only accept large+ sizes (skip low-res medium/small) — used to tell whether
+   109→  // Last.fm art is sharp enough to prefer over the iTunes fallback.
+   110→  function lfmImgHighRes(images) {
+   111→    const map = lfmImgMap(images);
+   112→    const sizes = ['mega', 'extralarge', 'large'];
+   113→    for (let i = 0; i < sizes.length; i++) { if (map[sizes[i]]) return map[sizes[i]]; }
+   114→    return '';
+   115→  }
+   116→
+   117→  /* ============================================================
+   118→     1. INTRO / PRELOADER
+   119→     ============================================================ */
+   120→  /* ============================================================
+   121→     1. INTRO OVERLAY — Glitch Name Reveal
+   122→     Scrambled characters lock in one by one, progress bar fills,
+   123→     user dismisses → whoosh sound + name shatters → site revealed.
+   124→     ============================================================ */
+   125→  window.__introDone = false;
+   126→  (function intro() {
+   127→    const overlay = $('intro-overlay');
+   128→    if (!overlay) return;
+   129→    let done = false, dismissed = false;
+   130→    const percentEl = $('intro-percent');
+   131→    const fillEl = $('intro-progress-fill');
+   132→    const designedEl = $('intro-designed');
+   133→    const statusText = $('intro-status-text');
+   134→    const timeEl = $('intro-time');
+   135→    const chars = overlay.querySelectorAll('.intro-char');
+   136→    const TARGET = ['Y','A','T','I','N'];
+   137→    const SCRAMBLE = '!@#$%&*?/\\\|0123456789\u2593\u2592\u2591\u2588\u2584\u2580\u25A0\u25A1\u25C7\u25C6'.split('');
+   138→    const STATUS_MSGS = [
+   139→      { at: 0, text: 'compiling portfolio' },
+   140→      { at: 25, text: 'loading assets' },
+   141→      { at: 50, text: 'initializing modules' },
+   142→      { at: 75, text: 'rendering interface' },
+   143→      { at: 95, text: 'system ready' }
+   144→    ];
+   145→    const DURATION = 1800;
+   146→    const HARD = 5000;
+   147→    const startTime = performance.now();
+   148→    let fontsReady = false, rafId = null, scrambleId = null;
+   149→    let lastStatusIdx = -1;
+   150→
+   151→    // Live clock in top-right
+   152→    function updateClock() {
+   153→      if (timeEl) timeEl.textContent = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+   154→    }
+   155→    updateClock();
+   156→    const clockId = setInterval(updateClock, 1000);
+   157→
+   158→    if (document.fonts && document.fonts.ready) {
+   159→      document.fonts.ready.then(() => { fontsReady = true; }).catch(() => { fontsReady = true; });
+   160→    } else { fontsReady = true; }
+   161→
+   162→    // Scramble all unlocked chars every 60ms
+   163→    function startScramble() {
+   164→      scrambleId = setInterval(() => {
+   165→        chars.forEach((ch, i) => {
+   166→          if (ch.classList.contains('locked')) return;
+   167→          ch.textContent = SCRAMBLE[Math.floor(Math.random() * SCRAMBLE.length)];
+   168→          ch.classList.add('scrambling');
+   169→        });
+   170→      }, 60);
+   171→    }
+   172→
+   173→    // Lock a single char at index
+   174→    function lockChar(i) {
+   175→      if (i >= chars.length) return;
+   176→      const ch = chars[i];
+   177→      ch.textContent = TARGET[i];
+   178→      ch.classList.remove('scrambling');
+   179→      ch.classList.add('locked');
+   180→    }
+   181→
+   182→    function updateProgress(now) {
+   183→      if (done) return;
+   184→      const elapsed = now - startTime;
+   185→      const timePct = Math.min(100, (elapsed / DURATION) * 100);
+   186→      const canFinish = fontsReady || elapsed >= HARD;
+   187→      const pct = canFinish ? timePct : Math.min(99, timePct);
+   188→      if (percentEl) percentEl.textContent = Math.floor(pct) + '%';
+   189→      if (fillEl) fillEl.style.width = Math.floor(pct) + '%';
+   190→      // Update status text based on progress (only forward)
+   191→      const floorPct = Math.floor(pct);
+   192→      for (let i = STATUS_MSGS.length - 1; i >= 0; i--) {
+   193→        if (floorPct >= STATUS_MSGS[i].at && lastStatusIdx < i) {
+   194→          if (statusText) statusText.textContent = STATUS_MSGS[i].text;
+   195→          lastStatusIdx = i;
+   196→          break;
+   197→        }
+   198→      }
+   199→      if (pct >= 100 && canFinish) { ready(); return; }
+   200→      rafId = requestAnimationFrame(updateProgress);
+   201→    }
+   202→
+   203→    function ready() {
+   204→      if (done) return;
+   205→      done = true;
+   206→      if (rafId) cancelAnimationFrame(rafId);
+   207→      if (percentEl) percentEl.textContent = '100%';
+   208→      if (fillEl) fillEl.style.width = '100%';
+   209→      if (statusText) statusText.textContent = 'system ready';
+   210→
+   211→      // Lock remaining chars in sequence
+   212→      if (scrambleId) clearInterval(scrambleId);
+   213→      const alreadyLocked = overlay.querySelectorAll('.intro-char.locked').length;
+   214→      let next = alreadyLocked;
+   215→      function lockNext() {
+   216→        if (next >= chars.length) {
+   217→          // All locked — show designed-by text
+   218→          if (designedEl) designedEl.classList.add('visible');
+   219→          overlay.classList.add('hint-ready');
+   220→          return;
+   221→        }
+   222→        lockChar(next);
+   223→        next++;
+   224→        setTimeout(lockNext, 280);
+   225→      }
+   226→      lockNext();
+   227→    }
+   228→
+   229→    // Whoosh sound via Web Audio
+   230→    function playWhoosh() {
+   231→      try {
+   232→        const ac = new (window.AudioContext || window.webkitAudioContext)();
+   233→        // White noise burst
+   234→        const len = ac.sampleRate * 0.2; // 200ms
+   235→        const buf = ac.createBuffer(1, len, ac.sampleRate);
+   236→        const data = buf.getChannelData(0);
+   237→        for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len); // fade out
+   238→        const src = ac.createBufferSource();
+   239→        src.buffer = buf;
+   240→        // Bandpass filter for whoosh character
+   241→        const bp = ac.createBiquadFilter();
+   242→        bp.type = 'bandpass'; bp.frequency.value = 1200; bp.Q.value = 0.7;
+   243→        const gain = ac.createGain();
+   244→        gain.gain.setValueAtTime(0.25, ac.currentTime);
+   245→        gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.2);
+   246→        src.connect(bp); bp.connect(gain); gain.connect(ac.destination);
+   247→        src.start(); src.stop(ac.currentTime + 0.25);
+   248→      } catch (e) {}
+   249→    }
+   250→
+   251→    // Shatter animation
+   252→    function shatter() {
+   253→      chars.forEach((ch, i) => {
+   254→        const tx = (Math.random() - 0.5) * 600;
+   255→        const ty = -(Math.random() * 400 + 100);
+   256→        const rot = (Math.random() - 0.5) * 720;
+   257→        ch.style.transform = `translate(${tx}px, ${ty}px) rotate(${rot}deg)`;
+   258→        ch.classList.add('shattered');
+   259→      });
+   260→    }
+   261→
+   262→    function dismiss() {
+   263→      if (dismissed || !done) return;
+   264→      dismissed = true;
+   265→      clearInterval(clockId);
+   266→      playWhoosh();
+   267→      shatter();
+   268→      // Delay the slide-up slightly so shatter is visible
+   269→      setTimeout(() => {
+   270→        overlay.classList.add('hidden');
+   271→        setTimeout(() => { overlay.style.display = 'none'; }, 600);
+   272→      }, 200);
+   273→      window.__introDone = true;
+   274→      // Auto-play music on enter
+   275→      try { doPlay(); } catch (e) {}
+   276→      // Fetch heavy API data
+   277→      try { fetchGitHub().catch(() => {}); } catch (e) {}
+   278→      try { fetchLastfm().catch(() => {}); } catch (e) {}
+   279→    }
+   280→
+   281→    // Start scramble immediately
+   282→    startScramble();
+   283→
+   284→    // Start progress
+   285→    rafId = requestAnimationFrame(updateProgress);
+   286→
+   287→    // Dismiss listeners — same as before
+   288→    overlay.addEventListener('click', () => { dismiss(); });
+   289→    overlay.addEventListener('pointerup', () => { dismiss(); });
+   290→    const enterKeys = ['ArrowDown', 'Space', 'Enter', 'PageDown', 'Escape'];
+   291→    window.addEventListener('keydown', (e) => { if (enterKeys.includes(e.code)) dismiss(); }, { once: true });
+   292→    window.addEventListener('wheel', (e) => { if (e.deltaY > 30) dismiss(); }, { once: true, passive: true });
+   293→    let sy = 0;
+   294→    overlay.addEventListener('touchstart', (e) => { sy = e.touches[0].clientY; }, { passive: true });
+   295→    overlay.addEventListener('touchend', (e) => {
+   296→      e.preventDefault();
+   297→      if (sy - e.changedTouches[0].clientY > 40) dismiss();
+   298→    });
+   299→  })();
+   300→
+   301→
+   302→  /* ============================================================
+   303→     2. CLICK SPLASH
+   304→     ============================================================ */
+   305→  (function splash() {
+   306→    const s = $('click-splash'), si = $('click-splash-inner');
+   307→    if (!s || !si) return;
+   308→    document.addEventListener('click', (e) => {
+   309→      const t = e.target.tagName;
+   310→      if (t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT' || t === 'A' || t === 'BUTTON') return;
+   311→      [s, si].forEach(el => { el.style.left = e.clientX + 'px'; el.style.top = e.clientY + 'px'; el.classList.remove('animating'); void el.offsetWidth; el.classList.add('animating'); });
+   312→    });
+   313→  })();
+   314→
+   315→  /* ============================================================
+   316→     3. THEME TOGGLE
+   317→     ============================================================ */
+   318→  (function theme() {
+   319→    const btn = $('theme-toggle-btn');
+   320→    const MODES = ['auto', 'light', 'dark'];
+   321→    const root = document.documentElement;
+   322→    let mode = localStorage.getItem('theme');
+   323→    if (MODES.indexOf(mode) === -1) mode = 'auto';
+   324→    const mq = window.matchMedia('(prefers-color-scheme: light)');
+   325→    function isLight(m) { if (m === 'light') return true; if (m === 'dark') return false; return mq.matches; }
+   326→    function apply(m) {
+   327→      mode = m;
+   328→      root.classList.toggle('light', isLight(m));
+   329→      if (btn) { btn.classList.remove('mode-auto', 'mode-light', 'mode-dark'); btn.classList.add('mode-' + m); btn.title = 'Theme: ' + m + ' (click to switch)'; }
+   330→    }
+   331→    apply(mode);
+   332→    if (mq.addEventListener) mq.addEventListener('change', function () { if (mode === 'auto') apply('auto'); });
+   333→    else if (mq.addListener) mq.addListener(function () { if (mode === 'auto') apply('auto'); });
+   334→    if (btn) btn.addEventListener('click', function () {
+   335→      const next = MODES[(MODES.indexOf(mode) + 1) % MODES.length];
+   336→      localStorage.setItem('theme', next);
+   337→      apply(next);
+   338→      if (window.unlockAchievement) window.unlockAchievement('theme', 'Stylish!', 'Theme: ' + next + '.');
+   339→    });
+   340→  })();
+   341→
+   342→  /* ============================================================
+   343→     3b. ACCENT COLOR PICKER (persisted to localStorage)
+   344→     ============================================================ */
+   345→  (function accentPicker() {
+   346→    const btn = $('accent-btn'), pop = $('accent-popover');
+   347→    const root = document.documentElement;
+   348→    // name, --accent, --accent2, solid swatch
+   349→    const ACCENTS = [
+   350→      { id: 'cyan',   name: 'Cyan',   accent: 'rgba(0,200,255,0.6)',  accent2: 'rgba(120,90,255,0.5)', swatch: '#00c8ff' },
+   351→      { id: 'violet', name: 'Violet', accent: 'rgba(139,92,246,0.6)', accent2: 'rgba(217,70,239,0.5)', swatch: '#8b5cf6' },
+   352→      { id: 'emerald',name: 'Emerald',accent: 'rgba(16,185,129,0.6)', accent2: 'rgba(5,150,105,0.5)',  swatch: '#10b981' },
+   353→      { id: 'rose',   name: 'Rose',   accent: 'rgba(244,63,94,0.6)',  accent2: 'rgba(251,113,133,0.5)',swatch: '#f43f5e' },
+   354→      { id: 'amber',  name: 'Amber',  accent: 'rgba(245,158,11,0.6)', accent2: 'rgba(234,88,12,0.5)',  swatch: '#f59e0b' },
+   355→      { id: 'blue',   name: 'Blue',   accent: 'rgba(59,130,246,0.6)', accent2: 'rgba(37,99,235,0.5)',  swatch: '#3b82f6' },
+   356→      { id: 'teal',   name: 'Teal',   accent: 'rgba(20,184,166,0.6)', accent2: 'rgba(13,148,136,0.5)', swatch: '#14b8a6' },
+   357→      { id: 'orange', name: 'Orange', accent: 'rgba(249,115,22,0.6)', accent2: 'rgba(234,88,12,0.5)',  swatch: '#f97316' },
+   358→      { id: 'pink',   name: 'Pink',   accent: 'rgba(236,72,153,0.6)', accent2: 'rgba(219,39,119,0.5)', swatch: '#ec4899' },
+   359→      { id: 'lime',   name: 'Lime',   accent: 'rgba(132,204,22,0.6)', accent2: 'rgba(101,163,13,0.5)', swatch: '#84cc16' },
+   360→      { id: 'indigo', name: 'Indigo', accent: 'rgba(99,102,241,0.6)', accent2: 'rgba(79,70,229,0.5)',  swatch: '#6366f1' },
+   361→      { id: 'red',    name: 'Red',    accent: 'rgba(239,68,68,0.6)',  accent2: 'rgba(220,38,38,0.5)',  swatch: '#ef4444' },
+   362→      { id: 'fuchsia',name: 'Fuchsia',accent: 'rgba(217,70,239,0.6)', accent2: 'rgba(162,28,175,0.5)', swatch: '#d946ef' },
+   363→      { id: 'yellow', name: 'Yellow', accent: 'rgba(234,179,8,0.6)',  accent2: 'rgba(217,119,6,0.5)',  swatch: '#eab308' },
+   364→      { id: 'green',  name: 'Green',  accent: 'rgba(34,197,94,0.6)',  accent2: 'rgba(22,163,74,0.5)',  swatch: '#22c55e' },
+   365→      { id: 'sky',    name: 'Sky',    accent: 'rgba(14,165,233,0.6)', accent2: 'rgba(2,132,199,0.5)',  swatch: '#0ea5e9' },
+   366→      { id: 'purple', name: 'Purple', accent: 'rgba(168,85,247,0.6)', accent2: 'rgba(124,58,237,0.5)', swatch: '#a855f7' },
+   367→      { id: 'crimson',name: 'Crimson',accent: 'rgba(190,18,60,0.6)',  accent2: 'rgba(225,29,72,0.5)',  swatch: '#be123c' },
+   368→      { id: 'mint',   name: 'Mint',   accent: 'rgba(45,212,191,0.6)', accent2: 'rgba(13,148,136,0.5)', swatch: '#2dd4bf' },
+   369→      { id: 'slate',  name: 'Slate',  accent: 'rgba(100,116,139,0.6)',accent2: 'rgba(71,85,105,0.5)',  swatch: '#64748b' },
+   370→      { id: 'coral',    name: 'Coral',    accent: 'rgba(255,111,97,0.6)', accent2: 'rgba(229,83,61,0.5)',  swatch: '#ff6f61' },
+   371→      { id: 'gold',     name: 'Gold',     accent: 'rgba(212,175,55,0.6)', accent2: 'rgba(184,134,11,0.5)', swatch: '#d4af37' },
+   372→      { id: 'turquoise',name: 'Turquoise',accent: 'rgba(20,224,200,0.6)', accent2: 'rgba(8,145,178,0.5)',  swatch: '#14e0c8' },
+   373→      { id: 'plum',     name: 'Plum',     accent: 'rgba(162,28,175,0.6)', accent2: 'rgba(112,26,117,0.5)', swatch: '#a21caf' },
+   374→      { id: 'sand',     name: 'Sand',     accent: 'rgba(200,161,101,0.6)',accent2: 'rgba(166,124,82,0.5)', swatch: '#c8a165' }
+   375→    ];
+   376→    let activeId = localStorage.getItem('accent') || 'cyan';
+   377→    if (!ACCENTS.some(a => a.id === activeId)) activeId = 'cyan';
+   378→
+   379→    function apply(id) {
+   380→      const a = ACCENTS.find(x => x.id === id) || ACCENTS[0];
+   381→      // Default (cyan) uses the stylesheet values — clear overrides so themes stay intact.
+   382→      if (a.id === 'cyan') { root.style.removeProperty('--accent'); root.style.removeProperty('--accent2'); }
+   383→      else { root.style.setProperty('--accent', a.accent); root.style.setProperty('--accent2', a.accent2); }
+   384→      // Solid accent (no alpha) drives the contribution heatmap + legend.
+   385→      root.style.setProperty('--accent-solid', a.swatch);
+   386→      activeId = a.id;
+   387→      const meta = document.querySelector('meta[name="theme-color"]');
+   388→      if (meta) meta.setAttribute('content', a.swatch);
+   389→    }
+   390→    apply(activeId);
+   391→
+   392→    if (!btn || !pop) return;
+   393→    pop.innerHTML = ACCENTS.map(a =>
+   394→      '<button class="accent-swatch' + (a.id === activeId ? ' active' : '') + '" role="menuitemradio" data-id="' + a.id + '" title="' + a.name + '" aria-label="' + a.name + '" aria-checked="' + (a.id === activeId) + '" style="--sw:' + a.swatch + '"><span></span></button>'
+   395→    ).join('');
+   396→
+   397→    function setOpen(open) {
+   398→      pop.hidden = !open;
+   399→      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+   400→      pop.classList.toggle('open', open);
+   401→    }
+   402→    function positionPop() {
+   403→      const r = btn.getBoundingClientRect();
+   404→      pop.style.top = (r.bottom + 10) + 'px';
+   405→      pop.style.right = Math.max(12, window.innerWidth - r.right) + 'px';
+   406→    }
+   407→    btn.addEventListener('click', (e) => {
+   408→      e.stopPropagation();
+   409→      const willOpen = pop.hidden;
+   410→      if (willOpen) positionPop();
+   411→      setOpen(willOpen);
+   412→    });
+   413→    pop.addEventListener('click', (e) => {
+   414→      const s = e.target.closest('.accent-swatch'); if (!s) return;
+   415→      apply(s.dataset.id);
+   416→      localStorage.setItem('accent', activeId);
+   417→      pop.querySelectorAll('.accent-swatch').forEach(x => {
+   418→        const on = x.dataset.id === activeId;
+   419→        x.classList.toggle('active', on); x.setAttribute('aria-checked', on ? 'true' : 'false');
+   420→      });
+   421→      setOpen(false);
+   422→      if (window.unlockAchievement) window.unlockAchievement('accent', 'True Colors', 'Changed the accent color.');
+   423→    });
+   424→    document.addEventListener('click', (e) => { if (!pop.hidden && !pop.contains(e.target) && e.target !== btn) setOpen(false); });
+   425→    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pop.hidden) setOpen(false); });
+   426→    window.addEventListener('resize', () => { if (!pop.hidden) positionPop(); });
+   427→  })();
+   428→
+   429→  /* ============================================================
+   430→     4. MUSIC PLAYER (YouTube IFrame API — bulletproof edition)
+   431→     ============================================================ */
+   432→  let ytPlayer = null, ytReady = false, ytError = false, wantPlay = false, isPlaying = false;
+   433→  const miniPlayer = $('mini-player');
+   434→  const musicWidget = $('topbar-music-icon');
+   435→  const YT_PLAYLIST_ID = CONFIG.ytPlaylistId || '';
+   436→
+   437→  function setVisuals(playing) {
+   438→    isPlaying = playing;
+   439→    if (miniPlayer) miniPlayer.classList.toggle('playing', playing);
+   440→    [$('tb-eq-bars'), $('mp-eq'), $('mp-play')].forEach(function (el) { if (el) el.classList.toggle('playing', playing); });
+   441→    const tip = $('tb-music-tooltip'); if (tip) tip.textContent = playing ? 'Now playing' : 'Tap to play';
+   442→  }
+   443→
+   444→  // Pull the current track's title / artist / artwork straight from YouTube.
+   445→  function syncMeta() {
+   446→    if (!ytReady) return;
+   447→    let d = null; try { d = ytPlayer.getVideoData(); } catch (e) {}
+   448→    if (!d || !d.video_id) return;
+   449→    const title = d.title || 'Now Playing';
+   450→    const artist = d.author ? d.author.replace(/ - Topic$/, '') : '';
+   451→    const id = d.video_id;
+   452→    const art = 'https://img.youtube.com/vi/' + id + '/maxresdefault.jpg';
+   453→    ['mp-thumb', 'mp-big-art', 'mp-backdrop'].forEach(function (x) { const el = $(x); if (el) el.style.backgroundImage = "url('" + art + "')"; });
+   454→    const set = function (x, t) { const el = $(x); if (el) el.textContent = t; };
+   455→    set('mp-title', title); set('mp-artist', artist); set('mp-big-title', title); set('mp-big-artist', artist);
+   456→    const yt = $('mp-yt'); if (yt) yt.href = 'https://youtu.be/' + id;
+   457→  }
+   458→
+   459→  window.onYouTubeIframeAPIReady = function () {
+   460→    if (typeof YT === 'undefined' || !YT.Player) { ytError = true; return; }
+   461→    try {
+   462→      ytPlayer = new YT.Player('yt-music-iframe', {
+   463→        playerVars: { autoplay: 0, controls: 0, disablekb: 1, modestbranding: 1, playsinline: 1, rel: 0, iv_load_policy: 3, listType: 'playlist', list: YT_PLAYLIST_ID },
+   464→        events: {
+   465→          onReady: function () {
+   466→            ytReady = true;
+   467→            const vol = $('mp-vol');
+   468→            try { ytPlayer.setVolume(vol ? Number(vol.value) : 70); } catch (e) {}
+   469→            applyRepeat();     // apply the current repeat mode (default: repeat all)
+   470→            setTimeout(syncMeta, 400);
+   471→            if (wantPlay) { try { ytPlayer.playVideo(); } catch (e) {} }
+   472→          },
+   473→          onStateChange: function (e) {
+   474→            if (e.data === 1) { setVisuals(true); progressLoop(); syncMeta(); }        // playing
+   475→            else if (e.data === 2) { setVisuals(false); }                              // paused
+   476→            else if (e.data === 3 || e.data === 5) { syncMeta(); }                     // buffering / cued -> refresh meta
+   477→            else if (e.data === 0) {                                                   // ended
+   478→              if (repeatMode === 'one') { try { ytPlayer.seekTo(0); ytPlayer.playVideo(); } catch (er) {} }  // loop this song
+   479→              else { setVisuals(false); }                                              // 'all' loops the list via setLoop; 'off' stops
+   480→            }
+   481→          },
+   482→          onError: function (e) { ytError = true; setVisuals(false); console.warn('YouTube player error:', e.data); }
+   483→        }
+   484→      });
+   485→    } catch (err) { ytError = true; console.warn('YT.Player init failed:', err); }
+   486→  };
+   487→  const tag = document.createElement('script'); tag.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(tag);
+   488→  setTimeout(function () { if (!ytReady && !ytError) { ytError = true; } }, 8000);
+   489→
+   490→  function doPlay() { if (ytError) return; wantPlay = true; if (!ytReady) { setVisuals(true); return; } try { ytPlayer.playVideo(); } catch (e) {} }
+   491→  function doPause() { wantPlay = false; if (!ytReady) { setVisuals(false); return; } try { ytPlayer.pauseVideo(); } catch (e) {} }
+   492→  function togglePlay() { if (isPlaying) doPause(); else doPlay(); }
+   493→  function setVolume(v) { if (ytReady) { try { ytPlayer.setVolume(v); } catch (e) {} } }
+   494→  function fmt(t) { t = Math.max(0, Math.floor(t || 0)); const m = Math.floor(t / 60); const s = t % 60; return m + ':' + (s < 10 ? '0' : '') + s; }
+   495→
+   496→  // seeking flag lets the drag own the seek bar without the rAF loop fighting it.
+   497→  let seeking = false, seekRatio = 0, loopId = null;
+   498→  function progressLoop() {
+   499→    cancelAnimationFrame(loopId);
+   500→    (function step() {
+   501→      if (!ytReady || !isPlaying) return;
+   502→      if (!seeking) {
+   503→        let cur = 0, dur = 0;
+   504→        try { cur = ytPlayer.getCurrentTime() || 0; dur = ytPlayer.getDuration() || 0; } catch (e) {}
+   505→        const ct = $('mp-cur'), dt = $('mp-dur'), fl = $('mp-seek-fill');
+   506→        if (ct) ct.textContent = fmt(cur); if (dt) dt.textContent = fmt(dur);
+   507→        if (fl) fl.style.width = (dur ? (cur / dur * 100) : 0) + '%';
+   508→      }
+   509→      loopId = requestAnimationFrame(step);
+   510→    })();
+   511→  }
+   512→
+   513→  function openPlayer() {
+   514→    if (miniPlayer) { miniPlayer.classList.add('open'); miniPlayer.setAttribute('aria-hidden', 'false'); }
+   515→    // No auto-play on open (prevents incidental external scrobbles) — play starts on explicit press.
+   516→  }
+   517→  function closePlayer() { if (miniPlayer) { miniPlayer.classList.remove('open', 'expanded'); miniPlayer.setAttribute('aria-hidden', 'true'); } }
+   518→  if (musicWidget) musicWidget.addEventListener('click', openPlayer);
+   519→  // Tap anywhere outside the player (and not on the topbar music button that
+   520→  // opens it) closes it — easy dismiss. Playback keeps going; only the panel hides.
+   521→  document.addEventListener('click', function (e) {
+   522→    if (!miniPlayer || !miniPlayer.classList.contains('open')) return;
+   523→    if (e.target.closest('#mini-player') || e.target.closest('#topbar-music-icon')) return;
+   524→    closePlayer();
+   525→  });
+   526→  const mpClose = $('mp-close'); if (mpClose) mpClose.addEventListener('click', closePlayer);
+   527→  const mpPlay = $('mp-play'); if (mpPlay) mpPlay.addEventListener('click', togglePlay);
+   528→  const mpExpand = $('mp-expand'); if (mpExpand) mpExpand.addEventListener('click', function () { if (miniPlayer) miniPlayer.classList.toggle('expanded'); });
+   529→
+   530→  // Volume — native range (smooth), with an accent fill that follows the thumb.
+   531→  const mpVol = $('mp-vol'), mpVolIcon = $('mp-vol-icon');
+   532→  function updateVolIcon(v) { var n = Number(v); if (mpVolIcon) mpVolIcon.textContent = (n === 0) ? 'volume_off' : (n < 50 ? 'volume_down' : 'volume_up'); }
+   533→  // The filled track is now rendered natively (accent-color), so input only
+   534→  // updates the icon (cheap) and throttles the YouTube setVolume() call — each
+   535→  // call is a postMessage to the iframe, so we cap them at ~1 per 90ms during a
+   536→  // drag and always apply the final value on release (`change`).
+   537→  if (mpVol) {
+   538→    let lastVolTs = 0;
+   539→    mpVol.addEventListener('input', function (e) {
+   540→      var v = e.target.value;
+   541→      updateVolIcon(v);
+   542→      var now = (window.performance && performance.now) ? performance.now() : Date.now();
+   543→      if (now - lastVolTs >= 90) { lastVolTs = now; setVolume(v); }
+   544→    });
+   545→    mpVol.addEventListener('change', function (e) { setVolume(e.target.value); });
+   546→  }
+   547→
+   548→  // Prev / Next — navigate the YouTube playlist natively.
+   549→  const mpPrev = $('mp-prev'), mpNext = $('mp-next');
+   550→  if (mpPrev) mpPrev.addEventListener('click', function () { wantPlay = true; try { ytPlayer.previousVideo(); } catch (e) {} });
+   551→  if (mpNext) mpNext.addEventListener('click', function () { wantPlay = true; try { ytPlayer.nextVideo(); } catch (e) {} });
+   552→
+   553→  // Shuffle.
+   554→  let shuffleOn = false;
+   555→  const mpShuffle = $('mp-shuffle');
+   556→  if (mpShuffle) mpShuffle.addEventListener('click', function () { shuffleOn = !shuffleOn; try { ytPlayer.setShuffle(shuffleOn); } catch (e) {} mpShuffle.classList.toggle('active', shuffleOn); });
+   557→
+   558→  // Repeat — three-state cycle: all (loop playlist) -> one (loop this song) -> off.
+   559→  // YouTube has no native "loop one" for playlists, so 'one' is handled in the
+   560→  // ENDED handler above by replaying the current track.
+   561→  let repeatMode = 'all';
+   562→  const mpRepeat = $('mp-repeat');
+   563→  const mpRepeatIcon = mpRepeat ? mpRepeat.querySelector('.material-symbols-outlined') : null;
+   564→  function applyRepeat() {
+   565→    try { ytPlayer.setLoop(repeatMode === 'all'); } catch (e) {}
+   566→    if (mpRepeat) {
+   567→      mpRepeat.classList.toggle('active', repeatMode !== 'off');
+   568→      mpRepeat.title = repeatMode === 'one' ? 'Repeat one' : repeatMode === 'all' ? 'Repeat all' : 'Repeat off';
+   569→      mpRepeat.setAttribute('aria-label', mpRepeat.title);
+   570→    }
+   571→    if (mpRepeatIcon) mpRepeatIcon.textContent = repeatMode === 'one' ? 'repeat_one' : 'repeat';
+   572→  }
+   573→  applyRepeat();
+   574→  if (mpRepeat) mpRepeat.addEventListener('click', function () {
+   575→    repeatMode = repeatMode === 'all' ? 'one' : (repeatMode === 'one' ? 'off' : 'all');
+   576→    applyRepeat();
+   577→  });
+   578→
+   579→  // Seek bar — smooth: only repaint while dragging, seek ONCE on release
+   580→  // (calling seekTo on every pointermove made YouTube re-buffer and stutter).
+   581→  const seekBar = $('mp-seek-bar');
+   582→  if (seekBar) {
+   583→    const fl = $('mp-seek-fill');
+   584→    function seekPct(clientX) { const r = seekBar.getBoundingClientRect(); return Math.max(0, Math.min(1, (clientX - r.left) / r.width)); }
+   585→    function paintSeek(ratio) {
+   586→      if (fl) fl.style.width = (ratio * 100) + '%';
+   587→      const ct = $('mp-cur'); if (ct && ytReady) { let dur = 0; try { dur = ytPlayer.getDuration() || 0; } catch (e) {} ct.textContent = fmt(ratio * dur); }
+   588→    }
+   589→    seekBar.addEventListener('pointerdown', function (e) { seeking = true; try { seekBar.setPointerCapture(e.pointerId); } catch (_) {} seekRatio = seekPct(e.clientX); paintSeek(seekRatio); e.preventDefault(); });
+   590→    seekBar.addEventListener('pointermove', function (e) { if (!seeking) return; seekRatio = seekPct(e.clientX); paintSeek(seekRatio); });
+   591→    function endSeek() { if (!seeking) return; seeking = false; if (ytReady) { try { ytPlayer.seekTo(seekRatio * (ytPlayer.getDuration() || 0), true); } catch (e) {} } }
+   592→    seekBar.addEventListener('pointerup', endSeek);
+   593→    seekBar.addEventListener('pointercancel', endSeek);
+   594→  }
+   595→
+   596→  // Drag the mini player anywhere on screen (persists position in localStorage).
+   597→  // Clicks on controls (buttons, inputs, links, the seek bar) are not treated as drags.
+   598→  if (miniPlayer) {
+   599→    try {
+   600→      var saved = JSON.parse(localStorage.getItem('mp_pos') || 'null');
+   601→      if (saved && typeof saved.l === 'number' && typeof saved.t === 'number') {
+   602→        miniPlayer.style.left = saved.l + 'px'; miniPlayer.style.top = saved.t + 'px';
+   603→        miniPlayer.style.right = 'auto'; miniPlayer.style.bottom = 'auto';
+   604→      }
+   605→    } catch (e) {}
+   606→    var drag = null;
+   607→    miniPlayer.addEventListener('pointerdown', function (e) {
+   608→      if (!miniPlayer.classList.contains('open')) return;
+   609→      if (e.target.closest('button, input, a, .mp-seek-bar')) return;
+   610→      var r = miniPlayer.getBoundingClientRect();
+   611→      drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
+   612→      miniPlayer.classList.add('dragging');
+   613→    });
+   614→    window.addEventListener('pointermove', function (e) {
+   615→      if (!drag) return;
+   616→      var w = miniPlayer.offsetWidth, h = miniPlayer.offsetHeight;
+   617→      var x = Math.max(8, Math.min(window.innerWidth - w - 8, e.clientX - drag.dx));
+   618→      var y = Math.max(8, Math.min(window.innerHeight - h - 8, e.clientY - drag.dy));
+   619→      miniPlayer.style.left = x + 'px'; miniPlayer.style.top = y + 'px';
+   620→      miniPlayer.style.right = 'auto'; miniPlayer.style.bottom = 'auto';
+   621→    });
+   622→    window.addEventListener('pointerup', function () {
+   623→      if (!drag) return;
+   624→      drag = null;
+   625→      miniPlayer.classList.remove('dragging');
+   626→      var r = miniPlayer.getBoundingClientRect();
+   627→      try { localStorage.setItem('mp_pos', JSON.stringify({ l: Math.round(r.left), t: Math.round(r.top) })); } catch (e) {}
+   628→    });
+   629→  }
+   630→
+   631→  /* ============================================================
+   632→     5. SKILLS
+   633→     ============================================================ */
+   634→  const SKILLS = [
+   635→    { cat: 'FRONTEND', icon: 'code', name: 'React', desc: 'Components, hooks, state, and clean SPA architecture.' },
+   636→    { cat: 'FRONTEND', icon: 'code_blocks', name: 'JavaScript', desc: 'ES6+, async/await, DOM, and modern tooling.' },
+   637→    { cat: 'FRONTEND', icon: 'data_object', name: 'TypeScript', desc: 'Typed JS for safer, scalable codebases.' },
+   638→    { cat: 'FRONTEND', icon: 'palette', name: 'HTML & CSS', desc: 'Semantic markup, responsive layouts, animations.' },
+   639→    { cat: 'FRONTEND', icon: 'style', name: 'Tailwind CSS', desc: 'Utility-first styling for fast, consistent UIs.' },
+   640→    { cat: 'FRONTEND', icon: 'bolt', name: 'Vite', desc: 'Lightning-fast dev server and optimized builds.' },
+   641→    { cat: 'BACKEND', icon: 'terminal', name: 'Python', desc: 'Backends, scripting, data, and ML pipelines.' },
+   642→    { cat: 'BACKEND', icon: 'dns', name: 'Node.js', desc: 'Server-side JS, APIs, and tooling.' },
+   643→    { cat: 'BACKEND', icon: 'api', name: 'REST APIs', desc: 'Designing and consuming clean HTTP APIs.' },
+   644→    { cat: 'BACKEND', icon: 'local_fire_department', name: 'Firebase', desc: 'Auth, Firestore, and rules-based security.' },
+   645→    { cat: 'AI/ML', icon: 'neurology', name: 'Machine Learning', desc: 'Training, evaluating and shipping models.' },
+   646→    { cat: 'AI/ML', icon: 'forest', name: 'Random Forest', desc: 'Classification across 41 diseases in production.' },
+   647→    { cat: 'AI/ML', icon: 'smart_toy', name: 'RAG / LLMs', desc: 'Retrieval-augmented chatbots with real context.' },
+   648→    { cat: 'AI/ML', icon: 'travel_explore', name: 'FAISS', desc: 'Vector similarity search at scale.' },
+   649→    { cat: 'AI/ML', icon: 'monitoring', name: 'Streamlit', desc: 'Rapid data & ML app interfaces.' },
+   650→    { cat: 'AI/ML', icon: 'settings_suggest', name: 'Groq LLM', desc: 'Fast LLM inference for chat features.' },
+   651→    { cat: 'TOOLS', icon: 'commit', name: 'Git & GitHub', desc: 'Version control, branching, collaboration.' },
+   652→    { cat: 'TOOLS', icon: 'change_history', name: 'Vercel', desc: 'CI/CD deploys with env-var management.' },
+   653→    { cat: 'TOOLS', icon: 'send', name: 'Telegram Bot API', desc: 'Automation bots and file/utility tools.' },
+   654→    { cat: 'TOOLS', icon: 'menu_book', name: 'Jupyter', desc: 'Notebooks for ML prototyping and analysis.' }
+   655→  ];
+   656→  (function skills() {
+   657→    const list = $('skill-list'), tabs = $('skill-tabs'); if (!list) return;
+   658→    const toggleBtn = $('skill-toggle');
+   659→    function render(cat) {
+   660→      const items = cat === 'ALL' ? SKILLS : SKILLS.filter(s => s.cat === cat);
+   661→      $('skill-count').textContent = items.length + ' skills';
+   662→      list.innerHTML = items.map(s => `<div class="skill-item"><div class="skill-item-head"><span class="skill-item-icon material-symbols-outlined">${s.icon}</span><span class="skill-item-name">${s.name}</span><span class="skill-item-cat">${s.cat}</span></div><div class="skill-item-desc">${s.desc}</div></div>`).join('');
+   663→    }
+   664→    render('ALL');
+   665→    if (tabs) tabs.addEventListener('click', (e) => { const t = e.target.closest('.skill-tab'); if (!t) return; tabs.querySelectorAll('.skill-tab').forEach(b => b.classList.remove('active')); t.classList.add('active'); render(t.dataset.cat); });
+   666→    if (toggleBtn) {
+   667→      toggleBtn.addEventListener('click', function () {
+   668→        var isOpen = list.classList.contains('open');
+   669→        list.classList.toggle('open', !isOpen);
+   670→        toggleBtn.classList.toggle('open', !isOpen);
+   671→        toggleBtn.querySelector('.skill-toggle-text').textContent = isOpen ? 'Show All Skills' : 'Hide Skills';
+   672→      });
+   673→    }
+   674→  })();
+   675→
+   676→  /* ============================================================
+   677→     6. PROJECTS (with generated thumbnails)
+   678→     ============================================================ */
+   679→  const PROJECTS = [
+   680→    {
+   681→      cat: 'AI Healthcare Platform · Python · Streamlit',
+   682→      name: 'SmartHealthCare AI',
+   683→      desc: 'A full-stack AI healthcare platform with four modules — Disease Prediction (Random Forest, 41 diseases), Drug Recommendation (cosine similarity over 9,720 medicines), Heart Risk Assessment (BRFSS 2022 models with PDF export), and MediBot, a RAG chatbot using FAISS + Groq LLM with voice input.',
+   684→      tags: ['Python', 'ML', 'Streamlit', 'RAG', 'FAISS'],
+   685→      repo: 'https://github.com/YatinSharma1303/SmartHealthCare-For-Early-Diagnosis-Using-Artificial-Intelligence',
+   686→      live: null,
+   687→      img: 'assets/smarthealthcare.jpg'
+   688→    },
+   689→    {
+   690→      cat: 'AI Chat App · JavaScript · Live on Vercel',
+   691→      name: 'YatiniGPT',
+   692→      desc: 'A custom GPT-style conversational AI web app with a clean, fast chat interface. Built with modern JavaScript and deployed on Vercel — type a prompt, get a streamed answer, all wrapped in a minimal UI.',
+   693→      tags: ['JavaScript', 'AI', 'Vercel'],
+   694→      repo: 'https://github.com/YatinSharma1303/YatiniGPT',
+   695→      live: 'https://yatini-gpt.vercel.app/',
+   696→      img: 'assets/yatinigpt.jpg'
+   697→    }
+   698→  ];
+   699→  (function projects() {
+   700→    const grid = $('projects-grid'); if (!grid) return;
+   701→    grid.innerHTML = PROJECTS.map(p => {
+   702→      const thumb = p.img
+   703→        ? '<img class="project-thumb-img" src="' + p.img + '" alt="' + esc(p.name) + '" loading="lazy">'
+   704→        : '<div class="project-thumb"></div>';
+   705→      const preview = p.img ? '<div class="project-preview"><img src="' + p.img + '" alt="' + esc(p.name) + ' preview"></div>' : '';
+   706→      return '<article class="project-card">' + preview + thumb +
+   707→        '<div class="project-body">' +
+   708→        '<div class="project-cat">' + p.cat + '</div>' +
+   709→        '<div class="project-name">' + p.name + '</div>' +
+   710→        '<div class="project-desc">' + p.desc + '</div>' +
+   711→        '<div class="project-tags">' + p.tags.map(t => '<span>' + t + '</span>').join('') + '</div>' +
+   712→        '<div class="project-actions">' +
+   713→        '<a class="project-dl-btn" href="' + p.repo + '" target="_blank" rel="noopener">Source</a>' +
+   714→        (p.live ? '<a class="project-live-btn" href="' + p.live + '" target="_blank" rel="noopener">Live Demo</a>' : '') +
+   715→        '</div></div></article>';
+   716→    }).join('');
+   717→  })();
+   718→
+   719→  /* ============================================================
+   720→     7. GITHUB (profile + repos)
+   721→     ============================================================ */
+   722→  function fetchGitHub() {
+   723→    const user = CONFIG.githubUser;
+   724→    return fetch(`https://api.github.com/users/${user}`).then(r => r.json()).then(d => {
+   725→      if (!d || d.message) return;
+   726→      const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
+   727→      set('gh-name', d.name || user);
+   728→      animateCounter('gh-repos', d.public_repos ?? 0);
+   729→      animateCounter('gh-followers', d.followers ?? 0);
+   730→      animateCounter('gh-following', d.following ?? 0);
+   731→      const av = $('gh-avatar'); if (av && d.avatar_url) av.src = d.avatar_url;
+   732→    }).then(() =>
+   733→      fetch(`https://api.github.com/users/${user}/repos?per_page=100`).then(r => r.json()).then(repos => {
+   734→        if (!Array.isArray(repos)) return;
+   735→        
+   736→        // 1. Render Top 6 Repos
+   737→        const wrap = $('gh-repos-list'); if (wrap) {
+   738→          const LANG_COLOR = { JavaScript: '#f1e05a', Python: '#3572A5', TypeScript: '#3178c6', HTML: '#e34c26', CSS: '#563d7c', 'Jupyter Notebook': '#DA5B0B' };
+   739→          wrap.innerHTML = repos.slice(0, 6).map(r => `<a class="gh-repo" href="${r.html_url}" target="_blank" rel="noopener" style="--lang-color:${LANG_COLOR[r.language]||'#888'}"><div class="gh-repo-name">${r.name}</div><div class="gh-repo-desc">${esc((r.description||'—').slice(0,90))}</div><div class="gh-repo-meta">${r.language ? `<span class="gh-repo-lang">${r.language}</span>` : ''}<span>★ ${r.stargazers_count}</span></div></a>`).join('');
+   740→        }
+   741→
+   742→        // 2. Calculate Languages for Donut Chart
+   743→        const langCounts = {};
+   744→        repos.forEach(r => { if (r.language) langCounts[r.language] = (langCounts[r.language] || 0) + 1; });
+   745→        const sortedLangs = Object.entries(langCounts).sort((a, b) => b[1] - a[1]);
+   746→        const topLangs = sortedLangs.slice(0, 5);
+   747→        const totalRepos = sortedLangs.reduce((s, [, c]) => s + c, 0);
+   748→        
+   749→        const LANG_COLOR = { JavaScript: '#f1e05a', Python: '#3572A5', TypeScript: '#3178c6', HTML: '#e34c26', CSS: '#563d7c', 'Jupyter Notebook': '#DA5B0B' };
+   750→        
+   751→        // Build Conic Gradient
+   752→        let cumulativePercent = 0;
+   753→        const gradientStops = topLangs.map(([lang, count]) => {
+   754→          const percent = (count / totalRepos) * 100;
+   755→          const start = cumulativePercent;
+   756→          cumulativePercent += percent;
+   757→          const color = LANG_COLOR[lang] || '#888888';
+   758→          return `${color} ${start}% ${cumulativePercent}%`;
+   759→        }).join(', ');
+   760→        
+   761→        const chartEl = $('gh-lang-chart');
+   762→        if (chartEl) chartEl.style.background = `conic-gradient(${gradientStops})`;
+   763→        
+   764→        // Build Legend
+   765→        const legendEl = $('gh-lang-legend');
+   766→        if (legendEl) {
+   767→          legendEl.innerHTML = topLangs.map(([lang, count]) => {
+   768→            const color = LANG_COLOR[lang] || '#888888';
+   769→            const percent = Math.round((count / totalRepos) * 100);
+   770→            return `<div class="gh-lang-pill"><span class="gh-lang-dot" style="background:${color}"></span> ${esc(lang)} (${percent}%)</div>`;
+   771→          }).join('');
+   772→        }
+   773→      })
+   774→    );
+   775→  }
+   776→
+   777→  /* ============================================================
+   778→     8. LAST.FM
+   779→     ============================================================ */
+   780→
+   781→  function fetchLastfm() {
+   782→    if (window.__lastfmLoading) return Promise.resolve();
+   783→    window.__lastfmLoading = true;
+   784→    const u = CONFIG.lastfmUser;
+   785→    let nowPlayingTimer = window.__lastfmTimer || null;
+   786→
+   787→    function artDiv(className, url, fallbackText) {
+   788→      if (url) return '<div class="' + className + '" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>';
+   789→      return '<div class="' + className + ' lfm-noart" style="background:#141414 !important">' + (fallbackText || '♪') + '</div>';
+   790→    }
+   791→
+   792→    function artistFallback(name, idx) {
+   793→      const gradients = [
+   794→        'linear-gradient(135deg, rgba(0, 200, 255, 0.5), rgba(120, 80, 255, 0.5))',
+   795→        'linear-gradient(135deg, rgba(0, 240, 180, 0.5), rgba(0, 200, 255, 0.5))',
+   796→        'linear-gradient(135deg, rgba(120, 80, 255, 0.5), rgba(0, 240, 180, 0.5))',
+   797→        'linear-gradient(135deg, rgba(0, 200, 255, 0.5), rgba(0, 240, 180, 0.5))',
+   798→        'linear-gradient(135deg, rgba(0, 240, 180, 0.5), rgba(120, 80, 255, 0.5))'
+   799→      ];
+   800→      return '<div class="lfm-artist-img lfm-noart lfm-artist-gradient" style="background:' + gradients[idx % gradients.length] + '; color:#ffffff !important;">' + esc((name || '?').charAt(0).toUpperCase()) + '</div>';
+   801→    }
+   802→
+   803→    /* Cover art for Top Tracks / Top Artists is resolved server-side inside the
+   804→       /api/lastfm bundle (each item carries an `artUrl`). Last.fm's top endpoints
+   805→       return no real art, and resolving it client-side fired too many calls and
+   806→       rate-limited the key (slowness). See enrichArt() in api/lastfm.js. */
+   807→
+   808→    // Loved tracks cache — set of "artist::track" (lowercase)
+   809→    let lovedTrackKeys = new Set();
+   810→    function isLovedTrack(trackName, artistName) {
+   811→      if (!lovedTrackKeys.size) return false;
+   812→      return lovedTrackKeys.has(((artistName || '').toLowerCase() + '::' + (trackName || '').toLowerCase()));
+   813→    }
+   814→    function fetchLovedTracks() {
+   815→      fetchWithTimeout(lfmAPI + '?method=user.getlovedtracks&user=' + encodeURIComponent(u) + '&limit=200', 5000)
+   816→        .then(r => r.json())
+   817→        .then(d => {
+   818→          const tracks = (d.lovedtracks && d.lovedtracks.track) || [];
+   819→          lovedTrackKeys = new Set();
+   820→          tracks.forEach(tr => {
+   821→            const a = (tr.artist && (tr.artist.name || tr.artist['#text'])) || '';
+   822→            const n = tr.name || '';
+   823→            if (a && n) lovedTrackKeys.add(a.toLowerCase() + '::' + n.toLowerCase());
+   824→          });
+   825→          // Re-render if data available
+   826→          const cached = cachedBundle();
+   827→          if (cached) { renderRecent(cached.recenttracks); renderTopSection(cached); }
+   828→        })
+   829→        .catch(() => {});
+   830→    }
+   831→
+   832→    // Genre tags — fetched async, non-blocking
+   833→    function fetchTrackTags(tracks) {
+   834→      tracks.forEach((tr, idx) => {
+   835→        const artistName = tr.artist ? (tr.artist.name || tr.artist['#text'] || '') : '';
+   836→        const trackName = tr.name || '';
+   837→        if (!artistName || !trackName) return;
+   838→        const cacheKey = 'lfm_tags_' + artistName.toLowerCase() + '::' + trackName.toLowerCase();
+   839→        try {
+   840→          const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+   841→          if (cached && Date.now() - cached.ts < 24 * 60 * 60 * 1000) {
+   842→            renderTrackTags(idx, cached.tags);
+   843→            return;
+   844→          }
+   845→        } catch (e) {}
+   846→        fetchWithTimeout(lfmAPI + '?method=track.getTopTags&artist=' + encodeURIComponent(artistName) + '&track=' + encodeURIComponent(trackName) + '&autocorrect=1', 3000)
+   847→          .then(r => r.json())
+   848→          .then(d => {
+   849→            const tags = ((d.toptags && d.toptags.tag) || []).slice(0, 2).map(t => t.name);
+   850→            if (tags.length) {
+   851→              try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), tags: tags })); } catch (e) {}
+   852→              renderTrackTags(idx, tags);
+   853→            }
+   854→          })
+   855→          .catch(() => {});
+   856→      });
+   857→    }
+   858→    function renderTrackTags(idx, tags) {
+   859→      const allTagEls = document.querySelectorAll('.lfm-track-tags');
+   860→      if (allTagEls[idx]) {
+   861→        allTagEls[idx].innerHTML = tags.map(t => '<span class="lfm-track-tag">' + esc(t) + '</span>').join('');
+   862→      }
+   863→    }
+   864→
+   865→    // Period tab switching
+   866→    window.__lfmPeriod = '1month';
+   867→    function renderTopSection(d) {
+   868→      const tracksWrap = $('lfm-tracks');
+   869→      const tracks = (d.toptracks && d.toptracks.track) || [];
+   870→      if (tracksWrap && tracks.length) {
+   871→        tracksWrap.innerHTML = tracks.map((tr, idx) => {
+   872→          const url = tr.artUrl || lfmImg(tr.image);
+   873→          const art = url
+   874→            ? '<div class="lfm-track-img" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>'
+   875→            : '<div class="lfm-track-img lfm-noart" style="background:#141414 !important">♪</div>';
+   876→          const artistName = tr.artist ? (tr.artist.name || tr.artist['#text'] || '') : '';
+   877→          const lovedHtml = isLovedTrack(tr.name, artistName) ? '<span class="lfm-loved">♥</span>' : '';
+   878→          return '<div class="lfm-track"><span class="lfm-track-rank">' + (idx+1) + '</span>' + art + '<div class="lfm-track-info"><div class="lfm-track-name">' + esc(tr.name) + lovedHtml + '</div><div class="lfm-track-artist">' + esc(artistName) + '</div><div class="lfm-track-tags" data-artist="' + esc(artistName) + '" data-track="' + esc(tr.name) + '"></div></div><span class="lfm-track-plays">' + formatPlays(tr.playcount) + '</span></div>';
+   879→        }).join('');
+   880→        fetchTrackTags(tracks);
+   881→      }
+   882→      const artistsWrap = $('lfm-artists');
+   883→      const artists = (d.topartists && d.topartists.artist) || [];
+   884→      if (artistsWrap && artists.length) {
+   885→        artistsWrap.innerHTML = artists.map((ar, idx) => {
+   886→          const url = ar.artUrl || lfmImg(ar.image);
+   887→          const art = url ? '<div class="lfm-artist-img" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>' : artistFallback(ar.name, idx);
+   888→          return '<div class="lfm-artist"><span class="lfm-artist-rank">' + (idx+1) + '</span>' + art + '<span class="lfm-artist-name">' + esc(ar.name) + '</span><span class="lfm-artist-plays">' + formatPlays(ar.playcount) + '</span></div>';
+   889→        }).join('');
+   890→      }
+   891→    }
+   892→    function setupPeriodTabs() {
+   893→      const tabsWrap = $('lfm-period-tabs');
+   894→      if (!tabsWrap) return;
+   895→      tabsWrap.addEventListener('click', function(e) {
+   896→        const btn = e.target.closest('.lfm-period-tab');
+   897→        if (!btn) return;
+   898→        const period = btn.dataset.period;
+   899→        if (!period || period === window.__lfmPeriod) return;
+   900→        window.__lfmPeriod = period;
+   901→        tabsWrap.querySelectorAll('.lfm-period-tab').forEach(b => b.classList.remove('active'));
+   902→        btn.classList.add('active');
+   903→        // Show skeletons
+   904→        const tracksWrap = $('lfm-tracks');
+   905→        const artistsWrap = $('lfm-artists');
+   906→        if (tracksWrap) tracksWrap.innerHTML = '<div class="lfm-track"><div class="skeleton" style="width:40px;height:40px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="width:80%;height:12px;margin-bottom:4px"></div><div class="skeleton" style="width:50%;height:10px"></div></div></div>'.repeat(3);
+   907→        if (artistsWrap) artistsWrap.innerHTML = '<div class="lfm-artist"><div class="skeleton" style="width:40px;height:40px;border-radius:50%;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:12px"></div></div>'.repeat(3);
+   908→        // Fetch via bundle endpoint (includes server-side art enrichment)
+   909→        fetchWithTimeout(lfmAPI + '?bundle=1&user=' + encodeURIComponent(u) + '&period=' + period, 6000)
+   910→          .then(r => r.json())
+   911→          .then(d => { renderTopSection({ toptracks: d.toptracks, topartists: d.topartists }); })
+   912→          .catch(() => {});
+   913→      });
+   914→    }
+   915→
+   916→    function renderBundle(d) {
+   917→      if (!d) return;
+   918→      const user = d.user;
+   919→      if (user) {
+   920→        const av = $('lfm-avatar');
+   921→        if (av) { const url = lfmImg(user.image); if (url) av.src = url; }
+   922→        const strip = $('lfm-statstrip');
+   923→        if (strip) strip.textContent = `${(user.playcount||0).toLocaleString()} scrobbles · ${(user.artist_count||0).toLocaleString()} artists · ${(user.album_count||0).toLocaleString()} albums`;
+   924→      }
+   925→
+   926→      const tracksWrap = $('lfm-tracks');
+   927→      const tracks = (d.toptracks && d.toptracks.track) || [];
+   928→      if (tracksWrap && tracks.length) {
+   929→        tracksWrap.innerHTML = tracks.map((tr, idx) => {
+   930→          const url = tr.artUrl || lfmImg(tr.image);
+   931→          const art = url
+   932→            ? '<div class="lfm-track-img" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>'
+   933→            : '<div class="lfm-track-img lfm-noart" style="background:#141414 !important">♪</div>';
+   934→          const artistName = tr.artist ? (tr.artist.name || tr.artist['#text'] || '') : '';
+   935→          const lovedHtml = isLovedTrack(tr.name, artistName) ? '<span class="lfm-loved">♥</span>' : '';
+   936→          return '<div class="lfm-track"><span class="lfm-track-rank">' + (idx+1) + '</span>' + art + '<div class="lfm-track-info"><div class="lfm-track-name">' + esc(tr.name) + lovedHtml + '</div><div class="lfm-track-artist">' + esc(artistName) + '</div><div class="lfm-track-tags" data-artist="' + esc(artistName) + '" data-track="' + esc(tr.name) + '"></div></div><span class="lfm-track-plays">' + formatPlays(tr.playcount) + '</span></div>';
+   937→        }).join('');
+   938→        // Fetch genre tags asynchronously
+   939→        fetchTrackTags(tracks);
+   940→      }
+   941→
+   942→      const artistsWrap = $('lfm-artists');
+   943→      const artists = (d.topartists && d.topartists.artist) || [];
+   944→      if (artistsWrap && artists.length) {
+   945→        artistsWrap.innerHTML = artists.map((ar, idx) => {
+   946→          const url = ar.artUrl || lfmImg(ar.image);
+   947→          const art = url ? '<div class="lfm-artist-img" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>' : artistFallback(ar.name, idx);
+   948→          return '<div class="lfm-artist"><span class="lfm-artist-rank">' + (idx+1) + '</span>' + art + '<span class="lfm-artist-name">' + esc(ar.name) + '</span><span class="lfm-artist-plays">' + formatPlays(ar.playcount) + '</span></div>';
+   949→        }).join('');
+   950→      }
+   951→
+   952→      renderRecent(d.recenttracks);
+   953→    }
+   954→
+   955→
+   956→    // Resolve crisp cover art for a recent / now-playing track. Prefers the
+   957→    // server-enriched iTunes art (from the bundle), caches it so the 12s live
+   958→    // poll stays sharp without another server call, then falls back to Last.fm.
+   959→    // Cover-art priority for Now Playing / Recently Played:
+   960→    // 1) Last.fm high-res art if present (always correct + sharp),
+   961→    // 2) iTunes (validated) when Last.fm has no high-res art,
+   962→    // 3) Last.fm low-res art as a last resort (correct, even if soft),
+   963→    // 4) '' -> placeholder.
+   964→    // Cover-art priority for Now Playing / Recently Played — favor the SHARPEST
+   965→    // correct cover. iTunes is validated server-side (correct artist) AND 600px,
+   966→    // so it goes first; Last.fm (always correct but maxes ~300px, often 174px) is
+   967→    // the fallback only when iTunes has no confident match. Then placeholder.
+   968→    function recentTrackArt(tr) {
+   969→      if (!tr) return '';
+   970→      const a = (tr.artist && (tr.artist['#text'] || tr.artist.name)) || '';
+   971→      const n = tr.name || '';
+   972→      if (tr.artUrl) { try { localStorage.setItem('lfm_track_art_' + a + '::' + n, tr.artUrl); } catch (e) {} return tr.artUrl; }
+   973→      try { const c = localStorage.getItem('lfm_track_art_' + a + '::' + n); if (c) return c; } catch (e) {}
+   974→      return lfmImg(tr.image);
+   975→    }
+   976→
+   977→    function renderActivityChart(tracks) {
+   978→      const wrap = $('lfm-activity');
+   979→      if (!wrap) return;
+   980→      const days = [];
+   981→      const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+   982→      for (let i = 6; i >= 0; i--) {
+   983→        const d = new Date(); d.setDate(d.getDate() - i);
+   984→        const key = d.toISOString().slice(0, 10);
+   985→        days.push({ label: dayNames[d.getDay()], date: key, count: 0 });
+   986→      }
+   987→      tracks.forEach(tr => {
+   988→        const uts = (tr.date && tr.date.uts) || '';
+   989→        if (!uts) return;
+   990→        const d = new Date(parseInt(uts, 10) * 1000);
+   991→        const key = d.toISOString().slice(0, 10);
+   992→        const day = days.find(dd => dd.date === key);
+   993→        if (day) day.count++;
+   994→      });
+   995→      const maxCount = Math.max(...days.map(d => d.count), 1);
+   996→      const total = days.reduce((s, d) => s + d.count, 0);
+   997→      if (total === 0) { wrap.innerHTML = ''; return; }
+   998→      wrap.innerHTML = '<div class="lfm-activity-label">' + total + ' tracks this week</div><div class="lfm-activity-bars">' + days.map(d => {
+   999→        const h = Math.max(3, (d.count / maxCount) * 32);
+  1000→        const opacity = d.count > 0 ? (0.3 + (d.count / maxCount) * 0.7) : 0.15;
+  1001→        return '<div class="lfm-activity-day"><div class="lfm-activity-bar" style="height:' + h + 'px;opacity:' + opacity.toFixed(2) + '"></div><div class="lfm-activity-day-label">' + d.label + '</div></div>';
+  1002→      }).join('') + '</div>';
+  1003→    }
+  1004→
+  1005→    function renderRecent(recenttracks) {
+  1006→      const tracks = (recenttracks && recenttracks.track) || [];
+  1007→      if (!tracks.length) return;
+  1008→      const first = tracks[0];
+  1009→      const isLive = first['@attr'] && first['@attr'].nowplaying === 'true';
+  1010→      const npArtEl = $('lfm-np-art');
+  1011→      const npBgEl = $('lfm-np-bg');
+  1012→      if (npArtEl) {
+  1013→        const url = recentTrackArt(first);
+  1014→        if (url) { npArtEl.style.cssText = 'background:#141414 url(\'' + url + '\') center/cover no-repeat'; npArtEl.classList.remove('lfm-noart'); npArtEl.textContent = ''; }
+  1015→        else { npArtEl.style.cssText = 'background:#141414'; npArtEl.classList.add('lfm-noart'); npArtEl.textContent = '♪'; }
+  1016→        npArtEl.style.visibility = 'visible';
+  1017→        if (npBgEl) {
+  1018→          if (url && isLive) { npBgEl.style.backgroundImage = 'url(\'' + url + '\')'; }
+  1019→          else { npBgEl.style.backgroundImage = ''; }
+  1020→        }
+  1021→      }
+  1022→      const npTrack = $('lfm-np-track'); if (npTrack) npTrack.textContent = first.name || '—';
+  1023→      const npArtist = $('lfm-np-artist'); if (npArtist) npArtist.textContent = (first.artist && (first.artist['#text'] || first.artist.name)) || '—';
+  1024→      const npAlbum = $('lfm-np-album'); if (npAlbum) {
+  1025→        const albumName = (first.album && first.album['#text']) || '';
+  1026→        npAlbum.textContent = albumName || '';
+  1027→        npAlbum.style.display = albumName ? '' : 'none';
+  1028→      }
+  1029→      const npCard = $('lfm-nowplaying'); if (npCard) npCard.classList.toggle('live', !!isLive);
+  1030→      const npLabel = $('lfm-np-label'); if (npLabel) npLabel.textContent = isLive ? 'NOW PLAYING' : 'LAST PLAYED';
+  1031→      renderActivityChart(tracks);
+  1032→      const recentWrap = $('lfm-recent');
+  1033→      if (recentWrap) {
+  1034→        const tickerTracks = isLive ? tracks.slice(1, 9) : tracks.slice(0, 9);
+  1035→        recentWrap.innerHTML = tickerTracks.map(tr => {
+  1036→          const artistName = (tr.artist && (tr.artist['#text'] || tr.artist.name)) || '';
+  1037→          const lovedHtml = isLovedTrack(tr.name, artistName) ? ' <span class="lfm-loved">♥</span>' : '';
+  1038→          const nameHtml = esc(tr.name || '—') + lovedHtml;
+  1039→          const uts = (tr.date && tr.date.uts) || '';
+  1040→          const ago = timeAgo(uts);
+  1041→          const timeHtml = ago ? '<div class="lfm-recent-time">' + ago + '</div>' : '';
+  1042→          return '<div class="lfm-recent-item">' + artDiv('lfm-recent-img', recentTrackArt(tr), '♪') + '<div class="lfm-recent-info"><div class="lfm-recent-name">' + nameHtml + '</div><div class="lfm-recent-artist">' + esc(artistName) + '</div>' + timeHtml + '</div></div>';
+  1043→        }).join('');
+  1044→      }
+  1045→    }
+  1046→
+  1047→
+  1048→    function cachedBundle() {
+  1049→      try {
+  1050→        const cached = JSON.parse(localStorage.getItem('lastfm_bundle_cache') || 'null');
+  1051→        if (cached && cached.data && Date.now() - cached.ts < 10 * 60 * 1000) return cached.data;
+  1052→      } catch (e) {}
+  1053→      return null;
+  1054→    }
+  1055→
+  1056→    function saveBundleCache(data) {
+  1057→      try { if (data && (data.user || data.toptracks || data.topartists || data.recenttracks)) localStorage.setItem('lastfm_bundle_cache', JSON.stringify({ ts: Date.now(), data })); } catch (e) {}
+  1058→    }
+  1059→
+  1060→    function fetchWithTimeout(url, timeoutMs) {
+  1061→      timeoutMs = timeoutMs || 4500;
+  1062→      const controller = new AbortController();
+  1063→      const timer = setTimeout(() => controller.abort(), timeoutMs);
+  1064→      return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
+  1065→    }
+  1066→
+  1067→    function loadBundle() {
+  1068→      const cached = cachedBundle();
+  1069→      if (cached) renderBundle(cached);
+  1070→      return fetchWithTimeout(`${lfmAPI}?bundle=1&user=${encodeURIComponent(u)}`, 5000)
+  1071→        .then(r => r.json())
+  1072→        .then(d => { saveBundleCache(d); renderBundle(d); })
+  1073→        .then(() => { fetchLovedTracks(); setupPeriodTabs(); })
+  1074→        .catch(err => {
+  1075→          console.warn('Last.fm bundle failed:', err);
+  1076→          if (!cached) {
+  1077→            const tracksWrap = $('lfm-tracks'); if (tracksWrap) tracksWrap.innerHTML = '<div class="lfm-track">Last.fm is waking up. Music stats will appear shortly.</div>';
+  1078→          }
+  1079→        });
+  1080→    }
+  1081→
+  1082→    function updateNowPlaying() {
+  1083→      fetchWithTimeout(`${lfmAPI}?method=user.getrecenttracks&user=${encodeURIComponent(u)}&limit=10&_=${Date.now()}`, 4500)
+  1084→        .then(r => r.json())
+  1085→        .then(d => renderRecent(d.recenttracks))
+  1086→        .catch(() => {});
+  1087→    }
+  1088→
+  1089→    if (nowPlayingTimer) clearInterval(nowPlayingTimer);
+  1090→    return loadBundle().then(() => {
+  1091→      updateNowPlaying();
+  1092→      window.__lastfmTimer = setInterval(updateNowPlaying, 12000);
+  1093→    }).finally(() => { window.__lastfmLoading = false; });
+  1094→  }
+  1095→
+  1096→
+  1097→  // Start Last.fm after initial page load too, not only after intro dismiss.
+  1098→  window.addEventListener('load', () => {
+  1099→    setTimeout(() => { try { fetchLastfm(); } catch (e) {} }, 1200);
+  1100→  }, { once: true });
+  1101→
+  1102→  /* ============================================================
+  1103→     9. ANILIST (summary + pagination)
+  1104→     ============================================================ */
+  1105→  (function anilist() {
+  1106→    const list = $('al-list'), tabs = $('al-tabs'); if (!list) return;
+  1107→    // 36. MANGA TAB — two datasets keyed by media type; manga lazy-loaded on first switch.
+  1108→    const datasets = { ANIME: [], MANGA: [] };
+  1109→    const loaded = { ANIME: false, MANGA: false };
+  1110→    const loading = { ANIME: false, MANGA: false };
+  1111→    let activeMedia = 'ANIME';
+  1112→    let allEntries = [], activeStatus = 'ALL', page = 1;
+  1113→    let activeSort = 'updated', activeGenre = '', activeSearch = '';
+  1114→    let showMeanScore = false;
+  1115→    let listView = false;
+  1116→    let PER_PAGE = 12;
+  1117→    const favSets = { ANIME: new Set(), MANGA: new Set() };
+  1118→    const statsByMedia = { ANIME: null, MANGA: null };
+  1119→    let favSet = favSets.ANIME, statsData = null;
+  1120→    const card = list.parentElement;
+  1121→    let statsPanel = null, controlsBar = null, genreBar = null, pagerEl = null, mediaBar = null;
+  1122→    let bannerTimer = null, bannerIdx = 0;
+  1123→
+  1124→    // Per-media label maps (anime uses episodes/watching, manga uses chapters/reading).
+  1125→    const STATUS_TABS = [
+  1126→      { status: 'ALL',       ANIME: 'ALL',           MANGA: 'ALL' },
+  1127→      { status: 'CURRENT',   ANIME: 'WATCHING',      MANGA: 'READING' },
+  1128→      { status: 'COMPLETED', ANIME: 'COMPLETED',     MANGA: 'COMPLETED' },
+  1129→      { status: 'REPEATING', ANIME: 'REWATCHING',    MANGA: 'REREADING' },
+  1130→      { status: 'PLANNING',  ANIME: 'PLAN TO WATCH', MANGA: 'PLAN TO READ' },
+  1131→      { status: 'PAUSED',    ANIME: 'ON HOLD',       MANGA: 'ON HOLD' },
+  1132→      { status: 'DROPPED',   ANIME: 'DROPPED',       MANGA: 'DROPPED' }
+  1133→    ];
+  1134→    const isManga = () => activeMedia === 'MANGA';
+  1135→    const unitLong = () => isManga() ? 'chapters' : 'episodes';
+  1136→    const unitShort = () => isManga() ? 'ch' : 'eps';
+  1137→    const verbPast = () => isManga() ? 'read' : 'watched';
+  1138→
+  1139→    function entryTitle(e) {
+  1140→      return (e.media && e.media.title && (e.media.title.romaji || e.media.title.english)) || '';
+  1141→    }
+  1142→    // Total units for an entry's media (episodes for anime, chapters for manga).
+  1143→    function totalUnits(m) { return (m && (isManga() ? m.chapters : m.episodes)) || 0; }
+  1144→    function scoreClass(mean) {
+  1145→      if (!mean) return '';
+  1146→      if (mean >= 75) return 'al-score-high';
+  1147→      if (mean >= 60) return 'al-score-mid';
+  1148→      return 'al-score-low';
+  1149→    }
+  1150→    function highlightMatch(text, query) {
+  1151→      if (!query) return text;
+  1152→      var i = text.toLowerCase().indexOf(query.toLowerCase());
+  1153→      if (i === -1) return text;
+  1154→      return text.slice(0, i) + '<mark class="al-hl">' + text.slice(i, i + query.length) + '</mark>' + text.slice(i + query.length);
+  1155→    }
+  1156→
+  1157→    // 36. Wire the Anime/Manga switcher and keep status-tab labels in sync.
+  1158→    function updateTabLabels() {
+  1159→      if (!tabs) return;
+  1160→      tabs.querySelectorAll('.al-tab').forEach(btn => {
+  1161→        const row = STATUS_TABS.find(s => s.status === btn.dataset.status);
+  1162→        if (!row) return;
+  1163→        let c = btn.querySelector('.al-tab-count');
+  1164→        btn.textContent = row[activeMedia] + ' ';
+  1165→        if (c) btn.appendChild(c);
+  1166→      });
+  1167→    }
+  1168→    function ensureMediaBar() {
+  1169→      if (mediaBar) return;
+  1170→      mediaBar = $('al-media');
+  1171→      if (!mediaBar) return;
+  1172→      mediaBar.addEventListener('click', (e) => {
+  1173→        const b = e.target.closest('.al-media-btn'); if (!b) return;
+  1174→        const m = b.dataset.media; if (m === activeMedia) return;
+  1175→        mediaBar.querySelectorAll('.al-media-btn').forEach(x => {
+  1176→          const on = x === b; x.classList.toggle('active', on); x.setAttribute('aria-selected', on ? 'true' : 'false');
+  1177→        });
+  1178→        switchMedia(m);
+  1179→      });
+  1180→      mediaBar.addEventListener('keydown', function (e) { var bs = Array.from(mediaBar.querySelectorAll('.al-media-btn')); var i = bs.indexOf(document.activeElement); if (i === -1) return; if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); var n = e.key === 'ArrowRight' ? (i+1)%bs.length : (i-1+bs.length)%bs.length; bs[n].focus(); bs[n].click(); } });
+  1181→    }
+  1182→
+  1183→    function ensureChrome() {
+  1184→      ensureMediaBar();
+  1185→      if (!statsPanel) {
+  1186→        statsPanel = document.createElement('div');
+  1187→        statsPanel.className = 'al-stats';
+  1188→        tabs.parentNode.insertBefore(statsPanel, tabs);
+  1189→      }
+  1190→      if (!controlsBar) {
+  1191→        controlsBar = document.createElement('div');
+  1192→        controlsBar.className = 'al-controls';
+  1193→        controlsBar.innerHTML =
+  1194→          '<div class="al-search-wrap"><span class="material-symbols-outlined al-search-icon">search</span>' +
+  1195→          '<input type="text" class="al-search-input" id="al-search" maxlength="60" placeholder="Search anime…" autocomplete="off" aria-label="Search titles">' +
+  1196→          '<button class="al-search-clear" id="al-search-clear" hidden title="Clear" aria-label="Clear search"><span class="material-symbols-outlined">close</span></button></div>' +
+  1197→          '<div class="al-sort" id="al-sort">' +
+  1198→            '<button class="al-sort-btn active" data-sort="updated">Updated</button>' +
+  1199→            '<button class="al-sort-btn" data-sort="score">Score</button>' +
+  1200→            '<button class="al-sort-btn" data-sort="title">Title</button>' +
+  1201→            '<button class="al-sort-btn" data-sort="progress">Progress</button>' +
+  1202→          '</div>' +
+  1203→          '<button class="al-score-toggle" id="al-score-toggle" title="Toggle score"><span class="material-symbols-outlined">swap_horiz</span>Score</button>' +
+  1204→          '<div class="al-view-toggle" id="al-view-toggle"><button class="al-view-btn active" data-view="grid" title="Grid"><span class="material-symbols-outlined">grid_view</span></button><button class="al-view-btn" data-view="list" title="List"><span class="material-symbols-outlined">view_list</span></button></div>' +
+  1205→          '<div class="al-perpage" id="al-perpage">Per page:<button class="al-perpage-btn" data-pp="6">6</button><button class="al-perpage-btn active" data-pp="12">12</button><button class="al-perpage-btn" data-pp="24">24</button><button class="al-perpage-btn" data-pp="48">48</button></div>';
+  1206→        list.parentNode.insertBefore(controlsBar, list);
+  1207→        const si = controlsBar.querySelector('#al-search'), sc = controlsBar.querySelector('#al-search-clear');
+  1208→        var searchTimer = null;
+  1209→        Widgets.bindSearch({ input: si, clear: sc, onChange: (v) => { clearTimeout(searchTimer); searchTimer = setTimeout(function () { activeSearch = v; page = 1; render(); }, 250); } });
+  1210→        Widgets.bindPills({ container: controlsBar.querySelector('#al-sort'), selector: '.al-sort-btn', attr: 'sort', onSelect: (v) => { activeSort = v; page = 1; render(); } });
+  1211→        var scoreTgl = controlsBar.querySelector('#al-score-toggle'); if (scoreTgl) scoreTgl.addEventListener('click', function () { showMeanScore = !showMeanScore; this.classList.toggle('active', showMeanScore); render(); });
+  1212→        var viewTgl = controlsBar.querySelector('#al-view-toggle'); if (viewTgl) viewTgl.addEventListener('click', function (ev) { var b = ev.target.closest('.al-view-btn'); if (!b) return; listView = b.dataset.view === 'list'; list.classList.toggle('list-view', listView); viewTgl.querySelectorAll('.al-view-btn').forEach(function(x){x.classList.toggle('active',x===b);}); });
+  1213→        var ppC = controlsBar.querySelector('#al-perpage'); if (ppC) ppC.addEventListener('click', function (ev) { var b = ev.target.closest('.al-perpage-btn'); if (!b) return; PER_PAGE = parseInt(b.dataset.pp) || 12; page = 1; ppC.querySelectorAll('.al-perpage-btn').forEach(function(x){x.classList.toggle('active',x===b);}); render(); });
+  1214→      }
+  1215→      if (!genreBar) {
+  1216→        genreBar = document.createElement('div');
+  1217→        genreBar.className = 'al-genres';
+  1218→        list.parentNode.insertBefore(genreBar, list);
+  1219→        // Delegated so it keeps working as renderGenres() rebuilds the pills.
+  1220→        Widgets.bindPills({ container: genreBar, selector: '.al-genre-pill', attr: 'genre', onSelect: (v) => { activeGenre = v || ''; page = 1; renderGenres(); render(); } });
+  1221→      }
+  1222→      if (!pagerEl) { pagerEl = document.createElement('div'); pagerEl.className = 'al-pagination'; card.appendChild(pagerEl); }
+  1223→    }
+  1224→    function loadFallbackAnime() {
+  1225→      datasets.ANIME = [
+  1226→        { _status: 'CURRENT', progress: 52, score: 0, updatedAt: Date.now()/1000, media: { id: 20, title: { romaji: 'NARUTO', english: 'Naruto' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20-CXyit3VSQwF4.png' }, episodes: 220, duration: 23, meanScore: 79, genres: ['Action', 'Adventure'], format: 'TV' } },
+  1227→        { _status: 'COMPLETED', progress: 64, score: 0, updatedAt: Date.now()/1000 - 10, media: { id: 5114, title: { romaji: 'FULLMETAL ALCHEMIST: BROTHERHOOD', english: 'Fullmetal Alchemist: Brotherhood' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/nx5114-CXyit3VSQwF4.png' }, episodes: 64, duration: 25, meanScore: 92, genres: ['Action', 'Adventure', 'Drama'], format: 'TV' } },
+  1228→        { _status: 'COMPLETED', progress: 37, score: 0, updatedAt: Date.now()/1000 - 20, media: { id: 1535, title: { romaji: 'DEATH NOTE', english: 'Death Note' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/nx1535-CXyit3VSQwF4.png' }, episodes: 37, duration: 23, meanScore: 87, genres: ['Mystery', 'Psychological', 'Thriller'], format: 'TV' } },
+  1229→        { _status: 'COMPLETED', progress: 75, score: 0, updatedAt: Date.now()/1000 - 30, media: { id: 16498, title: { romaji: 'SHINGEKI NO KYOJIN', english: 'Attack on Titan' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx16498-CXyit3VSQwF4.png' }, episodes: 75, duration: 24, meanScore: 86, genres: ['Action', 'Drama'], format: 'TV' } },
+  1230→        { _status: 'COMPLETED', progress: 26, score: 0, updatedAt: Date.now()/1000 - 40, media: { id: 21, title: { romaji: 'ONE PIECE', english: 'One Piece' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21-CXyit3VSQwF4.png' }, episodes: 26, duration: 24, meanScore: 87, genres: ['Action', 'Adventure', 'Comedy'], format: 'TV' } },
+  1231→        { _status: 'PLANNING', progress: 0, score: 0, updatedAt: Date.now()/1000 - 50, media: { id: 1, title: { romaji: 'COWBOY BEBOP', english: 'Cowboy Bebop' }, coverImage: { extraLarge: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx1-CXyit3VSQwF4.png' }, episodes: 26, duration: 24, meanScore: 88, genres: ['Action', 'Sci-Fi'], format: 'TV' } }
+  1232→      ];
+  1233→      loaded.ANIME = true;
+  1234→      if (activeMedia === 'ANIME') { allEntries = datasets.ANIME; refreshAll(); }
+  1235→    }
+  1236→
+  1237→    function buildListQuery(type) {
+  1238→      const progressFields = type === 'MANGA' ? 'chapters volumes' : 'episodes duration';
+  1239→      return `query{user:MediaListCollection(userName:"${CONFIG.anilistUser}",type:${type}){lists{name status entries{media{id title{romaji english}coverImage{extraLarge large medium}${progressFields} meanScore genres format description(asHtml:false)}score progress updatedAt}}}}`;
+  1240→    }
+  1241→    // Fetch a media list (anime or manga) on demand. Anime falls back to a local list on failure.
+  1242→    function loadMedia(type) {
+  1243→      if (loaded[type] || loading[type]) return;
+  1244→      loading[type] = true;
+  1245→      fetch('https://graphql.anilist.co?_=' + Date.now(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: buildListQuery(type) }) })
+  1246→        .then(r => { if (!r.ok) throw new Error('AniList HTTP ' + r.status); return r.json(); }).then(d => {
+  1247→          if (d.errors) throw new Error(d.errors[0]?.message || 'AniList GraphQL error');
+  1248→          const lists = (d.data && d.data.user && d.data.user.lists) || [];
+  1249→          const entries = [];
+  1250→          lists.forEach(l => (l.entries || []).forEach(e => { if (e && e.media) { e._status = l.status; entries.push(e); } }));
+  1251→          if (!entries.length) throw new Error('AniList list empty');
+  1252→          datasets[type] = entries; loaded[type] = true; loading[type] = false;
+  1253→          if (activeMedia === type) { allEntries = datasets[type]; refreshAll(); }
+  1254→        }).catch((err) => {
+  1255→          loading[type] = false;
+  1256→          console.warn('AniList ' + type + ' load failed:', err);
+  1257→          if (type === 'ANIME') loadFallbackAnime();
+  1258→          else if (activeMedia === 'MANGA') { list.innerHTML = '<div class="al-empty">Couldn’t load manga list right now.</div>'; }
+  1259→        });
+  1260→    }
+  1261→
+  1262→    function refreshAll() { renderStats(); renderGenres(); updateTabCounts(); render(); renderBanner(); }
+  1263→
+  1264→    // Switch between Anime and Manga: reset filters, lazy-load if needed.
+  1265→    function switchMedia(type) {
+  1266→      activeMedia = type;
+  1267→      allEntries = datasets[type];
+  1268→      favSet = favSets[type];
+  1269→      statsData = statsByMedia[type];
+  1270→      activeStatus = 'ALL'; activeGenre = ''; activeSearch = ''; page = 1;
+  1271→      if (tabs) { tabs.querySelectorAll('.al-tab').forEach(b => b.classList.toggle('active', b.dataset.status === 'ALL')); }
+  1272→      updateTabLabels();
+  1273→      const sub = $('al-sub'); if (sub) sub.textContent = 'AniList · ' + (isManga() ? 'manga list' : 'anime list');
+  1274→      const si = $('al-search'); if (si) { si.value = ''; si.placeholder = isManga() ? 'Search manga…' : 'Search anime…'; }
+  1275→      const sc = $('al-search-clear'); if (sc) sc.hidden = true;
+  1276→      stopBannerRotation();
+  1277→      if (!loaded[type]) {
+  1278→        list.innerHTML = '<div class="al-empty">Loading ' + (isManga() ? 'manga' : 'anime') + '…</div>';
+  1279→        if (statsPanel) statsPanel.innerHTML = ''; if (genreBar) genreBar.innerHTML = '';
+  1280→        const banner = $('al-banner'); if (banner) banner.style.display = 'none';
+  1281→        updateTabCounts();
+  1282→        loadMedia(type);
+  1283→      } else {
+  1284→        refreshAll();
+  1285→      }
+  1286→    }
+  1287→
+  1288→    loadMedia('ANIME');
+  1289→
+  1290→    // Fetch user avatar, favourites and statistics for both media types (separate request)
+  1291→    const userQuery = `query{User(name:"${CONFIG.anilistUser}"){avatar{large}favourites{anime{nodes{id}}manga{nodes{id}}}statistics{anime{count episodesWatched minutesWatched meanScore genres{genre count}}manga{count chaptersRead volumesRead meanScore genres{genre count}}}}}`;
+  1292→    function loadUserMeta() {
+  1293→      return fetch('https://graphql.anilist.co?_=' + Date.now(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: userQuery }) })
+  1294→        .then(r => r.json()).then(d => {
+  1295→          const u = d && d.data && d.data.User; if (!u) return;
+  1296→          const av = $('al-avatar'); if (av && u.avatar && u.avatar.large) av.src = u.avatar.large;
+  1297→          const fav = u.favourites || {};
+  1298→          favSets.ANIME = new Set(((fav.anime && fav.anime.nodes) || []).map(n => n && n.id).filter(Boolean));
+  1299→          favSets.MANGA = new Set(((fav.manga && fav.manga.nodes) || []).map(n => n && n.id).filter(Boolean));
+  1300→          statsByMedia.ANIME = (u.statistics && u.statistics.anime) || null;
+  1301→          statsByMedia.MANGA = (u.statistics && u.statistics.manga) || null;
+  1302→          favSet = favSets[activeMedia]; statsData = statsByMedia[activeMedia];
+  1303→          renderStats(); if (loaded[activeMedia]) render();
+  1304→        }).catch(() => {});
+  1305→    }
+  1306→    loadUserMeta();
+  1307→
+  1308→    // Manual refresh — re-fetch the active media list + user meta without a full page reload.
+  1309→    let refreshing = false;
+  1310→    function refresh() {
+  1311→      if (refreshing) return;
+  1312→      refreshing = true;
+  1313→      const btn = $('al-refresh');
+  1314→      if (btn) btn.classList.add('ama-refresh-spin');
+  1315→      const type = activeMedia;
+  1316→      loaded[type] = false; loading[type] = false;
+  1317→      loadMedia(type);   // re-fetches the active list; refreshAll() runs on success
+  1318→      loadUserMeta();    // refresh avatar / favourites / stats
+  1319→      setTimeout(() => { if (btn) btn.classList.remove('ama-refresh-spin'); refreshing = false; }, 700);
+  1320→    }
+  1321→    const alRefreshBtn = $('al-refresh');
+  1322→    if (alRefreshBtn) alRefreshBtn.addEventListener('click', refresh);
+  1323→    function renderStats() {
+  1324→      ensureChrome();
+  1325→      let count, mean, genres, numbers;
+  1326→      if (isManga()) {
+  1327→        let chapters, volumes;
+  1328→        if (statsData && (statsData.count || statsData.chaptersRead)) {
+  1329→          count = statsData.count || 0; chapters = statsData.chaptersRead || 0;
+  1330→          volumes = statsData.volumesRead || 0; mean = statsData.meanScore || 0;
+  1331→          genres = (statsData.genres || []).slice();
+  1332→        } else {
+  1333→          count = allEntries.length;
+  1334→          chapters = allEntries.reduce((s, e) => s + (Number(e.progress) || 0), 0);
+  1335→          volumes = 0; mean = 0;
+  1336→          const gc = {}; allEntries.forEach(e => ((e.media && e.media.genres) || []).forEach(g => gc[g] = (gc[g] || 0) + 1));
+  1337→          genres = Object.keys(gc).map(g => ({ genre: g, count: gc[g] }));
+  1338→        }
+  1339→        if (!count) { statsPanel.innerHTML = ''; return; }
+  1340→        /* #6 Chapters this week */
+  1341→        var weekAgo = Math.floor(Date.now() / 1000) - 7 * 86400;
+  1342→        var weekEps = allEntries.filter(e => (e.updatedAt || 0) >= weekAgo).reduce((s, e) => s + (Number(e.progress) || 0), 0);
+  1343→        numbers = '<div class="al-stat-nums">' +
+  1344→          '<span><b>' + count.toLocaleString() + '</b> manga</span>' +
+  1345→          '<span><b>' + chapters.toLocaleString() + '</b> chapters</span>' +
+  1346→          (volumes ? '<span><b>' + volumes.toLocaleString() + '</b> volumes</span>' : '') +
+  1347→          (weekEps ? '<span class="al-stat-week"><b>' + weekEps + '</b> ch this week</span>' : '') +
+  1348→          (mean ? '<span><b>' + (mean / 10).toFixed(1) + '</b> mean score</span>' : '') +
+  1349→        '</div>';
+  1350→      } else {
+  1351→        let eps, mins;
+  1352→        if (statsData && (statsData.count || statsData.episodesWatched)) {
+  1353→          count = statsData.count || 0; eps = statsData.episodesWatched || 0;
+  1354→          mins = statsData.minutesWatched || 0; mean = statsData.meanScore || 0;
+  1355→          genres = (statsData.genres || []).slice();
+  1356→        } else {
+  1357→          count = allEntries.length;
+  1358→          eps = allEntries.reduce((s, e) => s + (Number(e.progress) || 0), 0);
+  1359→          mins = allEntries.reduce((s, e) => s + (Number(e.progress) || 0) * ((e.media && e.media.duration) || 24), 0);
+  1360→          mean = 0;
+  1361→          const gc = {}; allEntries.forEach(e => ((e.media && e.media.genres) || []).forEach(g => gc[g] = (gc[g] || 0) + 1));
+  1362→          genres = Object.keys(gc).map(g => ({ genre: g, count: gc[g] }));
+  1363→        }
+  1364→        if (!count) { statsPanel.innerHTML = ''; return; }
+  1365→        const days = (mins / 1440).toFixed(1);
+  1366→        /* #6 Episodes this week */
+  1367→        var weekAgo = Math.floor(Date.now() / 1000) - 7 * 86400;
+  1368→        var weekEps = allEntries.filter(e => (e.updatedAt || 0) >= weekAgo).reduce((s, e) => s + (Number(e.progress) || 0), 0);
+  1369→        numbers = '<div class="al-stat-nums">' +
+  1370→          '<span><b>' + count.toLocaleString() + '</b> anime</span>' +
+  1371→          '<span><b>' + eps.toLocaleString() + '</b> episodes</span>' +
+  1372→          '<span><b>' + days + '</b> days watched</span>' +
+  1373→          (weekEps ? '<span class="al-stat-week"><b>' + weekEps + '</b> eps this week</span>' : '') +
+  1374→          (mean ? '<span><b>' + (mean / 10).toFixed(1) + '</b> mean score</span>' : '') +
+  1375→        '</div>';
+  1376→      }
+  1377→      const topG = genres.slice().sort((a, b) => b.count - a.count).slice(0, 5);
+  1378→      const maxC = topG.length ? topG[0].count : 1;
+  1379→      const bars = topG.length ? '<div class="al-stat-genres">' + topG.map(g =>
+  1380→        '<div class="al-stat-genre"><span class="al-sg-name">' + esc(g.genre) + '</span>' +
+  1381→        '<div class="al-sg-bar"><i style="width:' + Math.max(6, Math.round(g.count / maxC * 100)) + '%"></i></div>' +
+  1382→        '<span class="al-sg-count">' + g.count + '</span></div>').join('') + '</div>' : '';
+  1383→      statsPanel.innerHTML = numbers + bars;
+  1384→    }
+  1385→    function renderGenres() {
+  1386→      ensureChrome();
+  1387→      const counts = {};
+  1388→      allEntries.forEach(e => ((e.media && e.media.genres) || []).forEach(g => counts[g] = (counts[g] || 0) + 1));
+  1389→      const top = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 12);
+  1390→      if (!top.length) { genreBar.innerHTML = ''; return; }
+  1391→      // Click handling is delegated once in ensureChrome() via Widgets.bindPills.
+  1392→      genreBar.innerHTML =
+  1393→        '<button class="al-genre-pill ' + (activeGenre === '' ? 'active' : '') + '" data-genre="">All</button>' +
+  1394→        top.map(g => '<button class="al-genre-pill ' + (activeGenre === g ? 'active' : '') + '" data-genre="' + esc(g) + '">' + esc(g) + '</button>').join('');
+  1395→    }
+  1396→    function updateTabCounts() {
+  1397→      if (!tabs) return;
+  1398→      tabs.querySelectorAll('.al-tab').forEach(btn => {
+  1399→        const st = btn.dataset.status;
+  1400→        const n = st === 'ALL' ? allEntries.length : allEntries.filter(e => String(e._status || '').toUpperCase() === st).length;
+  1401→        let c = btn.querySelector('.al-tab-count');
+  1402→        if (!c) { c = document.createElement('span'); c.className = 'al-tab-count'; btn.appendChild(c); }
+  1403→        c.textContent = n;
+  1404→      });
+  1405→    }
+  1406→    function stopBannerRotation() { if (bannerTimer) { clearInterval(bannerTimer); bannerTimer = null; } }
+  1407→    function bannerHTML(item) {
+  1408→      const t = (item.media.title && (item.media.title.romaji || item.media.title.english)) || '\u2014';
+  1409→      const img = (item.media.coverImage && (item.media.coverImage.extraLarge || item.media.coverImage.large || item.media.coverImage.medium)) || '';
+  1410→      const statusRaw = (item._status || '').toUpperCase();
+  1411→      const manga = isManga();
+  1412→      const STATUS_LABELS = manga ? {
+  1413→        CURRENT: 'CURRENTLY READING', WATCHING: 'CURRENTLY READING',
+  1414→        COMPLETED: 'COMPLETED', REPEATING: 'REREADING', REWATCHING: 'REREADING',
+  1415→        PLANNING: 'PLAN TO READ', PAUSED: 'ON HOLD', DROPPED: 'DROPPED'
+  1416→      } : {
+  1417→        CURRENT: 'CURRENTLY WATCHING', WATCHING: 'CURRENTLY WATCHING',
+  1418→        COMPLETED: 'COMPLETED', REPEATING: 'REWATCHING', REWATCHING: 'REWATCHING',
+  1419→        PLANNING: 'PLAN TO WATCH', PAUSED: 'ON HOLD', DROPPED: 'DROPPED'
+  1420→      };
+  1421→      const label = STATUS_LABELS[statusRaw] || 'LATEST UPDATE';
+  1422→      const isOngoing = statusRaw === 'CURRENT' || statusRaw === 'WATCHING' || statusRaw === 'REPEATING' || statusRaw === 'REWATCHING';
+  1423→      const total = totalUnits(item.media);
+  1424→      const progress = item.progress ? item.progress + (total ? '/' + total : '') + ' ' + unitShort() + (isOngoing ? ' ' + verbPast() : '') : (statusRaw === 'COMPLETED' ? 'completed' : '');
+  1425→      const score = item.score ? ' · ★ ' + item.score : '';
+  1426→      var prog = item.progress || 0;
+  1427→      var bPct = (total && prog) ? Math.min(100, Math.round(prog / total * 100)) : (statusRaw === 'COMPLETED' ? 100 : 0);
+  1428→      var bBar = (bPct > 0 && bPct < 100) ? '<div class="al-banner-progress-bar"><div class="al-banner-progress-fill" style="width:' + bPct + '%"></div></div>' : '';
+  1429→      return (img ? '<img class="al-banner-img" alt="' + esc(t) + '" src="' + img + '">' : '') + '<div class="al-banner-info"><div class="al-banner-label" data-status="' + statusRaw.toLowerCase() + '">' + label + '</div><div class="al-banner-title">' + esc(t) + '</div><div class="al-banner-progress">' + esc(progress + score) + '</div>' + bBar + '</div>';
+  1430→    }
+  1431→    function bannerDots(rotation, activeI) {
+  1432→      if (rotation.length <= 1) return '';
+  1433→      return '<div class="al-banner-dots">' + rotation.map((_, di) => '<span class="' + (di === activeI ? 'on' : '') + '"></span>').join('') + '</div>';
+  1434→    }
+  1435→    // 39. Banner rotation — cycle through everything currently being watched/read;
+  1436→    // fall back to the single most-recently-updated entry if nothing is ongoing.
+  1437→    function renderBanner() {
+  1438→      const banner = $('al-banner'); if (!banner) return;
+  1439→      stopBannerRotation();
+  1440→      const entries = allEntries;
+  1441→      if (!entries.length) { banner.style.display = 'none'; return; }
+  1442→      const ongoing = entries
+  1443→        .filter(e => { const s = (e._status || '').toUpperCase(); return (s === 'CURRENT' || s === 'REPEATING') && e.media; })
+  1444→        .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  1445→      let rotation = ongoing;
+  1446→      if (!rotation.length) {
+  1447→        const latest = entries.slice().filter(e => e.media).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
+  1448→        rotation = latest ? [latest] : [];
+  1449→      }
+  1450→      if (!rotation.length) { banner.style.display = 'none'; return; }
+  1451→      bannerIdx = 0;
+  1452→      const paint = (i) => {
+  1453→        const item = rotation[i % rotation.length];
+  1454→        if (!item || !item.media) return;
+  1455→        banner.innerHTML = bannerHTML(item) + bannerDots(rotation, i % rotation.length);
+  1456→      };
+  1457→      paint(0);
+  1458→      banner.style.display = 'flex';
+  1459→      if (rotation.length > 1) {
+  1460→        bannerTimer = setInterval(() => {
+  1461→          bannerIdx = (bannerIdx + 1) % rotation.length;
+  1462→          banner.classList.add('al-banner-fading');
+  1463→          setTimeout(() => { paint(bannerIdx); banner.classList.remove('al-banner-fading'); }, 200);
+  1464→        }, 5000);
+  1465→      }
+  1466→    }
+  1467→    function sortEntries(arr) {
+  1468→      const a = arr.slice();
+  1469→      if (activeSort === 'score') a.sort((x, y) => (y.score || 0) - (x.score || 0) || ((y.media && y.media.meanScore) || 0) - ((x.media && x.media.meanScore) || 0));
+  1470→      else if (activeSort === 'title') a.sort((x, y) => entryTitle(x).localeCompare(entryTitle(y)));
+  1471→      else if (activeSort === 'progress') a.sort((x, y) => (y.progress || 0) - (x.progress || 0));
+  1472→      else a.sort((x, y) => (y.updatedAt || 0) - (x.updatedAt || 0));
+  1473→      return a;
+  1474→    }
+  1475→    function render() {
+  1476→      ensureChrome();
+  1477→      list.classList.toggle('list-view', listView);
+  1478→      let arr = allEntries.slice();
+  1479→      if (activeStatus !== 'ALL') arr = arr.filter(e => String(e._status || '').toUpperCase() === activeStatus);
+  1480→      if (activeGenre) arr = arr.filter(e => ((e.media && e.media.genres) || []).indexOf(activeGenre) >= 0);
+  1481→      if (activeSearch) {
+  1482→        const s = activeSearch.toLowerCase();
+  1483→        arr = arr.filter(e => {
+  1484→          const ti = e.media && e.media.title;
+  1485→          return (ti && ti.romaji && ti.romaji.toLowerCase().includes(s)) ||
+  1486→                 (ti && ti.english && ti.english.toLowerCase().includes(s));
+  1487→        });
+  1488→      }
+  1489→      arr = sortEntries(arr);
+  1490→      const pages = Math.max(1, Math.ceil(arr.length / PER_PAGE));
+  1491→      if (page > pages) page = pages;
+  1492→      const slice = arr.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  1493→      if (!slice.length) {
+  1494→        list.innerHTML = '<div class="al-empty"><span class="al-empty-icon material-symbols-outlined">' + (activeSearch ? 'search' : activeStatus === 'DROPPED' ? 'sentiment_satisfied' : 'movie') + '</span><div class="al-empty-text">' + (activeSearch ? 'No results found' : activeStatus === 'DROPPED' ? 'Nothing dropped yet!' : 'Nothing here yet') + '</div></div>';
+  1495→        renderPager(pages);
+  1496→        return;
+  1497→      }
+  1498→      list.innerHTML = slice.map((e, idx) => {
+  1499→        const m = e.media || {};
+  1500→        const t = (m.title && (m.title.romaji || m.title.english)) || '—';
+  1501→        const img = (m.coverImage && (m.coverImage.extraLarge || m.coverImage.large || m.coverImage.medium)) || '';
+  1502→        const st = String(e._status || '').toUpperCase();
+  1503→        const eps = totalUnits(m);
+  1504→        const prog = e.progress || 0;
+  1505→        const progText = prog ? prog + (eps ? '/' + eps : '') + ' ' + unitShort() : (st === 'COMPLETED' ? 'completed' : '');
+  1506→        const userScore = e.score ? '★ ' + e.score : '';
+  1507→        const mean = m.meanScore || 0;
+  1508→        const meanText = mean ? 'avg ' + (mean / 10).toFixed(1) : '';
+  1509→        var displayScore = showMeanScore ? (mean ? 'avg ★ ' + (mean / 10).toFixed(1) : '') : userScore;
+  1510→        const scoreLine = [progText, displayScore, showMeanScore ? '' : meanText].filter(Boolean).join(' · ');
+  1511→        const pct = eps ? Math.min(100, Math.round(prog / eps * 100)) : (st === 'COMPLETED' ? 100 : 0);
+  1512→        const showBar = (eps && prog) || st === 'COMPLETED';
+  1513→        const isFav = favSet.has(m.id);
+  1514→        const genres = (m.genres || []).slice(0, 3);
+  1515→        const desc = m.description ? esc(String(m.description).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()).slice(0, 180) : '';
+  1516→        const fmt = m.format ? String(m.format).replace(/_/g, ' ') : '';
+  1517→        const overlay = (genres.length || desc || fmt) ?
+  1518→          '<div class="al-item-overlay">' +
+  1519→            (fmt ? '<div class="al-ov-fmt">' + esc(fmt) + '</div>' : '') +
+  1520→            (genres.length ? '<div class="al-ov-genres">' + genres.map(g => '<span>' + esc(g) + '</span>').join('') + '</div>' : '') +
+  1521→            (desc ? '<div class="al-ov-desc">' + desc + '…</div>' : '') +
+  1522→          '</div>' : '';
+  1523→        var scoreBadge = '';
+  1524→        if (mean) { var sc = mean >= 75 ? 'high' : mean >= 60 ? 'mid' : 'low'; var sv = showMeanScore ? (mean / 10).toFixed(1) : (e.score || (mean / 10).toFixed(1)); scoreBadge = '<span class="al-cover-score ' + sc + '">★ ' + sv + '</span>'; }
+  1525→        var fmtChip = fmt ? '<span class="al-cover-fmt">' + esc(fmt) + '</span>' : '';
+  1526→        var stAttr = ' data-status="' + st + '"';
+  1527→        var nameHtml = activeSearch ? highlightMatch(esc(t), activeSearch) : esc(t);
+  1528→        var delay = idx * 0.04;
+  1529→        return '<div class="al-item"' + stAttr + ' style="animation-delay:' + delay + 's">' +
+  1530→          '<div class="al-item-cover">' +
+  1531→            (img ? '<img src="' + img + '" alt="' + esc(t) + '" loading="lazy">' : '') +
+  1532→            scoreBadge + fmtChip +
+  1533→            (isFav ? '<span class="al-fav" title="Favourite">♥</span>' : '') +
+  1534→            overlay +
+  1535→          '</div>' +
+  1536→          '<div class="al-item-info">' +
+  1537→            '<div class="al-item-name">' + nameHtml + '</div>' +
+  1538→            '<div class="al-item-score ' + scoreClass(mean) + '">' + esc(scoreLine) + '</div>' +
+  1539→            (showBar ? '<div class="al-item-bar"><i style="width:' + pct + '%"></i></div>' : '') +
+  1540→          '</div>' +
+  1541→        '</div>';
+  1542→      }).join('');
+  1543→      renderPager(pages);
+  1544→    }
+  1545→    function renderPager(pages) {
+  1546→      if (!pagerEl) return;
+  1547→      if (pages <= 1) { pagerEl.innerHTML = ''; return; }
+  1548→      let html = `<button class="al-page-btn" ${page===1?'disabled':''} data-page="${page-1}">‹</button>`;
+  1549→      for (let p = 1; p <= pages; p++) {
+  1550→        if (p === 1 || p === pages || Math.abs(p - page) <= 1) html += `<button class="al-page-btn ${p===page?'active':''}" data-page="${p}">${p}</button>`;
+  1551→        else if (Math.abs(p - page) === 2) html += `<span class="al-page-dots">…</span>`;
+  1552→      }
+  1553→      html += `<button class="al-page-btn" ${page===pages?'disabled':''} data-page="${page+1}">›</button>`;
+  1554→      pagerEl.innerHTML = html;
+  1555→      pagerEl.querySelectorAll('.al-page-btn').forEach(b => b.addEventListener('click', () => { const p = +b.dataset.page; if (p>=1 && p<=pages) { page = p; render(); } }));
+  1556→    }
+  1557→    if (tabs) tabs.addEventListener('click', (e) => {
+  1558→      const t = e.target.closest('.al-tab'); if (!t) return;
+  1559→      tabs.querySelectorAll('.al-tab').forEach(b => b.classList.remove('active'));
+  1560→      t.classList.add('active'); activeStatus = t.dataset.status; page = 1; render();
+  1561→    });
+  1562→    if (tabs) tabs.addEventListener('keydown', function (e) { var bs = Array.from(tabs.querySelectorAll('.al-tab')); var i = bs.indexOf(document.activeElement); if (i === -1) return; if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); var n = e.key === 'ArrowRight' ? (i+1)%bs.length : (i-1+bs.length)%bs.length; bs[n].focus(); bs[n].click(); } });
+  1563→  })();
+  1564→
+  1565→  /* ============================================================
+  1566→     10. QUOTE SWAP
+  1567→     ============================================================ */
+  1568→  (function quotes() {
+  1569→    const QUOTES = [
+  1570→      ['Talk is cheap. Show me the code.', 'Linus Torvalds'],
+  1571→      ['First, solve the problem. Then, write the code.', 'John Johnson'],
+  1572→      ['Simplicity is the soul of efficiency.', 'Austin Freeman'],
+  1573→      ['The best error message is the one that never shows up.', 'Thomas Fuchs'],
+  1574→      ['Programs must be written for people to read.', 'Harold Abelson'],
+  1575→      ['Make it work, make it right, make it fast.', 'Kent Beck']
+  1576→    ];
+  1577→    let i = 0; const swap = $('quote-swap');
+  1578→    if (swap) swap.addEventListener('click', () => { i = (i + 1) % QUOTES.length; $('quote-text').textContent = QUOTES[i][0]; $('quote-author').textContent = '— ' + QUOTES[i][1]; });
+  1579→  })();
+  1580→
+  1581→  /* ============================================================
+  1582→     11. PRESENCE LINKS (Material Symbols icons; YatiniGPT removed)
+  1583→     ============================================================ */
+  1584→  (function presence() {
+  1585→    const grid = $('presence-grid'); if (!grid) return;
+  1586→    const LINKS = [
+  1587→      { icon: 'code', name: 'GitHub', url: 'https://github.com/YatinSharma1303' },
+  1588→      { icon: 'mail', name: 'Email', url: 'mailto:' + EMAIL },
+  1589→      { icon: 'library_music', name: 'Last.fm', url: 'https://www.last.fm/user/YATINSHARMA' },
+  1590→      { icon: 'live_tv', name: 'AniList', url: 'https://anilist.co/user/YatinSharma1303/' }
+  1591→    ];
+  1592→    grid.innerHTML = LINKS.map(l => `<a class="presence-link" href="${l.url}" target="_blank" rel="noopener"><span class="presence-icon material-symbols-outlined">${l.icon}</span><span class="presence-name">${l.name}</span></a>`).join('');
+  1593→  })();
+  1594→
+  1595→  /* ============================================================
+  1596→     12. TIME WIDGET (India vs visitor, live)
+  1597→     ============================================================ */
+  1598→  (function timeWidget() {
+  1599→    const india = $('time-india'), visitor = $('time-visitor'), sub = $('time-visitor-sub');
+  1600→    if (!india) return;
+  1601→    const opt = { hour: '2-digit', minute: '2-digit', hour12: true };
+  1602→    function tick() {
+  1603→      try { india.textContent = new Date().toLocaleTimeString('en-US', { ...opt, timeZone: CONFIG.timezone }); } catch (e) { india.textContent = '—'; }
+  1604→      try {
+  1605→        const vtz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  1606→        visitor.textContent = new Date().toLocaleTimeString('en-US', { ...opt, timeZone: vtz });
+  1607→        sub.textContent = (vtz === CONFIG.timezone) ? 'same timezone' : 'your time';
+  1608→      } catch (e) { visitor.textContent = '—'; }
+  1609→    }
+  1610→    tick(); setInterval(tick, 1000);
+  1611→  })();
+  1612→
+  1613→  /* ============================================================
+  1614→     13. SCROLL: parallax + progress bar + back-to-top
+  1615→     ============================================================ */
+  1616→  (function scrollFX() {
+  1617→    const orb = document.querySelector('.hero-gradient-orb');
+  1618→    const hero = $('hero');
+  1619→    const prog = $('scroll-progress');
+  1620→    const btt = $('back-to-top');
+  1621→    let ticking = false;
+  1622→    function update() {
+  1623→      const y = window.scrollY;
+  1624→      const docH = document.documentElement.scrollHeight - window.innerHeight;
+  1625→      if (orb) orb.style.transform = `translate(0, ${y * 0.15}px)`;
+  1626→      if (hero) hero.style.transform = `translateY(${y * 0.25}px)`;
+  1627→      if (prog) prog.style.width = (docH > 0 ? (y / docH * 100) : 0) + '%';
+  1628→      if (btt) btt.classList.toggle('visible', y > 600);
+  1629→      ticking = false;
+  1630→    }
+  1631→    window.addEventListener('scroll', () => { if (!ticking) { requestAnimationFrame(update); ticking = true; } }, { passive: true });
+  1632→    if (btt) btt.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  1633→  })();
+  1634→
+  1635→  /* ============================================================
+  1636→     14. ANIMATED COUNTERS
+  1637→     ============================================================ */
+  1638→  function animateCounter(id, target) {
+  1639→    const el = $(id); if (!el) return;
+  1640→    const num = Number(target) || 0;
+  1641→    if (el.dataset.counted) { el.textContent = num.toLocaleString(); return; }
+  1642→    const obs = new IntersectionObserver((entries) => {
+  1643→      entries.forEach(e => {
+  1644→        if (!e.isIntersecting) return;
+  1645→        el.dataset.counted = '1'; obs.disconnect();
+  1646→        const dur = 900, start = performance.now();
+  1647→        (function step(t) {
+  1648→          const p = Math.min(1, (t - start) / dur);
+  1649→          const eased = 1 - Math.pow(1 - p, 3);
+  1650→          el.textContent = Math.round(num * eased).toLocaleString();
+  1651→          if (p < 1) requestAnimationFrame(step);
+  1652→        })(start);
+  1653→      });
+  1654→    }, { threshold: 0.4 });
+  1655→    obs.observe(el);
+  1656→  }
+  1657→
+  1658→  /* ============================================================
+  1659→     15. (Removed Changelogs)
+  1660→     ============================================================ */
+  1661→
+  1662→  /* ============================================================
+  1663→     16. HERO TERMINAL (typing effect)
+  1664→     ============================================================ */
+  1665→  (function terminal() {
+  1666→    const el = $('term-line'); if (!el) return;
+  1667→    const LINES = [
+  1668→      { cmd: 'whoami', out: 'yatin - full-stack developer' },
+  1669→      { cmd: 'cat stack.txt', out: 'react . python . firebase . ai/ml' },
+  1670→      { cmd: 'status --current', out: 'building cool stuff' }
+  1671→    ];
+  1672→    let li = 0, phase = 'cmd', ci = 0;
+  1673→    let isVisible = false;
+  1674→    let typingTimer = null;
+  1675→
+  1676→    function typeClick() {}
+  1677→    
+  1678→    function tick() {
+  1679→      // If the terminal is scrolled out of view, stop looping and wait until it's visible again
+  1680→      if (!isVisible) { typingTimer = null; return; }
+  1681→      
+  1682→      const item = LINES[li];
+  1683→      if (phase === 'cmd') {
+  1684→        ci++;
+  1685→        typeClick();
+  1686→        el.innerHTML = '<span class="term-cmd">$ ' + esc(item.cmd.slice(0, ci)) + '</span>';
+  1687→        if (ci >= item.cmd.length) { phase = 'pause1'; typingTimer = setTimeout(tick, 400); return; }
+  1688→        typingTimer = setTimeout(tick, 70);
+  1689→      } else if (phase === 'pause1') {
+  1690→        phase = 'out'; ci = 0; typingTimer = setTimeout(tick, 200);
+  1691→      } else if (phase === 'out') {
+  1692→        ci++;
+  1693→        typeClick();
+  1694→        el.innerHTML = '<span class="term-cmd">$ ' + item.cmd + '</span><br>' + esc('> ' + item.out.slice(0, ci));
+  1695→        if (ci >= item.out.length) { phase = 'pause2'; typingTimer = setTimeout(tick, 1800); return; }
+  1696→        typingTimer = setTimeout(tick, 35);
+  1697→      } else {
+  1698→        li = (li + 1) % LINES.length; phase = 'cmd'; ci = 0; typingTimer = setTimeout(tick, 300);
+  1699→      }
+  1700→    }
+  1701→
+  1702→    // Start/Stop typing based on scroll visibility
+  1703→    const obs = new IntersectionObserver((entries) => {
+  1704→      entries.forEach(entry => {
+  1705→        const wasVisible = isVisible;
+  1706→        isVisible = entry.isIntersecting;
+  1707→        
+  1708→        // If it just became visible and the loop isn't running, start it
+  1709→        if (isVisible && !wasVisible && !typingTimer) {
+  1710→          typingTimer = setTimeout(tick, 0);
+  1711→        } 
+  1712→        // If it just scrolled out of view, clear the timer to pause sound/typing
+  1713→        else if (!isVisible && wasVisible && typingTimer) {
+  1714→          clearTimeout(typingTimer);
+  1715→          typingTimer = null;
+  1716→        }
+  1717→      });
+  1718→    }, { threshold: 0.2 }); // Trigger when 20% visible
+  1719→
+  1720→    // Observe the parent terminal container
+  1721→    const termBox = el.closest('.hero-terminal');
+  1722→    if (termBox) obs.observe(termBox);
+  1723→  })();
+  1724→
+  1725→  /* ============================================================
+  1726→     16b. HERO PARTICLES (neural-network style)
+  1727→     ============================================================ */
+  1728→  (function particles() {
+  1729→    const canvas = $('hero-particles'); if (!canvas) return;
+  1730→    const ctx = canvas.getContext('2d');
+  1731→    let dots = [], w, h;
+  1732→    function init() {
+  1733→      w = canvas.width = window.innerWidth;
+  1734→      h = canvas.height = window.innerHeight;
+  1735→      const count = Math.min(80, Math.floor(w * h / 18000));
+  1736→      dots = [];
+  1737→      for (let i = 0; i < count; i++) dots.push({ x: Math.random()*w, y: Math.random()*h, vx: (Math.random()-0.5)*0.3, vy: (Math.random()-0.5)*0.3 });
+  1738→    }
+  1739→    // Resize WITHOUT recreating dots — keeps them smooth across viewport changes.
+  1740→    function resize() {
+  1741→      const newW = window.innerWidth, newH = window.innerHeight;
+  1742→      w = canvas.width = newW;
+  1743→      h = canvas.height = newH;
+  1744→      // keep existing dots, just nudge any that are now off-screen back into bounds
+  1745→      dots.forEach(d => {
+  1746→        if (d.x > newW) d.x = Math.random() * newW;
+  1747→        if (d.y > newH) d.y = Math.random() * newH;
+  1748→      });
+  1749→    }
+  1750→    // Debounce resize so mobile URL-bar toggling doesn't thrash.
+  1751→    let resizeTimer = null;
+  1752→    window.addEventListener('resize', () => {
+  1753→      if (resizeTimer) clearTimeout(resizeTimer);
+  1754→      resizeTimer = setTimeout(resize, 200);
+  1755→    });
+  1756→    // Particle colour follows the palette accent (--accent-solid), parsed + cached.
+  1757→    let pAccent = { hex: '', rgb: '0,200,255' };
+  1758→    function accentRGB() {
+  1759→      const hex = (getComputedStyle(document.documentElement).getPropertyValue('--accent-solid') || '').trim();
+  1760→      if (hex && hex !== pAccent.hex) {
+  1761→        const m = hex.replace('#', '');
+  1762→        if (m.length === 6) pAccent = { hex: hex, rgb: parseInt(m.slice(0,2),16) + ',' + parseInt(m.slice(2,4),16) + ',' + parseInt(m.slice(4,6),16) };
+  1763→        else if (m.length === 3) pAccent = { hex: hex, rgb: parseInt(m[0]+m[0],16) + ',' + parseInt(m[1]+m[1],16) + ',' + parseInt(m[2]+m[2],16) };
+  1764→      }
+  1765→      return pAccent.rgb;
+  1766→    }
+  1767→    function draw() {
+  1768→      ctx.clearRect(0, 0, w, h);
+  1769→      dots.forEach(d => { d.x += d.vx; d.y += d.vy; if (d.x<0||d.x>w) d.vx*=-1; if (d.y<0||d.y>h) d.vy*=-1; });
+  1770→      // Light mode keeps a higher opacity so the accent particles stay visible on the light bg.
+  1771→      const isLight = document.documentElement.classList.contains('light');
+  1772→      const rgb = accentRGB();
+  1773→      const lineOpacity = isLight ? 0.3 : 0.15;
+  1774→      const dotColor = 'rgba(' + rgb + ',' + (isLight ? 0.75 : 0.6) + ')';
+  1775→      for (let i = 0; i < dots.length; i++) {
+  1776→        for (let j = i+1; j < dots.length; j++) {
+  1777→          const dx = dots[i].x - dots[j].x, dy = dots[i].y - dots[j].y;
+  1778→          const dist = Math.sqrt(dx*dx + dy*dy);
+  1779→          if (dist < 120) { ctx.strokeStyle = 'rgba(' + rgb + ',' + (lineOpacity * (1 - dist/120)) + ')'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(dots[i].x, dots[i].y); ctx.lineTo(dots[j].x, dots[j].y); ctx.stroke(); }
+  1780→        }
+  1781→      }
+  1782→      ctx.fillStyle = dotColor;
+  1783→      dots.forEach(d => { ctx.beginPath(); ctx.arc(d.x, d.y, 1.5, 0, 7); ctx.fill(); });
+  1784→      requestAnimationFrame(draw);
+  1785→    }
+  1786→    init(); draw();
+  1787→  })();
+  1788→
+  1789→  /* ============================================================
+  1790→     16c. TECH ORBIT (populate ring with icons)
+  1791→     ============================================================ */
+  1792→  (function orbit() {
+  1793→    const ring = $('orbit-ring'); if (!ring) return;
+  1794→    const TECH = ['R','Py','FB','AI','JS','TS','Git','ML'];
+  1795→    const radius = 115;
+  1796→    TECH.forEach((label, i) => {
+  1797→      const angle = (i / TECH.length) * Math.PI * 2;
+  1798→      const x = Math.cos(angle) * radius;
+  1799→      const y = Math.sin(angle) * radius;
+  1800→      const item = document.createElement('div');
+  1801→      item.className = 'orbit-item';
+  1802→      item.textContent = label;
+  1803→      // Position using top/left so it doesn't conflict with the CSS transform animation
+  1804→      item.style.left = `calc(50% + ${x}px)`;
+  1805→      item.style.top = `calc(50% + ${y}px)`;
+  1806→      ring.appendChild(item);
+  1807→    });
+  1808→  })();
+  1809→
+  1810→  /* ============================================================
+  1811→     16d. 3D CARD TILT (project + interest cards)
+  1812→     ============================================================ */
+  1813→  (function tilt() {
+  1814→    if (window.matchMedia('(hover: none)').matches) return;
+  1815→    document.querySelectorAll('.project-card, .interest-card').forEach(card => {
+  1816→      card.addEventListener('mousemove', (e) => {
+  1817→        const r = card.getBoundingClientRect();
+  1818→        const cx = e.clientX - r.left, cy = e.clientY - r.top;
+  1819→        const rx = ((cy / r.height) - 0.5) * -10;
+  1820→        const ry = ((cx / r.width) - 0.5) * 10;
+  1821→        card.style.transform = 'perspective(800px) rotateX(' + rx + 'deg) rotateY(' + ry + 'deg)';
+  1822→      });
+  1823→      card.addEventListener('mouseleave', () => { card.style.transform = ''; });
+  1824→    });
+  1825→  })();
+  1826→  /* ============================================================
+  1827→     17. ACTIVE NAV HIGHLIGHT (sync with scroll position)
+  1828→     ============================================================ */
+  1829→  (function activeNav() {
+  1830→    const navLinks = document.querySelectorAll('.topbar-nav-icons .tb-icon-btn');
+  1831→    if (!navLinks.length) return;
+  1832→    const sections = [];
+  1833→    navLinks.forEach(a => { const id = a.getAttribute('href').slice(1); const sec = document.getElementById(id); if (sec) sections.push({ sec, a }); });
+  1834→    if (!sections.length) return;
+  1835→    const obs = new IntersectionObserver((entries) => {
+  1836→      entries.forEach(e => {
+  1837→        if (e.isIntersecting) {
+  1838→          navLinks.forEach(a => a.classList.remove('active'));
+  1839→          const match = sections.find(s => s.sec === e.target);
+  1840→          if (match) match.a.classList.add('active');
+  1841→        }
+  1842→      });
+  1843→    }, { rootMargin: '-45% 0px -50% 0px' });
+  1844→    sections.forEach(s => obs.observe(s.sec));
+  1845→  })();
+  1846→
+  1847→  /* ============================================================
+  1848→     18. EMAIL — inject into DOM (not in HTML to dodge Cloudflare obfuscation)
+  1849→     ============================================================ */
+  1850→  (function setupEmail() {
+  1851→    // Populate bio card email text
+  1852→    const emailDisplay = $('email-display');
+  1853→    if (emailDisplay) emailDisplay.textContent = EMAIL;
+  1854→
+  1855→    // Wire footer mailto link
+  1856→    const footerLink = $('footer-email-link');
+  1857→    if (footerLink) footerLink.href = 'mailto:' + EMAIL;
+  1858→
+  1859→    // Copy button
+  1860→    function wireCopyButton(btn) {
+  1861→      if (!btn) return;
+  1862→      btn.addEventListener('click', async () => {
+  1863→        try {
+  1864→          await navigator.clipboard.writeText(EMAIL);
+  1865→          btn.classList.add('copied');
+  1866→          const orig = btn.textContent;
+  1867→          btn.textContent = 'check';
+  1868→          setTimeout(() => { btn.classList.remove('copied'); btn.textContent = orig; }, 1800);
+  1869→        } catch (e) {
+  1870→          // Fallback
+  1871→          const t = document.createElement('textarea'); t.value = EMAIL;
+  1872→          document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (er) {} document.body.removeChild(t);
+  1873→          btn.classList.add('copied'); setTimeout(() => btn.classList.remove('copied'), 1800);
+  1874→        }
+  1875→      });
+  1876→    }
+  1877→    wireCopyButton($('copy-email'));
+  1878→  })();
+  1879→
+  1880→
+  1881→  /* ============================================================
+  1882→     19. AMA — Firestore + Telegram + voting + sort + pagination
+  1883→     ============================================================ */
+  1884→  (function ama() {
+  1885→    const input = $('ama-input'), send = $('ama-send'), status = $('ama-status'),
+  1886→          countEl = $('ama-count'), listWrap = $('ama-list-wrap'),
+  1887→          list = $('ama-list'), sortWrap = $('ama-sort'), pager = $('ama-pager'), featured = $('ama-featured'),
+  1888→          searchInput = $('ama-search'), searchClear = $('ama-search-clear');
+  1889→    if (!input) return;
+  1890→    if (send) send.disabled = true;
+  1891→
+  1892→    const LIMIT_KEY = 'yatin_ama_submits';
+  1893→    const today = new Date().toDateString();
+  1894→    let todayCount = 0;
+  1895→    try { const stored = JSON.parse(localStorage.getItem(LIMIT_KEY) || '{}'); todayCount = stored.date === today ? stored.count : 0; } catch (e) {}
+  1896→    countEl.textContent = todayCount;
+  1897→
+  1898→    const nameInput = $('ama-name-input');
+  1899→    let nameTouched = false;
+  1900→    try { localStorage.removeItem('yatin_ama_name'); } catch (e) {}
+  1901→    if (nameInput) {
+  1902→      nameInput.value = '';
+  1903→      nameInput.setAttribute('autocomplete', 'off');
+  1904→      nameInput.addEventListener('input', () => { nameTouched = true; });
+  1905→    }
+  1906→
+  1907→    const counterFill = $('ama-counter-fill');
+  1908→
+  1909→    // Character counter & send button state — set up immediately
+  1910→    const MAX_CHARS = 280;
+  1911→    function updateCharCount() {
+  1912→      const len = input.value.length;
+  1913→      const charSpan = document.querySelector('#ama .ama-char-count');
+  1914→      if (charSpan) {
+  1915→        charSpan.classList.remove('warn', 'limit');
+  1916→        if (len > 250) charSpan.classList.add(len >= MAX_CHARS ? 'limit' : 'warn');
+  1917→      }
+  1918→      const numSpan = document.getElementById('ama-char-count');
+  1919→      if (numSpan) numSpan.textContent = len;
+  1920→      if (send) send.disabled = len === 0;
+  1921→      // Update counter bar
+  1922→      if (counterFill) {
+  1923→        const pct = Math.min(100, (todayCount / 20) * 100);
+  1924→        counterFill.style.width = pct + '%';
+  1925→        counterFill.classList.toggle('warn', pct >= 75);
+  1926→      }
+  1927→    }
+  1928→    input.addEventListener('input', updateCharCount);
+  1929→    input.addEventListener('keydown', updateCharCount);
+  1930→    updateCharCount();
+  1931→
+  1932→    const fb = CONFIG.firebase;
+  1933→    const FIREBASE_READY = fb && fb.apiKey && fb.projectId &&
+  1934→      fb.apiKey !== 'YOUR_FIREBASE_WEB_API_KEY' && fb.projectId !== 'YOUR_FIREBASE_PROJECT_ID';
+  1935→    const COL = CONFIG.amaCollection;
+  1936→    const base = () => `https://firestore.googleapis.com/v1/projects/${fb.projectId}/databases/(default)/documents`;
+  1937→    const queryUrl = () => `${base()}:runQuery?key=${encodeURIComponent(fb.apiKey)}`;
+  1938→    const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : ('q_' + Date.now() + '_' + Math.random().toString(16).slice(2)));
+  1939→    const PER_PAGE = 4;
+  1940→
+  1941→    let votedSet = new Set();
+  1942→    try { votedSet = new Set(JSON.parse(localStorage.getItem('yatin_ama_votes') || '[]')); } catch (e) {}
+  1943→    let reactedSet = new Set();
+  1944→    try { reactedSet = new Set(JSON.parse(localStorage.getItem('yatin_ama_reactions') || '[]')); } catch (e) {}
+  1945→
+  1946→    let answeredDocs = [], activeSort = 'top', page = 1, activeSearch = '';
+  1947→
+  1948→    function matchesSearch(q) {
+  1949→      if (!activeSearch) return true;
+  1950→      const s = activeSearch.toLowerCase();
+  1951→      return (q.question || '').toLowerCase().includes(s)
+  1952→        || (q.answer || '').toLowerCase().includes(s)
+  1953→        || (q.topic || '').toLowerCase().includes(s)
+  1954→        || (q.name || '').toLowerCase().includes(s);
+  1955→    }
+  1956→
+  1957→    function formatAmaTime(iso) {
+  1958→      if (!iso) return '';
+  1959→      try {
+  1960→        return new Date(iso).toLocaleString('en-IN', {
+  1961→          timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short',
+  1962→          hour: '2-digit', minute: '2-digit', hour12: true
+  1963→        });
+  1964→      } catch (e) { return ''; }
+  1965→    }
+  1966→    function titleTopicClient(value) {
+  1967→      const keep = { ai:'AI', ml:'ML', rag:'RAG', llm:'LLM', api:'API', css:'CSS', html:'HTML', js:'JS', ui:'UI', ux:'UX' };
+  1968→      return String(value || '').trim().split(/\s+/).filter(Boolean).map(w => {
+  1969→        const l = w.toLowerCase();
+  1970→        if (keep[l]) return keep[l];
+  1971→        if (l === 'react') return 'React';
+  1972→        if (l === 'firebase') return 'Firebase';
+  1973→        if (l === 'firestore') return 'Firestore';
+  1974→        if (l === 'github') return 'GitHub';
+  1975→        return l.charAt(0).toUpperCase() + l.slice(1);
+  1976→      }).join(' ').slice(0, 40) || 'General';
+  1977→    }
+  1978→    function autoTopicForQuestionClient(question, answer) {
+  1979→      const text = ((question || '') + ' ' + (answer || '')).toLowerCase();
+  1980→      const phrases = [
+  1981→        ['smarthealthcare', 'SmartHealthCare'], ['smart healthcare', 'SmartHealthCare'],
+  1982→        ['disease prediction', 'Disease Prediction'], ['drug recommendation', 'Drug Recommendation'], ['heart risk', 'Heart Risk'],
+  1983→        ['machine learning', 'Machine Learning'], ['deep learning', 'Deep Learning'], ['data science', 'Data Science'], ['random forest', 'Random Forest'],
+  1984→        ['rag chatbot', 'RAG Chatbot'], ['telegram bot', 'Telegram Bot'], ['firebase firestore', 'Firestore'], ['firestore rules', 'Firestore Rules'],
+  1985→        ['react hooks', 'React Hooks'], ['portfolio website', 'Portfolio'], ['full stack', 'Full Stack'], ['resume tips', 'Resume'],
+  1986→        ['career roadmap', 'Career Roadmap'], ['anime list', 'Anime List'], ['last fm', 'Last.fm'], ['last.fm', 'Last.fm']
+  1987→      ];
+  1988→      for (const [phrase, topic] of phrases) if (text.includes(phrase)) return topic;
+  1989→      const important = ['smarthealthcare','yatini','react','firebase','firestore','telegram','wakatime','lastfm','anilist','github','portfolio','resume','internship','roadmap','career','anime','naruto','gaara','bleach','pokemon','healthcare','prediction','medicine','disease','model','rag','llm','api','database','frontend','backend','python','javascript','typescript','tailwind','vercel','streamlit','faiss','groq'];
+  1990→      for (const w of important) if (new RegExp('(^|[^a-z0-9])' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^a-z0-9]|$)', 'i').test(text)) return titleTopicClient(w);
+  1991→      const stop = new Set(['what','why','how','can','you','your','the','and','for','with','about','please','tell','this','that','from','have','want','need','question','answer','anything','best','good','like','using','make','made','build','built','start','learn','explain']);
+  1992→      const counts = {};
+  1993→      text.replace(/[^a-z0-9+#.\s-]/g, ' ').split(/\s+/).filter(w => w.length >= 4 && !stop.has(w)).forEach(w => counts[w] = (counts[w] || 0) + 1);
+  1994→      const best = Object.keys(counts).sort((a,b) => (counts[b] * 10 + b.length) - (counts[a] * 10 + a.length))[0];
+  1995→      return best ? titleTopicClient(best) : 'General';
+  1996→    }
+  1997→
+  1998→    function fromDoc(doc) {
+  1999→      const f = doc.fields || {};
+  2000→      const reactions = {};
+
+[showing lines 1-2000 of 3371; use offset=2001 with limit to continue reading]
