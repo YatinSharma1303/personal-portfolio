@@ -2962,25 +2962,8 @@
   })();
 
   /* ============================================================
-     25. SECTION DIVIDERS
+     25. SECTION DIVIDERS (disabled — section headings have numbering)
      ============================================================ */
-  (function sectionDividers() {
-    const sections = document.querySelectorAll('.section, .hero');
-    const labels = { hero: '00', about: '01', skills: '02', contributions: '03', coding: '04', projects: '05', music: '06', anime: '07', interests: '08', ama: '09', playground: '10', presence: '11' };
-    for (let i = 1; i < sections.length; i++) {
-      const prev = sections[i - 1]; const cur = sections[i];
-      const lbl = labels[cur.id];
-      if (!lbl) continue;
-      const div = document.createElement('div');
-      div.className = 'section-divider fade-in';
-      div.innerHTML = '<div class="section-divider-line"></div><span class="section-divider-label">' + lbl + ' / ' + (cur.querySelector('.section-title')?.textContent || cur.id) + '</span><div class="section-divider-line"></div>';
-      cur.parentNode.insertBefore(div, cur);
-    }
-    const obs = new IntersectionObserver((entries) => {
-      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
-    }, { threshold: 0.3 });
-    document.querySelectorAll('.section-divider').forEach(d => obs.observe(d));
-  })();
 
   /* ============================================================
      26. GITHUB CONTRIBUTION GRAPH
