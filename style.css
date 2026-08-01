@@ -1866,7 +1866,7 @@ html.light .interest-icon { background: color-mix(in srgb, var(--accent-solid) 8
 .ama-input {
   width: 100%; min-height: 90px; resize: vertical;
   background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 16px;
-  padding: 16px 16px 32px 44px; color: var(--white); font-family: inherit; font-size: 15px; line-height: 1.5;
+  padding: 16px 50px 32px 44px; color: var(--white); font-family: inherit; font-size: 15px; line-height: 1.5;
   outline: none;
 }
 .ama-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-solid) 10%, transparent), 0 0 16px color-mix(in srgb, var(--accent-solid) 8%, transparent); }
@@ -2472,7 +2472,7 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
   /* AMA */
   .ama-deco-icon { font-size: 22px; }
   .ama-counter { font-size: 11px; padding: 5px 12px; }
-  .ama-input { min-height: 72px; padding: 14px 14px 28px 40px; font-size: 14px; }
+  .ama-input { min-height: 72px; padding: 14px 44px 28px 40px; font-size: 14px; }
   .ama-name-input { padding: 10px 14px 10px 40px; font-size: 13px; }
   .ama-input-icon { font-size: 16px; left: 12px; }
   .ama-textarea-wrap .ama-input-icon { top: 14px; }
