@@ -975,8 +975,9 @@ html.light .site-particles { opacity: 0.8; }
 
 /* Input form */
 .pchat-form {
-  display: flex; gap: 8px; padding: 12px;
+  display: flex; gap: 8px; padding: 12px 12px 18px 12px;
   border-top: 1px solid var(--border); align-items: center; position: relative;
+  flex-wrap: wrap;
 }
 .pchat-input {
   flex: 1; padding: 11px 14px; border-radius: 12px;
@@ -986,10 +987,12 @@ html.light .site-particles { opacity: 0.8; }
 .pchat-input:focus { border-color: var(--accent); }
 .pchat-input::placeholder { color: var(--gray-dim); }
 .pchat-char-count {
-  position: absolute; bottom: 16px; left: 56px;
+  width: 100%; text-align: right;
   font-family: var(--mono); font-size: 10px; color: var(--gray-dim);
   pointer-events: none; opacity: 0;
   transition: opacity 0.15s ease;
+  margin-top: 2px;
+  order: 10;
 }
 .pchat-char-count.visible { opacity: 0.6; }
 .pchat-char-count.warn { color: #f59e0b; opacity: 1 !important; }
