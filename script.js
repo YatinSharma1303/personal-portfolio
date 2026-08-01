@@ -1041,8 +1041,10 @@
       const npArtist = $('lfm-np-artist'); if (npArtist) { const a = (first.artist && (first.artist['#text'] || first.artist.name)) || ''; if (a) npArtist.textContent = a; }
       const npAlbum = $('lfm-np-album'); if (npAlbum) {
         const albumName = (first.album && first.album['#text']) || '';
-        npAlbum.textContent = albumName;
-        npAlbum.style.display = albumName ? '' : 'none';
+        const artistName = (first.artist && (first.artist['#text'] || first.artist.name)) || '';
+        const show = albumName && albumName.toLowerCase() !== artistName.toLowerCase();
+        npAlbum.textContent = show ? albumName : '';
+        npAlbum.style.display = show ? '' : 'none';
       }
       const npCard = $('lfm-nowplaying'); if (npCard) npCard.classList.toggle('live', !!isLive);
       const npLabel = $('lfm-np-label'); if (npLabel) npLabel.textContent = isLive ? 'NOW PLAYING' : 'LAST PLAYED';
