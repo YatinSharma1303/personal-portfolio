@@ -1608,6 +1608,8 @@ html.light .lastfm-card .skeleton { background: linear-gradient(90deg, rgba(0,0,
 .al-fav { position: absolute; top: 6px; right: 6px; z-index: 2; color: #ff5c8a; font-size: 13px; background: rgba(0,0,0,0.55); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 .al-item-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(6,8,14,0.97) 28%, rgba(6,8,14,0.55)); opacity: 0; transition: opacity 0.2s ease; padding: 10px; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; }
 .al-item:hover .al-item-overlay, .al-item:focus-within .al-item-overlay { opacity: 1; }
+.al-item:hover .al-cover-fmt, .al-item:focus-within .al-cover-fmt { opacity: 0; }
+.al-cover-fmt { transition: opacity 0.2s ease; }
 .al-ov-fmt { font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em; color: var(--accent); }
 .al-ov-genres { display: flex; flex-wrap: wrap; gap: 4px; }
 .al-ov-genres span { font-family: var(--mono); font-size: 9px; padding: 2px 6px; border-radius: 6px; background: rgba(255,255,255,0.14); color: #fff; }
