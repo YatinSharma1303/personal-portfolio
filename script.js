@@ -1030,18 +1030,18 @@
       if (npArtEl) {
         const url = recentTrackArt(first);
         if (url) { npArtEl.style.cssText = 'background:#141414 url(\'' + url + '\') center/cover no-repeat'; npArtEl.classList.remove('lfm-noart'); npArtEl.textContent = ''; }
-        else { npArtEl.style.cssText = 'background:#141414'; npArtEl.classList.add('lfm-noart'); npArtEl.textContent = '♪'; }
+        else { npArtEl.style.cssText = 'background:#141414'; npArtEl.classList.add('lfm-noart'); npArtEl.textContent = '\u266A'; }
         npArtEl.style.visibility = 'visible';
         if (npBgEl) {
           if (url && isLive) { npBgEl.style.backgroundImage = 'url(\'' + url + '\')'; }
           else { npBgEl.style.backgroundImage = ''; }
         }
       }
-      const npTrack = $('lfm-np-track'); if (npTrack) npTrack.textContent = first.name || '—';
-      const npArtist = $('lfm-np-artist'); if (npArtist) npArtist.textContent = (first.artist && (first.artist['#text'] || first.artist.name)) || '—';
+      const npTrack = $('lfm-np-track'); if (npTrack && first.name) npTrack.textContent = first.name;
+      const npArtist = $('lfm-np-artist'); if (npArtist) { const a = (first.artist && (first.artist['#text'] || first.artist.name)) || ''; if (a) npArtist.textContent = a; }
       const npAlbum = $('lfm-np-album'); if (npAlbum) {
         const albumName = (first.album && first.album['#text']) || '';
-        npAlbum.textContent = albumName || '';
+        npAlbum.textContent = albumName;
         npAlbum.style.display = albumName ? '' : 'none';
       }
       const npCard = $('lfm-nowplaying'); if (npCard) npCard.classList.toggle('live', !!isLive);
