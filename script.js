@@ -1242,6 +1242,31 @@
     }
     /* When AniList API is down, show a clean message and hide the list body */
 
+    function showApiDown(type) {
+      var banner = $('al-banner'); if (banner) banner.style.display = 'none';
+      if (statsPanel) statsPanel.style.display = 'none';
+      if (genreBar) genreBar.style.display = 'none';
+      if (controlsBar) controlsBar.style.display = 'none';
+      if (pagerEl) pagerEl.style.display = 'none';
+      /* Keep tabs and media switcher visible */
+      list.innerHTML = '<div class="al-api-down"><span class="material-symbols-outlined" style="font-size:48px;display:block;margin-bottom:16px;opacity:.6">cloud_off</span><div style="font-size:18px;font-weight:600;margin-bottom:8px">AniList API is currently down</div><div style="opacity:.6;font-size:14px;max-width:320px;margin:0 auto">Your ' + (type === 'MANGA' ? 'manga' : 'anime') + ' list will be back once the API is available again.</div><button id="al-retry-btn" style="margin-top:20px;padding:10px 24px;border-radius:12px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;cursor:pointer;font-size:14px">Retry</button></div>';
+      var retryBtn = document.getElementById('al-retry-btn');
+      if (retryBtn) retryBtn.addEventListener('click', function() { retryAnilist(type); });
+    }
+
+    function retryAnilist(type) {
+      /* Unhide everything so loadMedia/refreshAll can populate it */
+      if (statsPanel) statsPanel.style.display = '';
+      if (genreBar) genreBar.style.display = '';
+      if (controlsBar) controlsBar.style.display = '';
+      if (pagerEl) pagerEl.style.display = '';
+      list.innerHTML = '<div class="al-empty">Retrying ' + (type === 'MANGA' ? 'manga' : 'anime') + '…</div>';
+      loading[type] = false;
+      loaded[type] = false;
+      loadMedia(type);
+      loadUserMeta();
+    }
+
     function buildListQuery(type) {
       const progressFields = type === 'MANGA' ? 'chapters volumes' : 'episodes duration';
       return `query{user:MediaListCollection(userName:"${CONFIG.anilistUser}",type:${type}){lists{name status entries{media{id title{romaji english}coverImage{extraLarge large medium}${progressFields} meanScore genres format description(asHtml:false) startDate{year month day} endDate{year month day}}score progress updatedAt startedAt{year month day} completedAt{year month day}}}}}`;
@@ -1259,18 +1284,17 @@
           lists.forEach(l => (l.entries || []).forEach(e => { if (e && e.media) { e._status = l.status; entries.push(e); } }));
           if (!entries.length) throw new Error('AniList list empty');
           datasets[type] = entries; loaded[type] = true; loading[type] = false;
+          /* Restore hidden elements if they were hidden by showApiDown */
+          if (statsPanel) statsPanel.style.display = '';
+          if (genreBar) genreBar.style.display = '';
+          if (controlsBar) controlsBar.style.display = '';
+          if (pagerEl) pagerEl.style.display = '';
           if (activeMedia === type) { allEntries = datasets[type]; refreshAll(); }
         }).catch((err) => {
           loading[type] = false;
+          loaded[type] = false; // allow retry
           console.warn('AniList ' + type + ' load failed:', err);
-          /* Hide all interactive body elements when API is down */
-          var banner = $('al-banner'); if (banner) banner.style.display = 'none';
-          var tabs = $('al-tabs'); if (tabs) tabs.style.display = 'none';
-          if (statsPanel) statsPanel.style.display = 'none';
-          if (genreBar) genreBar.style.display = 'none';
-          if (controlsBar) controlsBar.style.display = 'none';
-          if (pagerEl) pagerEl.style.display = 'none';
-          list.innerHTML = '<div class="al-api-down"><span class="material-symbols-outlined" style="font-size:48px;display:block;margin-bottom:16px;opacity:.6">cloud_off</span><div style="font-size:18px;font-weight:600;margin-bottom:8px">AniList API is currently down</div><div style="opacity:.6;font-size:14px;max-width:320px;margin:0 auto">Your anime &amp; manga list will be back once the API is available again.</div><button onclick="location.reload()" style="margin-top:20px;padding:10px 24px;border-radius:12px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;cursor:pointer;font-size:14px">Retry</button></div>';
+          showApiDown(type);
         });
     }
 
