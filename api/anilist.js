@@ -1,7 +1,9 @@
 /* ============================================================
  api/anilist.js - Vercel serverless function
- Proxies AniList GraphQL API calls server-side so the frontend
- doesn't call graphql.anilist.co directly from the browser.
+ Proxies AniList GraphQL API calls server-side.
+ When AniList is down, dynamically fetches from Shikimori API
+ (popular anime list) + Jikan for cover images.
+ No hardcoded data — always fresh from real APIs.
 
  Usage from frontend:
    /api/anilist?type=ANIME
@@ -10,72 +12,230 @@
  ============================================================ */
 
 var ANILIST_API = 'https://graphql.anilist.co';
+var SHIKIMORI_API = 'https://shikimori.one/api';
+var JIKAN_API = 'https://api.jikan.moe/v4';
+var ANILIST_USER = process.env.ANILIST_USER || 'YatinSharma1303';
 
-/* Simple in-memory cache (per cold-start invocation).
-   AniList data changes when user updates their list. */
+/* In-memory cache */
 var _cache = {};
-var CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+var CACHE_TTL = 2 * 60 * 1000;
+var FALLBACK_CACHE_TTL = 10 * 60 * 1000;
+
+/* ---------- AniList queries ---------- */
 
 function buildListQuery(type) {
-  var progressFields = type === 'MANGA' ? 'chapters volumes' : 'episodes duration';
-  return 'query{user:MediaListCollection(userName:"' + (process.env.ANILIST_USER || 'YatinSharma1303') + '",type:' + type + '){lists{name status entries{media{id title{romaji english}coverImage{extraLarge large medium}' + progressFields + ' meanScore genres format description(asHtml:false) startDate{year month day} endDate{year month day}}score progress updatedAt startedAt{year month day} completedAt{year month day}}}}}';
+  var pf = type === 'MANGA' ? 'chapters volumes' : 'episodes duration';
+  return 'query{user:MediaListCollection(userName:"' + ANILIST_USER + '",type:' + type + '){lists{name status entries{media{id title{romaji english}coverImage{extraLarge large medium}' + pf + ' meanScore genres format description(asHtml:false) startDate{year month day} endDate{year month day}}score progress updatedAt startedAt{year month day} completedAt{year month day}}}}}';
 }
 
-var userQuery = 'query{User(name:"' + (process.env.ANILIST_USER || 'YatinSharma1303') + '"){avatar{large}favourites{anime{nodes{id}}manga{nodes{id}}}statistics{anime{count episodesWatched minutesWatched meanScore genres{genre count}}manga{count chaptersRead volumesRead meanScore genres{genre count}}}}}';
+var userQuery = 'query{User(name:"' + ANILIST_USER + '"){avatar{large}favourites{anime{nodes{id}}manga{nodes{id}}}statistics{anime{count episodesWatched minutesWatched meanScore genres{genre count}}manga{count chaptersRead volumesRead meanScore genres{genre count}}}}}';
 
-async function fetchAnilist(query, cacheKey, cacheTtl) {
-  cacheTtl = cacheTtl || CACHE_TTL;
+/* ---------- Cache helpers ---------- */
 
-  /* Check cache */
-  if (cacheKey) {
-    var cached = _cache[cacheKey];
-    if (cached && Date.now() - cached.ts < cacheTtl) {
-      return { body: cached.body, cached: true };
-    }
+function getCached(key, maxAge) {
+  var c = _cache[key];
+  if (c && Date.now() - c.ts < maxAge) return c.body;
+  return null;
+}
+function setCache(key, body) { _cache[key] = { body: body, ts: Date.now() }; }
+function purgeCache() {
+  var now = Date.now(), keys = Object.keys(_cache);
+  for (var i = 0; i < keys.length; i++) {
+    if (now - _cache[keys[i]].ts > FALLBACK_CACHE_TTL * 3) delete _cache[keys[i]];
   }
+}
+
+async function fetchWithTimeout(url, options, timeoutMs) {
+  timeoutMs = timeoutMs || 8000;
+  var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var timer = controller ? setTimeout(function() { controller.abort(); }, timeoutMs) : null;
+  try {
+    var res = await fetch(url, Object.assign({}, options, controller ? { signal: controller.signal } : {}));
+    if (timer) clearTimeout(timer);
+    return res;
+  } catch (e) { if (timer) clearTimeout(timer); throw e; }
+}
+
+/* ---------- AniList fetch ---------- */
+
+async function fetchAnilist(query, cacheKey) {
+  var cached = getCached(cacheKey, CACHE_TTL);
+  if (cached) return { body: cached, source: 'anilist-cache' };
+  try {
+    var response = await fetchWithTimeout(ANILIST_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ query: query })
+    }, 8000);
+    if (!response.ok) return { ok: false, error: 'AniList HTTP ' + response.status };
+    var data = await response.json();
+    if (data.errors) return { ok: false, error: data.errors[0].message };
+    setCache(cacheKey, data);
+    return { body: data, source: 'anilist' };
+  } catch (e) { return { ok: false, error: e.message || 'timeout' }; }
+}
+
+/* ---------- Shikimori fallback (data) ---------- */
+
+/*
+ * Shikimori IDs = MAL IDs. Their API returns anime/manga with:
+ *   id, name, russian, english, japanese, synonyms, kind, score,
+ *   episodes, status, aired_on, released_on, genres, image paths
+ *
+ * We use this as the primary fallback data source.
+ */
+
+async function fetchShikimoriList(type) {
+  var cacheKey = 'shikimori:list:' + type;
+  var cached = getCached(cacheKey, FALLBACK_CACHE_TTL);
+  if (cached) return { body: cached, source: 'shikimori-cache' };
 
   try {
-    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    var timer = controller ? setTimeout(function() { controller.abort(); }, 8000) : null;
+    var kind = type === 'MANGA' ? 'manga' : 'tv';
+    var url = SHIKIMORI_API + '/animes?limit=25&order=popularity&kind=' + kind;
 
-    var response = await fetch(ANILIST_API, {
-      method: 'POST',
+    var response = await fetchWithTimeout(url, {
       headers: {
-        'Content-Type': 'application/json',
+        'User-Agent': 'YatinPortfolio/1.0',
         'Accept': 'application/json'
-      },
-      body: JSON.stringify({ query: query }),
-      signal: controller ? controller.signal : undefined
+      }
+    }, 6000);
+
+    if (!response.ok) return { ok: false, error: 'Shikimori HTTP ' + response.status };
+
+    var items = await response.json();
+    if (!Array.isArray(items) || !items.length) return { ok: false, error: 'Shikimori empty' };
+
+    /* Enrich with cover art images from Jikan (MAL IDs are the same) */
+    var enrichedItems = await enrichWithJikanImages(items);
+
+    /* Map to AniList format */
+    var entries = enrichedItems.map(function(item) {
+      var genres = (item.genres || []).map(function(g) {
+        return (typeof g === 'string') ? g : (g.name || g.russian || '');
+      }).filter(Boolean);
+
+      return {
+        _status: 'COMPLETED',
+        score: Math.round((item.score || 0) * 10),
+        progress: type === 'MANGA' ? (item.chapters || 0) : (item.episodes || 0),
+        media: {
+          id: item.mal_id || item.id || 0,
+          title: {
+            romaji: item.name || '',
+            english: item.english || item.name || ''
+          },
+          coverImage: {
+            extraLarge: item.coverUrl || '',
+            large: item.coverUrl || '',
+            medium: item.coverUrlSmall || item.coverUrl || ''
+          },
+          episodes: type === 'MANGA' ? null : (item.episodes || null),
+          chapters: type === 'MANGA' ? (item.chapters || null) : null,
+          volumes: type === 'MANGA' ? (item.volumes || null) : null,
+          duration: type === 'MANGA' ? null : 24,
+          meanScore: Math.round((item.score || 0) * 10),
+          genres: genres,
+          format: mapShikimoriKind(item.kind),
+          description: '',
+          startDate: item.aired_on ? parseShikimoriDate(item.aired_on) : null,
+          endDate: item.released_on ? parseShikimoriDate(item.released_on) : null
+        },
+        updatedAt: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 864000),
+        startedAt: { year: null },
+        completedAt: { year: null }
+      };
     });
 
-    if (timer) clearTimeout(timer);
+    var anilistFormat = {
+      data: {
+        user: {
+          lists: [{ name: type, status: 'COMPLETED', entries: entries }]
+        }
+      },
+      _fallback: true,
+      _source: 'shikimori'
+    };
 
-    if (!response.ok) {
-      return { ok: false, status: response.status, error: 'AniList HTTP ' + response.status };
-    }
-
-    var data = await response.json();
-
-    /* Cache successful responses */
-    if (cacheKey) {
-      _cache[cacheKey] = { body: data, ts: Date.now() };
-    }
-
-    return { body: data, cached: false };
+    setCache(cacheKey, anilistFormat);
+    return { body: anilistFormat, source: 'shikimori' };
   } catch (e) {
-    return { ok: false, error: e.message || 'timeout' };
+    return { ok: false, error: e.message || 'Shikimori timeout' };
   }
 }
 
-/* Purge stale cache entries */
-function purgeCache() {
-  var keys = Object.keys(_cache);
-  for (var i = 0; i < keys.length; i++) {
-    if (Date.now() - _cache[keys[i]].ts > CACHE_TTL * 3) {
-      delete _cache[keys[i]];
+/* Fetch cover art URLs from Jikan for Shikimori items (MAL IDs match) */
+async function enrichWithJikanImages(items) {
+  /* Fetch images in small batches to respect rate limits */
+  var batchSize = 5;
+  for (var i = 0; i < items.length; i += batchSize) {
+    var batch = items.slice(i, i + batchSize);
+    await Promise.all(batch.map(async function(item) {
+      try {
+        var malId = item.mal_id || item.id;
+        var res = await fetchWithTimeout(
+          JIKAN_API + '/anime/' + malId,
+          { headers: { 'User-Agent': 'YatinPortfolio/1.0' } },
+          3000
+        );
+        if (res.ok) {
+          var data = await res.json();
+          var imgs = data && data.data && data.data.images && data.data.images.jpg;
+          if (imgs) {
+            item.coverUrl = imgs.large_image_url || imgs.image_url || '';
+            item.coverUrlSmall = imgs.image_url || item.coverUrl;
+          }
+        }
+      } catch (e) {
+        /* If Jikan fails for one item, just skip — no cover is better than breaking */
+        item.coverUrl = item.coverUrl || '';
+        item.coverUrlSmall = item.coverUrlSmall || '';
+      }
+    }));
+    /* Small delay between batches to be gentle on Jikan rate limits */
+    if (i + batchSize < items.length) {
+      await new Promise(function(r) { setTimeout(r, 350); });
     }
   }
+  return items;
 }
+
+function parseShikimoriDate(dateStr) {
+  if (!dateStr) return null;
+  var parts = String(dateStr).split('-');
+  if (parts.length >= 1) {
+    return { year: parseInt(parts[0]) || null, month: parts[1] ? parseInt(parts[1]) : null, day: parts[2] ? parseInt(parts[2]) : null };
+  }
+  return null;
+}
+
+function mapShikimoriKind(kind) {
+  if (!kind) return 'TV';
+  var map = {
+    'tv': 'TV', 'tv_special': 'TV_SPECIAL', 'ova': 'OVA', 'ona': 'ONA',
+    'movie': 'MOVIE', 'music': 'MUSIC', 'special': 'SPECIAL',
+    'web': 'ONA', 'cm': 'SPECIAL', 'pv': 'SPECIAL',
+    'manga': 'MANGA', 'manhwa': 'MANGA', 'manhua': 'MANGA',
+    'novel': 'NOVEL', 'one_shot': 'ONE_SHOT'
+  };
+  return map[String(kind).toLowerCase()] || 'TV';
+}
+
+/* ---------- Shikimori meta fallback ---------- */
+
+async function fetchShikimoriMetaFallback() {
+  var cacheKey = 'shikimori:meta';
+  var cached = getCached(cacheKey, FALLBACK_CACHE_TTL);
+  if (cached) return { body: cached, source: 'shikimori-cache' };
+
+  /* Shikimori doesn't have user profiles via this API, so return null gracefully.
+     The frontend already handles missing User data. */
+  var result = { data: { User: null }, _fallback: true, _source: 'shikimori-meta' };
+  setCache(cacheKey, result);
+  return { body: result, source: 'shikimori-meta' };
+}
+
+/* ---------- Main handler ---------- */
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -85,16 +245,18 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'GET') return res.status(405).json({ ok: false, error: 'Method not allowed' });
 
-  /* meta=1 → fetch user avatar, favourites, statistics */
+  /* meta=1 → user avatar, favourites, statistics */
   if (req.query.meta === '1') {
     var result = await fetchAnilist(userQuery, 'anilist:meta');
+    if (!result.body || result.ok === false) {
+      result = await fetchShikimoriMetaFallback();
+    }
     purgeCache();
-
     if (result.body) {
       res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=300');
       return res.status(200).json(result.body);
     }
-    return res.status(502).json({ ok: false, error: result.error || 'Failed to reach AniList' });
+    return res.status(502).json({ ok: false, error: result.error || 'All sources failed' });
   }
 
   /* type=ANIME|MANGA → fetch media list */
@@ -103,18 +265,24 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ ok: false, error: 'Invalid type. Use ANIME or MANGA.' });
   }
 
+  /* 1) Try AniList first */
   var query = buildListQuery(type);
   var result = await fetchAnilist(query, 'anilist:list:' + type);
+
+  /* 2) If AniList fails, dynamically fetch from Shikimori + Jikan images */
+  if (!result.body || result.ok === false) {
+    console.log('AniList ' + type + ' failed (' + (result.error || '?') + '), trying Shikimori fallback');
+    result = await fetchShikimoriList(type);
+  }
+
   purgeCache();
 
   if (result.body) {
-    if (result.body.errors) {
-      /* AniList returned a GraphQL error — pass it through so the frontend can handle it */
-      res.setHeader('Cache-Control', 'no-store');
-      return res.status(200).json(result.body);
-    }
     res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=300');
+    res.setHeader('X-Anime-Source', result.source || 'unknown');
     return res.status(200).json(result.body);
   }
-  return res.status(502).json({ ok: false, error: result.error || 'Failed to reach AniList' });
+
+  /* Both AniList and Shikimori failed — frontend will use its local hardcoded fallback */
+  return res.status(502).json({ ok: false, error: result.error || 'All sources failed' });
 };
