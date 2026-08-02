@@ -1638,6 +1638,7 @@ html.light .lastfm-card .skeleton { background: linear-gradient(90deg, rgba(0,0,
 .al-tab-count { margin-left: 6px; opacity: 0.6; font-size: 10px; }
 .al-tab.active .al-tab-count { opacity: 0.85; }
 .al-empty { grid-column: 1/-1; text-align: center; color: var(--gray-dim); font-family: var(--mono); font-size: 13px; padding: 20px; }
+.al-api-down { grid-column: 1/-1; text-align: center; color: var(--gray-dim); padding: 60px 20px; display: flex; flex-direction: column; align-items: center; }
 
 /* ====== AniList Improvements ====== */
 
