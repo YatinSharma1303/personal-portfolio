@@ -1261,9 +1261,10 @@
     function loadMedia(type) {
       if (loaded[type] || loading[type]) return;
       loading[type] = true;
-      fetch('https://graphql.anilist.co', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ query: buildListQuery(type) }) })
-        .then(r => { if (!r.ok) throw new Error('AniList HTTP ' + r.status); return r.json(); }).then(d => {
+      fetch('/api/anilist?type=' + type)
+        .then(r => { if (!r.ok) throw new Error('AniList proxy HTTP ' + r.status); return r.json(); }).then(d => {
           if (d.errors) throw new Error(d.errors[0]?.message || 'AniList GraphQL error');
+          if (d.ok === false) throw new Error(d.error || 'AniList proxy error');
           const lists = (d.data && d.data.user && d.data.user.lists) || [];
           const entries = [];
           lists.forEach(l => (l.entries || []).forEach(e => { if (e && e.media) { e._status = l.status; entries.push(e); } }));
@@ -1309,7 +1310,7 @@
     // Fetch user avatar, favourites and statistics for both media types (separate request)
     const userQuery = `query{User(name:"${CONFIG.anilistUser}"){avatar{large}favourites{anime{nodes{id}}manga{nodes{id}}}statistics{anime{count episodesWatched minutesWatched meanScore genres{genre count}}manga{count chaptersRead volumesRead meanScore genres{genre count}}}}}`;
     function loadUserMeta() {
-      return fetch('https://graphql.anilist.co?_=' + Date.now(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: userQuery }) })
+      return fetch('/api/anilist?meta=1&_=' + Date.now())
         .then(r => r.json()).then(d => {
           const u = d && d.data && d.data.User; if (!u) return;
           const av = $('al-avatar'); if (av && u.avatar && u.avatar.large) av.src = u.avatar.large;
