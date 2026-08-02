@@ -1240,50 +1240,8 @@
       }
       if (!pagerEl) { pagerEl = document.createElement('div'); pagerEl.className = 'al-pagination'; card.appendChild(pagerEl); }
     }
-    /* Hardcoded fallback anime list (user's actual taste, not random popular list).
-       Cover art URLs are fetched dynamically from Jikan (MAL) so they never break. */
-    var FALLBACK_ANIME = [
-      { _status: 'CURRENT', progress: 52, score: 0, updatedAt: Date.now()/1000, media: { id: 20, title: { romaji: 'NARUTO', english: 'Naruto' }, coverImage: { extraLarge: '' }, episodes: 220, duration: 23, meanScore: 79, genres: ['Action', 'Adventure'], format: 'TV' } },
-      { _status: 'COMPLETED', progress: 64, score: 0, updatedAt: Date.now()/1000 - 10, media: { id: 5114, title: { romaji: 'FULLMETAL ALCHEMIST: BROTHERHOOD', english: 'Fullmetal Alchemist: Brotherhood' }, coverImage: { extraLarge: '' }, episodes: 64, duration: 25, meanScore: 92, genres: ['Action', 'Adventure', 'Drama'], format: 'TV' } },
-      { _status: 'COMPLETED', progress: 37, score: 0, updatedAt: Date.now()/1000 - 20, media: { id: 1535, title: { romaji: 'DEATH NOTE', english: 'Death Note' }, coverImage: { extraLarge: '' }, episodes: 37, duration: 23, meanScore: 87, genres: ['Mystery', 'Psychological', 'Thriller'], format: 'TV' } },
-      { _status: 'COMPLETED', progress: 75, score: 0, updatedAt: Date.now()/1000 - 30, media: { id: 16498, title: { romaji: 'SHINGEKI NO KYOJIN', english: 'Attack on Titan' }, coverImage: { extraLarge: '' }, episodes: 75, duration: 24, meanScore: 86, genres: ['Action', 'Drama'], format: 'TV' } },
-      { _status: 'COMPLETED', progress: 26, score: 0, updatedAt: Date.now()/1000 - 40, media: { id: 21, title: { romaji: 'ONE PIECE', english: 'One Piece' }, coverImage: { extraLarge: '' }, episodes: 26, duration: 24, meanScore: 87, genres: ['Action', 'Adventure', 'Comedy'], format: 'TV' } },
-      { _status: 'PLANNING', progress: 0, score: 0, updatedAt: Date.now()/1000 - 50, media: { id: 1, title: { romaji: 'COWBOY BEBOP', english: 'Cowboy Bebop' }, coverImage: { extraLarge: '' }, episodes: 26, duration: 24, meanScore: 88, genres: ['Action', 'Sci-Fi'], format: 'TV' } }
-    ];
-    /* Cache fetched cover art URLs so we don't re-fetch on every fallback trigger */
-    var _fallbackArtCache = {};
-
-    function loadFallbackAnime() {
-      datasets.ANIME = JSON.parse(JSON.stringify(FALLBACK_ANIME));
-      loaded.ANIME = true;
-      if (activeMedia === 'ANIME') { allEntries = datasets.ANIME; refreshAll(); }
-      /* Fetch cover art from Jikan in background (MAL IDs = AniList IDs for these anime) */
-      fetchFallbackArt();
-    }
-
-    function fetchFallbackArt() {
-      var entries = datasets.ANIME;
-      entries.forEach(function(entry) {
-        var malId = entry.media && entry.media.id;
-        if (!malId) return;
-        if (_fallbackArtCache[malId]) {
-          entry.media.coverImage.extraLarge = _fallbackArtCache[malId];
-          return;
-        }
-        fetch('https://api.jikan.moe/v4/anime/' + malId, { headers: { 'User-Agent': 'YatinPortfolio/1.0' } })
-          .then(function(r) { if (!r.ok) throw new Error(); return r.json(); })
-          .then(function(d) {
-            var imgs = d && d.data && d.data.images && d.data.images.jpg;
-            if (imgs && imgs.large_image_url) {
-              _fallbackArtCache[malId] = imgs.large_image_url;
-              entry.media.coverImage.extraLarge = imgs.large_image_url;
-              entry.media.coverImage.large = imgs.large_image_url;
-              entry.media.coverImage.medium = imgs.image_url || imgs.large_image_url;
-              if (activeMedia === 'ANIME') render();
-            }
-          }).catch(function() { /* Cover art fetch failed — image stays empty, that's ok */ });
-      });
-    }
+    /* No hardcoded fallback — the server proxy (/api/anilist) handles fallback
+       to Shikimori+Jikan dynamically. If even that fails, show a message. */
 
     function buildListQuery(type) {
       const progressFields = type === 'MANGA' ? 'chapters volumes' : 'episodes duration';
@@ -1306,8 +1264,7 @@
         }).catch((err) => {
           loading[type] = false;
           console.warn('AniList ' + type + ' load failed:', err);
-          if (type === 'ANIME') loadFallbackAnime();
-          else if (activeMedia === 'MANGA') { list.innerHTML = '<div class="al-empty">Couldn\u2019t load manga list right now.</div>'; }
+          list.innerHTML = '<div class="al-empty">Couldn\u2019t load ' + (type === 'MANGA' ? 'manga' : 'anime') + ' list right now. Try refreshing.</div>';
         });
     }
 
