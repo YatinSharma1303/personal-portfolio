@@ -1387,7 +1387,7 @@
     ];
     const isManga = () => activeMedia === 'MANGA';
     const unitLong = () => isManga() ? 'chapters' : 'episodes';
-    const unitShort = () => isManga() ? 'ch' : 'eps';
+    const unitShort = () => isManga() ? 'ch' : 'EP';
     const verbPast = () => isManga() ? 'read' : 'watched';
 
     function entryTitle(e) {
