@@ -1531,9 +1531,9 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .lfm-nowplaying.live .lfm-np-bg { opacity: 0.4; }
 
 /* Layer 2: ghost thumbnail — faint recognizable cover art hint */
-.lfm-np-bg-ghost { position: absolute; inset: 0; background-size: cover; background-position: center; filter: blur(8px) saturate(0.6) brightness(0.5); opacity: 0; transition: opacity 0.8s ease 0.15s; border-radius: inherit; z-index: 0; pointer-events: none; }
-.lfm-nowplaying.live .lfm-np-bg-ghost { opacity: 0.4; }
-html.light .lfm-nowplaying.live .lfm-np-bg-ghost { opacity: 0.3; }
+.lfm-np-bg-ghost { position: absolute; inset: 0; background-size: cover; background-position: center; filter: blur(4px) saturate(0.7) brightness(0.55); opacity: 0; transition: opacity 0.8s ease 0.15s; border-radius: inherit; z-index: 0; pointer-events: none; }
+.lfm-nowplaying.live .lfm-np-bg-ghost { opacity: 0.55; }
+html.light .lfm-nowplaying.live .lfm-np-bg-ghost { opacity: 0.4; }
 
 .lfm-np-art-wrap, .lfm-np-info { position: relative; z-index: 1; }
 
