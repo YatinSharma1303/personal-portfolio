@@ -1825,8 +1825,8 @@
         const hasCustomDates = e.startedAt && e.startedAt.year;
         const watchStr = hasCustomDates ? (function() { try { if (wdS && wdE && wdS !== wdE) return wdS + ' \u2192 ' + wdE; return wdS || ''; } catch(err) { return ''; } })() : '';
         var dateInfo = '';
-        if (airStr) dateInfo += '<span class="al-item-date"><span class="material-symbols-outlined">tv</span><span>' + esc(airStr) + '</span></span>';
-        if (watchStr) dateInfo += '<span class="al-item-date"><span class="material-symbols-outlined">schedule</span><span>' + esc(watchStr) + '</span></span>';
+        if (airStr) dateInfo += '<div class="al-item-date"><span class="material-symbols-outlined">tv</span><span>' + esc(airStr) + '</span></div>';
+        if (watchStr) dateInfo += '<div class="al-item-date"><span class="material-symbols-outlined">schedule</span><span>' + esc(watchStr) + '</span></div>';
         const overlay = (genres.length || desc || fmt) ?
           '<div class="al-item-overlay">' +
             (fmt ? '<div class="al-ov-fmt">' + esc(fmt) + '</div>' : '') +
@@ -1849,10 +1849,8 @@
           '</div>' +
           '<div class="al-item-info">' +
             '<div class="al-item-name">' + nameHtml + '</div>' +
-            '<div class="al-item-meta">' +
-              '<div class="al-item-score ' + scoreClass(mean) + '">' + scoreLine + '</div>' +
-              dateInfo +
-            '</div>' +
+            '<div class="al-item-score ' + scoreClass(mean) + '">' + scoreLine + '</div>' +
+            dateInfo +
             (showBar ? '<div class="al-item-bar"><i style="width:' + pct + '%"></i></div>' : '') +
           '</div>' +
         '</div>';
