@@ -1353,6 +1353,7 @@
       refreshing = true;
       const btn = $('al-refresh');
       if (btn) btn.classList.add('ama-refresh-spin');
+      refreshStart = Date.now();
       const type = activeMedia;
       loaded[type] = false; loading[type] = false;
       /* Show loading skeleton in list area */
@@ -1362,11 +1363,16 @@
       loadMedia(type, true);   // nocache=true — bypass server cache
       loadUserMeta(true);      // nocache=true — bypass server cache
     }
-    /* Stop refresh spinner when data loads (called from loadMedia success/fail) */
+    /* Stop refresh spinner — ensures at least 1 full rotation before stopping */
+    var refreshStart = 0;
     function stopRefreshSpinner() {
-      refreshing = false;
-      const btn = $('al-refresh');
-      if (btn) btn.classList.remove('ama-refresh-spin');
+      var elapsed = Date.now() - refreshStart;
+      var delay = Math.max(0, 600 - elapsed); // ensure at least 600ms of spin
+      setTimeout(function() {
+        refreshing = false;
+        const btn = $('al-refresh');
+        if (btn) btn.classList.remove('ama-refresh-spin');
+      }, delay);
     }
     const alRefreshBtn = $('al-refresh');
     if (alRefreshBtn) alRefreshBtn.addEventListener('click', refresh);
