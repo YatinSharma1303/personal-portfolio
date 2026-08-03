@@ -999,11 +999,17 @@
           npArtCrossfaded = true;
           npArtIdx = (npArtIdx + 1) % npArtUrls.length;
           var bg = $('lfm-np-bg');
+          var ghost = $('lfm-np-bg-ghost');
           if (bg && npArtUrls[npArtIdx]) {
             bg.style.opacity = '0';
+            if (ghost) ghost.style.opacity = '0';
             setTimeout(function() {
               bg.style.backgroundImage = 'url(\'' + npArtUrls[npArtIdx] + '\')';
               bg.style.opacity = '';
+              if (ghost) {
+                ghost.style.backgroundImage = 'url(\'' + npArtUrls[npArtIdx] + '\')';
+                ghost.style.opacity = '';
+              }
             }, 400);
           }
         }
@@ -1243,6 +1249,11 @@
         if (npBgEl) {
           if (url && isLive) { npBgEl.style.backgroundImage = 'url(\'' + url + '\')'; }
           else { npBgEl.style.backgroundImage = ''; }
+        }
+        var npBgGhost = $('lfm-np-bg-ghost');
+        if (npBgGhost) {
+          if (url && isLive) { npBgGhost.style.backgroundImage = 'url(\'' + url + '\')'; }
+          else { npBgGhost.style.backgroundImage = ''; }
         }
       }
       const npTrack = $('lfm-np-track'); if (npTrack && first.name) npTrack.textContent = first.name;

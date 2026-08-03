@@ -1523,10 +1523,17 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 /* -- Loved tracks heart -- */
 .lfm-loved { color: #ef4444; font-size: 10px; margin-left: 4px; font-style: normal; }
 
-/* -- Now Playing background blur -- */
+/* -- Now Playing background blur (dual-layer) -- */
 .lfm-nowplaying { position: relative; overflow: hidden; }
-.lfm-np-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: blur(40px) saturate(1.3) brightness(0.8); opacity: 0; transition: opacity 0.6s ease; border-radius: inherit; z-index: 0; pointer-events: none; }
-.lfm-nowplaying.live .lfm-np-bg { opacity: 0.35; }
+
+/* Layer 1: heavy blur — ambient color wash */
+.lfm-np-bg { position: absolute; inset: -20px; background-size: cover; background-position: center; filter: blur(50px) saturate(1.6) brightness(0.9); opacity: 0; transition: opacity 0.8s ease; border-radius: inherit; z-index: 0; pointer-events: none; }
+.lfm-nowplaying.live .lfm-np-bg { opacity: 0.4; }
+
+/* Layer 2: ghost thumbnail — faint recognizable cover art hint */
+.lfm-np-bg-ghost { position: absolute; inset: 0; background-size: cover; background-position: center; filter: blur(6px) saturate(0.5) brightness(0.45); opacity: 0; transition: opacity 0.8s ease 0.15s; border-radius: inherit; z-index: 0; pointer-events: none; mix-blend-mode: screen; }
+.lfm-nowplaying.live .lfm-np-bg-ghost { opacity: 0.25; }
+
 .lfm-np-art-wrap, .lfm-np-info { position: relative; z-index: 1; }
 
 /* -- 7-day activity chart -- */
