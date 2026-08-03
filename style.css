@@ -1714,12 +1714,12 @@ html.light .lastfm-card .skeleton { background: linear-gradient(90deg, rgba(0,0,
 .al-item-cover::after {
   content: '';
   position: absolute;
-  top: 6px;
+  bottom: 6px;
   left: 6px;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  z-index: 2;
+  z-index: 4;
   opacity: 0;
   transition: opacity 0.3s ease;
 }
