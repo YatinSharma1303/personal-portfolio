@@ -1563,7 +1563,7 @@ html.light .lfm-nowplaying.live .lfm-np-bg-ghost { opacity: 0.4; }
 .lfm-nowplaying.live .lfm-np-progress-bar { transition: width 0.5s linear; }
 
 /* -- Album name in now playing -- */
-.lfm-np-album { font-size: 11px; color: color-mix(in srgb, var(--gray) 65%, var(--gray-dim)); font-family: var(--mono); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 1; }
+.lfm-np-album { font-size: 11px; color: color-mix(in srgb, var(--accent-solid) 30%, var(--gray-dim)); font-family: var(--mono); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 1; }
 
 /* -- Artist rank numbers -- */
 .lfm-artist-rank { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--gray-dim); width: 18px; height: 18px; text-align: center; line-height: 18px; border-radius: 6px; flex-shrink: 0; }
