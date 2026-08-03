@@ -1114,6 +1114,54 @@
       return lfmImg(tr.image);
     }
 
+    function buildStreakHtml(todayTracks) {
+      if (!todayTracks || todayTracks.length === 0) return '';
+      // Use the actual Last.fm live now-playing state, not a timestamp guess
+      var isLive = window.__lfmIsLiveNow === true;
+      var nowUts = Math.floor(Date.now() / 1000);
+      var lastUts = parseInt(todayTracks[todayTracks.length - 1].date.uts);
+      var lastScrobbleWasRecent = (nowUts - lastUts) < 600;
+      if (isLive && lastScrobbleWasRecent) {
+        return '<div class="lfm-streak"><span class="lfm-streak-dot"></span>🔥 Listening now</div>';
+      }
+      // Not listening now — show longest continuous listening streak today
+      var bestStart = 0, bestLen = 1, curStart = 0, curLen = 1;
+      for (var si = 1; si < todayTracks.length; si++) {
+        var gap = parseInt(todayTracks[si].date.uts) - parseInt(todayTracks[si-1].date.uts);
+        if (gap < 600) { curLen++; }
+        else { if (curLen > bestLen) { bestLen = curLen; bestStart = curStart; } curStart = si; curLen = 1; }
+      }
+      if (curLen > bestLen) { bestLen = curLen; bestStart = curStart; }
+      if (bestLen < 2 && !lastScrobbleWasRecent) {
+        // Only scattered plays today, not a streak — show last play time instead
+        var agoStr = timeAgo(lastUts);
+        return '<div class="lfm-streak"><span class="lfm-streak-dot"></span>🎵 Last played ' + agoStr + '</div>';
+      }
+      var streakFirstUts = parseInt(todayTracks[bestStart].date.uts);
+      var streakLastUts = parseInt(todayTracks[bestStart + bestLen - 1].date.uts);
+      var durationSec = (streakLastUts - streakFirstUts) + 210;
+      var durationMin = Math.round(durationSec / 60);
+      var sh = Math.floor(durationMin / 60);
+      var sm = durationMin % 60;
+      var sTimeStr = sh > 0 ? sh + 'h ' + sm + 'm' : sm + 'm';
+      return '<div class="lfm-streak"><span class="lfm-streak-dot"></span>🔥 ' + sTimeStr + ' listening today</div>';
+    }
+
+    // Re-render only the streak part when live state changes (called by renderRecent)
+    function refreshStreak() {
+      if (!window.__lfmTodayTracks) return;
+      var newStreak = buildStreakHtml(window.__lfmTodayTracks);
+      var meta = document.querySelector('.lfm-activity-meta');
+      if (meta) {
+        var streakEl = meta.querySelector('.lfm-streak');
+        if (streakEl) {
+          var temp = document.createElement('div');
+          temp.innerHTML = newStreak;
+          streakEl.replaceWith(temp.firstElementChild);
+        }
+      }
+    }
+
     function renderActivityChart(tracks) {
       const wrap = $('lfm-activity');
       if (!wrap) return;
@@ -1139,7 +1187,7 @@
       const total = days.reduce((s, d) => s + d.count, 0);
       if (total === 0) { wrap.innerHTML = ''; return; }
 
-      // Feature 2: Listening streak for today
+      // Feature 3: Listening streak — uses actual live now-playing state, not guesswork
       var today = new Date();
       var todayKey = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
       var todayTracks = tracks.filter(function(tr) {
@@ -1149,33 +1197,11 @@
         var k = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
         return k === todayKey;
       }).sort(function(a, b) { return parseInt(a.date.uts) - parseInt(b.date.uts); });
-      var streakHtml = '';
-      if (todayTracks.length > 0) {
-        var nowUts = Math.floor(Date.now() / 1000);
-        var lastUts = parseInt(todayTracks[todayTracks.length - 1].date.uts);
-        var isCurrentlyListening = (nowUts - lastUts) < 600;
-        if (isCurrentlyListening) {
-          streakHtml = '<div class="lfm-streak"><span class="lfm-streak-dot"></span>🔥 Listening now</div>';
-        } else {
-          var bestStart = 0, bestLen = 1, curStart = 0, curLen = 1;
-          for (var si = 1; si < todayTracks.length; si++) {
-            var gap = parseInt(todayTracks[si].date.uts) - parseInt(todayTracks[si-1].date.uts);
-            if (gap < 600) { curLen++; }
-            else { if (curLen > bestLen) { bestLen = curLen; bestStart = curStart; } curStart = si; curLen = 1; }
-          }
-          if (curLen > bestLen) { bestLen = curLen; bestStart = curStart; }
-          var streakFirstUts = parseInt(todayTracks[bestStart].date.uts);
-          var streakLastUts = parseInt(todayTracks[bestStart + bestLen - 1].date.uts);
-          var durationSec = (streakLastUts - streakFirstUts) + 210;
-          var durationMin = Math.round(durationSec / 60);
-          var sh = Math.floor(durationMin / 60);
-          var sm = durationMin % 60;
-          var sTimeStr = sh > 0 ? sh + 'h ' + sm + 'm' : sm + 'm';
-          streakHtml = '<div class="lfm-streak"><span class="lfm-streak-dot"></span>🔥 ' + sTimeStr + ' listening today</div>';
-        }
-      }
+      // Store today tracks so streak can be re-rendered on live state change
+      window.__lfmTodayTracks = todayTracks;
+      var streakHtml = buildStreakHtml(todayTracks);
 
-      // Feature 6: Listening time this week (tracks × 3.5 min)
+      // Feature 7: Listening time this week (tracks × 3.5 min)
       var ltMinutes = Math.round(total * 3.5);
       var ltH = Math.floor(ltMinutes / 60);
       var ltM = ltMinutes % 60;
@@ -1230,6 +1256,12 @@
       }
       const npCard = $('lfm-nowplaying'); if (npCard) npCard.classList.toggle('live', !!isLive);
       const npLabel = $('lfm-np-label'); if (npLabel) npLabel.textContent = isLive ? 'NOW PLAYING' : 'LAST PLAYED';
+
+      // Track live state for accurate streak indicator
+      var wasLive = window.__lfmIsLiveNow;
+      window.__lfmIsLiveNow = !!isLive;
+      // Update streak if live state changed
+      if (wasLive !== window.__lfmIsLiveNow) { try { refreshStreak(); } catch(e) {} }
 
       // Feature 1 & 5: Update progress bar and collect art URLs for carousel
       updateNpProgress(isLive, first);
