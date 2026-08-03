@@ -2731,8 +2731,18 @@
     const refreshBtn = $('ama-refresh');
     if (refreshBtn) refreshBtn.addEventListener('click', () => {
       refreshBtn.classList.add('ama-refresh-spin');
+      var amaCard = document.querySelector('.ama-card');
+      if (amaCard) {
+        var ov = amaCard.querySelector('.ama-refresh-overlay');
+        if (!ov) { ov = document.createElement('div'); ov.className = 'ama-refresh-overlay'; amaCard.style.position = 'relative'; amaCard.appendChild(ov); }
+        ov.offsetHeight; ov.classList.add('visible');
+      }
       loadAnswered();
-      setTimeout(() => refreshBtn.classList.remove('ama-refresh-spin'), 600);
+      setTimeout(function() {
+        refreshBtn.classList.remove('ama-refresh-spin');
+        var ov2 = document.querySelector('.ama-refresh-overlay');
+        if (ov2) { ov2.classList.remove('visible'); setTimeout(function() { ov2.remove(); }, 300); }
+      }, 600);
     });
 
     /* Auto-refresh every 60s when AMA section is visible.
