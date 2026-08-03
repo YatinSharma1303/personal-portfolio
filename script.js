@@ -1260,8 +1260,8 @@
       // Track live state for accurate streak indicator
       var wasLive = window.__lfmIsLiveNow;
       window.__lfmIsLiveNow = !!isLive;
-      // Update streak if live state changed
-      if (wasLive !== window.__lfmIsLiveNow) { try { refreshStreak(); } catch(e) {} }
+      // Always refresh streak to keep it synced with NP card
+      try { refreshStreak(); } catch(e) {}
 
       // Feature 1 & 5: Update progress bar and collect art URLs for carousel
       updateNpProgress(isLive, first);
@@ -1356,7 +1356,7 @@
     let activeSort = 'updated', activeGenre = '', activeSearch = '';
     let showMeanScore = false;
     let listView = false;
-    let PER_PAGE = 12;
+    let PER_PAGE = 6;
     const favSets = { ANIME: new Set(), MANGA: new Set() };
     const statsByMedia = { ANIME: null, MANGA: null };
     let favSet = favSets.ANIME, statsData = null;
@@ -1445,7 +1445,7 @@
           '</div>' +
           '<button class="al-score-toggle" id="al-score-toggle" title="Toggle score"><span class="material-symbols-outlined">swap_horiz</span>Score</button>' +
           '<div class="al-view-toggle" id="al-view-toggle"><button class="al-view-btn active" data-view="grid" title="Grid"><span class="material-symbols-outlined">grid_view</span></button><button class="al-view-btn" data-view="list" title="List"><span class="material-symbols-outlined">view_list</span></button></div>' +
-          '<div class="al-perpage" id="al-perpage"><span class="al-perpage-label">Per page</span><button class="al-perpage-btn" data-pp="6">6</button><button class="al-perpage-btn active" data-pp="12">12</button><button class="al-perpage-btn" data-pp="24">24</button><button class="al-perpage-btn" data-pp="48">48</button></div>';
+          '<div class="al-perpage" id="al-perpage"><span class="al-perpage-label">Per page</span><button class="al-perpage-btn active" data-pp="6">6</button><button class="al-perpage-btn" data-pp="12">12</button><button class="al-perpage-btn" data-pp="24">24</button><button class="al-perpage-btn" data-pp="48">48</button></div>';
         list.parentNode.insertBefore(controlsBar, list);
         const si = controlsBar.querySelector('#al-search'), sc = controlsBar.querySelector('#al-search-clear');
         var searchTimer = null;
