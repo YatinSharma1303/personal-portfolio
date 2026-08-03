@@ -1530,7 +1530,9 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .lfm-np-art-wrap, .lfm-np-info { position: relative; z-index: 1; }
 
 /* -- 7-day activity chart -- */
-.lfm-activity { display: flex; align-items: flex-end; gap: 6px; margin-bottom: 22px; padding: 14px 0 0; }
+.lfm-activity { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 22px; padding: 14px 0 0; flex-wrap: wrap; }
+.lfm-activity-meta { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+.lfm-activity-meta .lfm-activity-label { margin-bottom: 0; }
 .lfm-activity-label {
   display: inline-flex; align-items: center; gap: 4px;
   font-family: var(--mono); font-size: 10px; letter-spacing: 0.02em;
@@ -1549,8 +1551,8 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .lfm-np-progress { position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: rgba(255,255,255,0.05); border-radius: 0 0 18px 18px; z-index: 2; overflow: hidden; opacity: 0; transition: opacity 0.3s ease; }
 .lfm-nowplaying.live .lfm-np-progress { opacity: 1; }
 .lfm-np-progress-bar { height: 100%; background: var(--accent); border-radius: 0 0 18px 18px; width: 0; }
-.lfm-nowplaying.live .lfm-np-progress-bar { animation: npProgress 12s linear infinite; }
-@keyframes npProgress { 0% { width: 0; } 85% { width: 92%; } 100% { width: 95%; } }
+/* Progress bar width controlled via JS when live */
+.lfm-nowplaying.live .lfm-np-progress-bar { transition: width 0.5s linear; }
 
 /* -- Album name in now playing -- */
 .lfm-np-album { font-size: 11px; color: var(--gray-dim); font-family: var(--mono); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.7; }
@@ -1560,6 +1562,27 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .lfm-artist:nth-child(1) .lfm-artist-rank,
 .lfm-artist:nth-child(2) .lfm-artist-rank,
 .lfm-artist:nth-child(3) .lfm-artist-rank { background: color-mix(in srgb, var(--accent-solid) 12%, transparent); color: var(--accent); }
+
+/* -- Genre cloud -- */
+.lfm-genre-cloud { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); background: color-mix(in srgb, var(--accent-solid) 4%, transparent); }
+.lfm-genre-cloud-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; color: var(--accent); margin-right: 6px; }
+.lfm-genre-pill { font-family: var(--mono); font-size: 10px; padding: 3px 10px; border-radius: 6px; border: 1px solid var(--border); color: var(--gray-dim); transition: all 0.2s; }
+.lfm-genre-pill:hover { border-color: var(--accent); color: var(--accent); }
+
+/* -- Play count bar -- */
+.lfm-track-plays { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.lfm-track-plays-bar { width: 40px; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.06); overflow: hidden; }
+.lfm-track-plays-bar-fill { height: 100%; border-radius: 2px; background: color-mix(in srgb, var(--accent-solid) 60%, transparent); transition: width 0.4s ease; }
+
+/* -- Listening streak -- */
+.lfm-streak { display: flex; align-items: center; gap: 6px; margin-top: 0; font-family: var(--mono); font-size: 10px; color: var(--gray-dim); }
+.lfm-streak-dot { width: 6px; height: 6px; border-radius: 50%; background: #34d399; animation: npPulse 2s ease-in-out infinite; }
+
+/* -- Track tooltip -- */
+.lfm-track { position: relative; }
+.lfm-track-tip { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%) scale(0.95); background: rgba(20,20,28,0.95); backdrop-filter: blur(8px); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; font-family: var(--mono); font-size: 10px; color: var(--gray); white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.15s, transform 0.15s; z-index: 10; }
+.lfm-track:hover .lfm-track-tip { opacity: 1; transform: translateX(-50%) scale(1); }
+.lfm-track-tip-loved { color: #ef4444; }
 
 /* -- Clickable track/artist links -- */
 .lfm-track-name a, .lfm-artist-name a { color: inherit; text-decoration: none; }

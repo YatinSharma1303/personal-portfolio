@@ -784,6 +784,17 @@
     const u = CONFIG.lastfmUser;
     let nowPlayingTimer = window.__lastfmTimer || null;
 
+    // -- Feature 1 & 5: NP progress bar state + art carousel --
+    let npProgressTimer = null;
+    let npStartUts = null;
+    let npTrackKey = null;
+    let npArtUrls = [];
+    let npArtIdx = 0;
+    let npArtCrossfaded = false;
+
+    // -- Feature 3: Genre cloud state --
+    let genreCounts = new Map();
+
     function artDiv(className, url, fallbackText) {
       if (url) return '<div class="' + className + '" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>';
       return '<div class="' + className + ' lfm-noart" style="background:#141414 !important">' + (fallbackText || '♪') + '</div>';
@@ -860,6 +871,85 @@
       if (allTagEls[idx]) {
         allTagEls[idx].innerHTML = tags.map(t => '<span class="lfm-track-tag">' + esc(t) + '</span>').join('');
       }
+      // Feature 3: collect tags for genre cloud
+      tags.forEach(t => {
+        const key = t.toLowerCase();
+        genreCounts.set(key, (genreCounts.get(key) || 0) + 1);
+      });
+      updateGenreCloud();
+    }
+
+    // Feature 3: Genre cloud rendering
+    function updateGenreCloud() {
+      const cloudEl = $('lfm-genre-cloud');
+      if (!cloudEl) return;
+      const sorted = [...genreCounts.entries()].sort((a, b) => b[1] - a[1]);
+      const top5 = sorted.slice(0, 5);
+      if (top5.length === 0) { cloudEl.style.display = 'none'; return; }
+      cloudEl.style.display = 'flex';
+      cloudEl.innerHTML = '<span class="lfm-genre-cloud-label">YOUR VIBE</span>' + top5.map(function(entry) {
+        return '<span class="lfm-genre-pill">' + esc(entry[0]) + '</span>';
+      }).join('');
+    }
+
+    // Feature 4 & 7: Build track HTML with play count bar and tooltip
+    function buildTrackHtml(tr, idx, tracks) {
+      const url = tr.artUrl || lfmImg(tr.image);
+      const art = url
+        ? '<div class="lfm-track-img" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>'
+        : '<div class="lfm-track-img lfm-noart" style="background:#141414 !important">♪</div>';
+      const artistName = tr.artist ? (tr.artist.name || tr.artist['#text'] || '') : '';
+      const loved = isLovedTrack(tr.name, artistName);
+      const lovedHtml = loved ? '<span class="lfm-loved">♥</span>' : '';
+      const albumName = (tr.album && (tr.album['#text'] || tr.album.name)) || '';
+      const pc = parseInt(tr.playcount, 10) || 0;
+      const maxPc = tracks.reduce(function(m, t) { return Math.max(m, parseInt(t.playcount, 10) || 0); }, 1);
+      const barPct = Math.round((pc / maxPc) * 100);
+      const playsBarHtml = '<div class="lfm-track-plays-bar"><div class="lfm-track-plays-bar-fill" style="width:' + barPct + '%"></div></div>';
+      // Tooltip content
+      var tipParts = [];
+      if (albumName) tipParts.push('Album: ' + esc(albumName));
+      tipParts.push('Plays: ' + pc.toLocaleString());
+      if (loved) tipParts.push('<span class="lfm-track-tip-loved">♥ Loved</span>');
+      const tipHtml = '<div class="lfm-track-tip">' + tipParts.join(' · ') + '</div>';
+      return '<div class="lfm-track" data-album="' + esc(albumName) + '" data-plays="' + pc + '" data-loved="' + (loved ? '1' : '0') + '">' + tipHtml + '<span class="lfm-track-rank">' + (idx+1) + '</span>' + art + '<div class="lfm-track-info"><div class="lfm-track-name">' + esc(tr.name) + lovedHtml + '</div><div class="lfm-track-artist">' + esc(artistName) + '</div><div class="lfm-track-tags" data-artist="' + esc(artistName) + '" data-track="' + esc(tr.name) + '"></div></div><span class="lfm-track-plays">' + formatPlays(tr.playcount) + playsBarHtml + '</span></div>';
+    }
+
+    // Feature 1 & 5: NP progress bar timer + album art carousel
+    function updateNpProgress(isLive, track) {
+      if (npProgressTimer) { clearInterval(npProgressTimer); npProgressTimer = null; }
+      const bar = $('lfm-np-progress-bar');
+      if (!bar) return;
+      npArtCrossfaded = false;
+      if (!isLive) { bar.style.width = '0'; return; }
+      // Determine start time
+      var uts = (track && track.date && parseInt(track.date.uts, 10)) || 0;
+      var key = ((track && track.artist && (track.artist['#text'] || track.artist.name)) || '') + '::' + (track.name || '');
+      if (key !== npTrackKey) {
+        npTrackKey = key;
+        npStartUts = uts || Math.floor(Date.now() / 1000);
+      }
+      function tick() {
+        var now = Math.floor(Date.now() / 1000);
+        var elapsed = now - npStartUts;
+        var progress = Math.min(Math.max(elapsed / 210, 0), 1);
+        bar.style.width = (progress * 100) + '%';
+        // Feature 5: crossfade NP background art at ~90%
+        if (progress >= 0.9 && !npArtCrossfaded && npArtUrls.length > 1) {
+          npArtCrossfaded = true;
+          npArtIdx = (npArtIdx + 1) % npArtUrls.length;
+          var bg = $('lfm-np-bg');
+          if (bg && npArtUrls[npArtIdx]) {
+            bg.style.opacity = '0';
+            setTimeout(function() {
+              bg.style.backgroundImage = 'url(\'' + npArtUrls[npArtIdx] + '\')';
+              bg.style.opacity = '';
+            }, 400);
+          }
+        }
+      }
+      tick();
+      npProgressTimer = setInterval(tick, 2000);
     }
 
     // Period tab switching
@@ -868,15 +958,9 @@
       const tracksWrap = $('lfm-tracks');
       const tracks = (d.toptracks && d.toptracks.track) || [];
       if (tracksWrap && tracks.length) {
-        tracksWrap.innerHTML = tracks.map((tr, idx) => {
-          const url = tr.artUrl || lfmImg(tr.image);
-          const art = url
-            ? '<div class="lfm-track-img" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>'
-            : '<div class="lfm-track-img lfm-noart" style="background:#141414 !important">♪</div>';
-          const artistName = tr.artist ? (tr.artist.name || tr.artist['#text'] || '') : '';
-          const lovedHtml = isLovedTrack(tr.name, artistName) ? '<span class="lfm-loved">♥</span>' : '';
-          return '<div class="lfm-track"><span class="lfm-track-rank">' + (idx+1) + '</span>' + art + '<div class="lfm-track-info"><div class="lfm-track-name">' + esc(tr.name) + lovedHtml + '</div><div class="lfm-track-artist">' + esc(artistName) + '</div><div class="lfm-track-tags" data-artist="' + esc(artistName) + '" data-track="' + esc(tr.name) + '"></div></div><span class="lfm-track-plays">' + formatPlays(tr.playcount) + '</span></div>';
-        }).join('');
+        // Reset genre cloud for new period
+        genreCounts = new Map();
+        tracksWrap.innerHTML = tracks.map((tr, idx) => buildTrackHtml(tr, idx, tracks)).join('');
         fetchTrackTags(tracks);
       }
       const artistsWrap = $('lfm-artists');
@@ -928,15 +1012,9 @@
       const tracksWrap = $('lfm-tracks');
       const tracks = (d.toptracks && d.toptracks.track) || [];
       if (tracksWrap && tracks.length) {
-        tracksWrap.innerHTML = tracks.map((tr, idx) => {
-          const url = tr.artUrl || lfmImg(tr.image);
-          const art = url
-            ? '<div class="lfm-track-img" style="background:#141414 url(\'' + url + '\') center/cover no-repeat"></div>'
-            : '<div class="lfm-track-img lfm-noart" style="background:#141414 !important">♪</div>';
-          const artistName = tr.artist ? (tr.artist.name || tr.artist['#text'] || '') : '';
-          const lovedHtml = isLovedTrack(tr.name, artistName) ? '<span class="lfm-loved">♥</span>' : '';
-          return '<div class="lfm-track"><span class="lfm-track-rank">' + (idx+1) + '</span>' + art + '<div class="lfm-track-info"><div class="lfm-track-name">' + esc(tr.name) + lovedHtml + '</div><div class="lfm-track-artist">' + esc(artistName) + '</div><div class="lfm-track-tags" data-artist="' + esc(artistName) + '" data-track="' + esc(tr.name) + '"></div></div><span class="lfm-track-plays">' + formatPlays(tr.playcount) + '</span></div>';
-        }).join('');
+        // Reset genre cloud for new data
+        genreCounts = new Map();
+        tracksWrap.innerHTML = tracks.map((tr, idx) => buildTrackHtml(tr, idx, tracks)).join('');
         // Fetch genre tags asynchronously
         fetchTrackTags(tracks);
       }
@@ -1000,7 +1078,51 @@
       const maxCount = Math.max(...days.map(d => d.count), 1);
       const total = days.reduce((s, d) => s + d.count, 0);
       if (total === 0) { wrap.innerHTML = ''; return; }
-      wrap.innerHTML = '<div class="lfm-activity-label"><b>' + total + '</b> tracks this week</div><div class="lfm-activity-bars">' + days.map(d => {
+
+      // Feature 2: Listening streak for today
+      var today = new Date();
+      var todayKey = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+      var todayTracks = tracks.filter(function(tr) {
+        var uts = (tr.date && tr.date.uts) || '';
+        if (!uts) return false;
+        var d = new Date(parseInt(uts, 10) * 1000);
+        var k = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+        return k === todayKey;
+      }).sort(function(a, b) { return parseInt(a.date.uts) - parseInt(b.date.uts); });
+      var streakHtml = '';
+      if (todayTracks.length > 0) {
+        var nowUts = Math.floor(Date.now() / 1000);
+        var lastUts = parseInt(todayTracks[todayTracks.length - 1].date.uts);
+        var isCurrentlyListening = (nowUts - lastUts) < 600;
+        if (isCurrentlyListening) {
+          streakHtml = '<div class="lfm-streak"><span class="lfm-streak-dot"></span>🔥 Listening now</div>';
+        } else {
+          var bestStart = 0, bestLen = 1, curStart = 0, curLen = 1;
+          for (var si = 1; si < todayTracks.length; si++) {
+            var gap = parseInt(todayTracks[si].date.uts) - parseInt(todayTracks[si-1].date.uts);
+            if (gap < 600) { curLen++; }
+            else { if (curLen > bestLen) { bestLen = curLen; bestStart = curStart; } curStart = si; curLen = 1; }
+          }
+          if (curLen > bestLen) { bestLen = curLen; bestStart = curStart; }
+          var streakFirstUts = parseInt(todayTracks[bestStart].date.uts);
+          var streakLastUts = parseInt(todayTracks[bestStart + bestLen - 1].date.uts);
+          var durationSec = (streakLastUts - streakFirstUts) + 210;
+          var durationMin = Math.round(durationSec / 60);
+          var sh = Math.floor(durationMin / 60);
+          var sm = durationMin % 60;
+          var sTimeStr = sh > 0 ? sh + 'h ' + sm + 'm' : sm + 'm';
+          streakHtml = '<div class="lfm-streak"><span class="lfm-streak-dot"></span>🔥 ' + sTimeStr + ' listening today</div>';
+        }
+      }
+
+      // Feature 6: Listening time this week (tracks × 3.5 min)
+      var ltMinutes = Math.round(total * 3.5);
+      var ltH = Math.floor(ltMinutes / 60);
+      var ltM = ltMinutes % 60;
+      var ltStr = ltH > 0 ? '≈ ' + ltH + 'h ' + ltM + 'm' : '≈ ' + ltM + 'm';
+      var listeningTimeHtml = '<div class="lfm-activity-label">' + ltStr + ' this week</div>';
+
+      wrap.innerHTML = '<div class="lfm-activity-meta"><div class="lfm-activity-label"><b>' + total + '</b> tracks this week</div>' + listeningTimeHtml + streakHtml + '</div><div class="lfm-activity-bars">' + days.map(d => {
         const h = Math.max(3, (d.count / maxCount) * 32);
         const opacity = d.count > 0 ? (0.3 + (d.count / maxCount) * 0.7) : 0.15;
         return '<div class="lfm-activity-day"><div class="lfm-activity-bar" style="height:' + h + 'px;opacity:' + opacity.toFixed(2) + '"></div><div class="lfm-activity-day-label">' + d.label + '</div></div>';
@@ -1048,6 +1170,16 @@
       }
       const npCard = $('lfm-nowplaying'); if (npCard) npCard.classList.toggle('live', !!isLive);
       const npLabel = $('lfm-np-label'); if (npLabel) npLabel.textContent = isLive ? 'NOW PLAYING' : 'LAST PLAYED';
+
+      // Feature 1 & 5: Update progress bar and collect art URLs for carousel
+      updateNpProgress(isLive, first);
+      npArtUrls = [];
+      npArtIdx = 0;
+      tracks.forEach(function(tr) {
+        var artUrl = recentTrackArt(tr);
+        if (artUrl) npArtUrls.push(artUrl);
+      });
+
       const recentWrap = $('lfm-recent');
       if (recentWrap) {
         const tickerTracks = isLive ? tracks.slice(1, 9) : tracks.slice(0, 9);
