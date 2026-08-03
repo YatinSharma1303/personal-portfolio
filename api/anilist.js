@@ -8,6 +8,7 @@
    /api/anilist?type=ANIME
    /api/anilist?type=MANGA
    /api/anilist?meta=1
+   /api/anilist?type=ANIME&nocache=1   (bypasses all caches)
  ============================================================ */
 
 var ANILIST_API = 'https://graphql.anilist.co';
@@ -63,7 +64,7 @@ module.exports = async function handler(req, res) {
   if (req.query.meta === '1') {
     var result = await fetchAnilist(userQuery, 'anilist:meta', skipCache);
     if (result.body) {
-      res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=300');
+      res.setHeader('Cache-Control', skipCache ? 'no-store' : 's-maxage=120, stale-while-revalidate=300');
       return res.status(200).json(result.body);
     }
     return res.status(502).json({ ok: false, error: result.error || 'AniList unavailable' });
@@ -79,7 +80,8 @@ module.exports = async function handler(req, res) {
   var result = await fetchAnilist(query, 'anilist:list:' + type, skipCache);
 
   if (result.body) {
-    res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=300');
+    /* nocache=1 requests are never cached at Vercel edge */
+    res.setHeader('Cache-Control', skipCache ? 'no-store' : 's-maxage=120, stale-while-revalidate=300');
     return res.status(200).json(result.body);
   }
 
