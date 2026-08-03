@@ -1723,20 +1723,20 @@ html.light .lastfm-card .skeleton { background: linear-gradient(90deg, rgba(0,0,
   opacity: 0;
   transition: opacity 0.3s ease;
 }
-.al-item:hover .al-item-cover::after, .al-item:focus-within .al-item-cover::after { opacity: 0; }
 .al-item[data-status] .al-item-cover::after { opacity: 1; }
-.al-item[data-status="CURRENT"] .al-item-cover::after { background: #34d399; box-shadow: 0 0 6px #34d399, 0 0 12px rgba(52,211,153,0.3); }
+.al-item[data-status]:hover .al-item-cover::after,
+.al-item[data-status]:focus-within .al-item-cover::after { opacity: 0 !important; animation: none !important; }
+.al-item[data-status="CURRENT"] .al-item-cover::after { background: #34d399; box-shadow: 0 0 6px #34d399, 0 0 12px rgba(52,211,153,0.3); animation: al-statusPulse 2s ease-in-out infinite; }
 .al-item[data-status="REPEATING"] .al-item-cover::after { background: #a78bfa; box-shadow: 0 0 6px #a78bfa, 0 0 12px rgba(167,139,250,0.3); }
 .al-item[data-status="COMPLETED"] .al-item-cover::after { background: #3b82f6; box-shadow: 0 0 6px #3b82f6, 0 0 12px rgba(59,130,246,0.3); }
 .al-item[data-status="PLANNING"] .al-item-cover::after { background: #f59e0b; box-shadow: 0 0 6px #f59e0b, 0 0 12px rgba(245,158,11,0.3); }
 .al-item[data-status="PAUSED"] .al-item-cover::after { background: #fb923c; box-shadow: 0 0 6px #fb923c, 0 0 12px rgba(251,146,60,0.3); }
 .al-item[data-status="DROPPED"] .al-item-cover::after { background: #f87171; box-shadow: 0 0 6px #f87171, 0 0 12px rgba(248,113,113,0.3); }
 
-/* CURRENT gets a subtle pulse animation */
-.al-item[data-status="CURRENT"] .al-item-cover::after { animation: al-statusPulse 2s ease-in-out infinite; }
+/* CURRENT gets a subtle breathe animation */
 @keyframes al-statusPulse {
-  0%, 100% { box-shadow: 0 0 6px #34d399, 0 0 12px rgba(52,211,153,0.3); }
-  50% { box-shadow: 0 0 8px #34d399, 0 0 18px rgba(52,211,153,0.5); }
+  0%, 100% { box-shadow: 0 0 4px #34d399, 0 0 10px rgba(52,211,153,0.2); transform: scale(1); }
+  50% { box-shadow: 0 0 6px #34d399, 0 0 16px rgba(52,211,153,0.45); transform: scale(1.15); }
 }
 
 /* #5 Skeleton shimmer (reuse Last.fm pattern) */
