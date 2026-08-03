@@ -840,8 +840,12 @@
         .catch(() => {});
     }
 
-    // Genre tags — fetched async, non-blocking
+    // Genre tags — fetched async, non-blocking.
+    // Primary: track.getTopTags (per-track). Fallback: artist.getTopTags (per-artist).
+    var artistTagFetchDone = false;
     function fetchTrackTags(tracks) {
+      var fetchedCount = 0;
+      var totalTracks = tracks.length;
       tracks.forEach((tr, idx) => {
         const artistName = tr.artist ? (tr.artist.name || tr.artist['#text'] || '') : '';
         const trackName = tr.name || '';
@@ -851,6 +855,7 @@
           const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
           if (cached && Date.now() - cached.ts < 24 * 60 * 60 * 1000) {
             renderTrackTags(idx, cached.tags);
+            fetchedCount++;
             return;
           }
         } catch (e) {}
@@ -864,6 +869,52 @@
             }
           })
           .catch(() => {});
+      });
+      // After a delay, check if genre cloud is still empty — if so, fallback to artist tags
+      setTimeout(function() {
+        if (genreCounts.size > 0 || artistTagFetchDone) return;
+        fetchArtistTagsForCloud(tracks);
+      }, 4000);
+    }
+    // Fallback: pull genre tags from the artists of the top tracks
+    function fetchArtistTagsForCloud(tracks) {
+      artistTagFetchDone = true;
+      var seenArtists = new Set();
+      var artistNames = [];
+      tracks.forEach(function(tr) {
+        var a = tr.artist ? (tr.artist.name || tr.artist['#text'] || '') : '';
+        if (a && !seenArtists.has(a.toLowerCase())) {
+          seenArtists.add(a.toLowerCase());
+          artistNames.push(a);
+        }
+      });
+      var tagPromises = artistNames.slice(0, 5).map(function(artistName) {
+        var cacheKey = 'lfm_atags_' + artistName.toLowerCase();
+        try {
+          var cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+          if (cached && Date.now() - cached.ts < 24 * 60 * 60 * 1000) {
+            return Promise.resolve(cached.tags);
+          }
+        } catch (e) {}
+        return fetchWithTimeout(lfmAPI + '?method=artist.getTopTags&artist=' + encodeURIComponent(artistName) + '&autocorrect=1', 3000)
+          .then(function(r) { return r.json(); })
+          .then(function(d) {
+            var tags = ((d.toptags && d.toptags.tag) || []).slice(0, 3).map(function(t) { return t.name; });
+            if (tags.length) {
+              try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), tags: tags })); } catch (e) {}
+            }
+            return tags;
+          })
+          .catch(function() { return []; });
+      });
+      Promise.all(tagPromises).then(function(allArtistTags) {
+        allArtistTags.forEach(function(tags) {
+          tags.forEach(function(t) {
+            var key = t.toLowerCase();
+            genreCounts.set(key, (genreCounts.get(key) || 0) + 1);
+          });
+        });
+        updateGenreCloud();
       });
     }
     function renderTrackTags(idx, tags) {
@@ -879,11 +930,20 @@
       updateGenreCloud();
     }
 
-    // Feature 3: Genre cloud rendering
+    // Feature 4: Genre cloud rendering
+    // Filter out overly generic tags that aren't useful as genre indicators
+    var BAD_GENRE_TAGS = ['seen live','favorites','favorite','love','loved','amazing','awesome','beautiful','chill','cool','good','great','best','amazing','perfect','epic','nice','guilty pleasure','overplayed','songs','music','default','unknown','other','to listen','check out'];
     function updateGenreCloud() {
       const cloudEl = $('lfm-genre-cloud');
       if (!cloudEl) return;
-      const sorted = [...genreCounts.entries()].sort((a, b) => b[1] - a[1]);
+      // Filter bad tags
+      var filtered = new Map();
+      genreCounts.forEach(function(count, tag) {
+        if (BAD_GENRE_TAGS.indexOf(tag.toLowerCase()) === -1) {
+          filtered.set(tag, count);
+        }
+      });
+      const sorted = [...filtered.entries()].sort((a, b) => b[1] - a[1]);
       const top5 = sorted.slice(0, 5);
       if (top5.length === 0) { cloudEl.style.display = 'none'; return; }
       cloudEl.style.display = 'flex';
