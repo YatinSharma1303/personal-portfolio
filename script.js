@@ -1272,10 +1272,10 @@
       return `query{user:MediaListCollection(userName:"${CONFIG.anilistUser}",type:${type}){lists{name status entries{media{id title{romaji english}coverImage{extraLarge large medium}${progressFields} meanScore genres format description(asHtml:false) startDate{year month day} endDate{year month day}}score progress updatedAt startedAt{year month day} completedAt{year month day}}}}}`;
     }
     // Fetch a media list (anime or manga) on demand. Anime falls back to a local list on failure.
-    function loadMedia(type) {
+    function loadMedia(type, nocache) {
       if (loaded[type] || loading[type]) return;
       loading[type] = true;
-      fetch('/api/anilist?type=' + type)
+      fetch('/api/anilist?type=' + type + (nocache ? '&nocache=1' : ''))
         .then(r => { if (!r.ok) throw new Error('AniList proxy HTTP ' + r.status); return r.json(); }).then(d => {
           if (d.errors) throw new Error(d.errors[0]?.message || 'AniList GraphQL error');
           if (d.ok === false) throw new Error(d.error || 'AniList proxy error');
@@ -1328,8 +1328,8 @@
 
     // Fetch user avatar, favourites and statistics for both media types (separate request)
     const userQuery = `query{User(name:"${CONFIG.anilistUser}"){avatar{large}favourites{anime{nodes{id}}manga{nodes{id}}}statistics{anime{count episodesWatched minutesWatched meanScore genres{genre count}}manga{count chaptersRead volumesRead meanScore genres{genre count}}}}}`;
-    function loadUserMeta() {
-      return fetch('/api/anilist?meta=1&_=' + Date.now())
+    function loadUserMeta(nocache) {
+      return fetch('/api/anilist?meta=1&_=' + Date.now() + (nocache ? '&nocache=1' : ''))
         .then(r => r.json()).then(d => {
           const u = d && d.data && d.data.User; if (!u) return;
           const av = $('al-avatar'); if (av && u.avatar && u.avatar.large) av.src = u.avatar.large;
@@ -1353,8 +1353,8 @@
       if (btn) btn.classList.add('ama-refresh-spin');
       const type = activeMedia;
       loaded[type] = false; loading[type] = false;
-      loadMedia(type);   // re-fetches the active list; refreshAll() runs on success
-      loadUserMeta();    // refresh avatar / favourites / stats
+      loadMedia(type, true);   // nocache=true — bypass server cache
+      loadUserMeta(true);      // nocache=true — bypass server cache
       setTimeout(() => { if (btn) btn.classList.remove('ama-refresh-spin'); refreshing = false; }, 700);
     }
     const alRefreshBtn = $('al-refresh');

@@ -30,9 +30,11 @@ function getCached(key, maxAge) {
 }
 function setCache(key, body) { _cache[key] = { body: body, ts: Date.now() }; }
 
-async function fetchAnilist(query, cacheKey) {
-  var cached = getCached(cacheKey, CACHE_TTL);
-  if (cached) return { body: cached, source: 'anilist-cache' };
+async function fetchAnilist(query, cacheKey, skipCache) {
+  if (!skipCache) {
+    var cached = getCached(cacheKey, CACHE_TTL);
+    if (cached) return { body: cached, source: 'anilist-cache' };
+  }
   try {
     var response = await fetch(ANILIST_API, {
       method: 'POST',
@@ -55,9 +57,11 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'GET') return res.status(405).json({ ok: false, error: 'Method not allowed' });
 
+  var skipCache = req.query.nocache === '1';
+
   /* meta=1 → user avatar, favourites, statistics */
   if (req.query.meta === '1') {
-    var result = await fetchAnilist(userQuery, 'anilist:meta');
+    var result = await fetchAnilist(userQuery, 'anilist:meta', skipCache);
     if (result.body) {
       res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=300');
       return res.status(200).json(result.body);
@@ -72,7 +76,7 @@ module.exports = async function handler(req, res) {
   }
 
   var query = buildListQuery(type);
-  var result = await fetchAnilist(query, 'anilist:list:' + type);
+  var result = await fetchAnilist(query, 'anilist:list:' + type, skipCache);
 
   if (result.body) {
     res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=300');
