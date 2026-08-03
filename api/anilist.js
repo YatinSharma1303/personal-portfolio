@@ -15,7 +15,7 @@ var ANILIST_API = 'https://graphql.anilist.co';
 var ANILIST_USER = process.env.ANILIST_USER || 'YatinSharma1303';
 
 var _cache = {};
-var CACHE_TTL = 2 * 60 * 1000; // 2 min
+var CACHE_TTL = 15 * 1000; // 15 sec — keeps data fresh for page loads
 
 function buildListQuery(type) {
   var pf = type === 'MANGA' ? 'chapters volumes' : 'episodes duration';
@@ -64,7 +64,7 @@ module.exports = async function handler(req, res) {
   if (req.query.meta === '1') {
     var result = await fetchAnilist(userQuery, 'anilist:meta', skipCache);
     if (result.body) {
-      res.setHeader('Cache-Control', skipCache ? 'no-store' : 's-maxage=120, stale-while-revalidate=300');
+      res.setHeader('Cache-Control', skipCache ? 'no-store' : 's-maxage=15, stale-while-revalidate=60');
       return res.status(200).json(result.body);
     }
     return res.status(502).json({ ok: false, error: result.error || 'AniList unavailable' });
@@ -81,7 +81,7 @@ module.exports = async function handler(req, res) {
 
   if (result.body) {
     /* nocache=1 requests are never cached at Vercel edge */
-    res.setHeader('Cache-Control', skipCache ? 'no-store' : 's-maxage=120, stale-while-revalidate=300');
+    res.setHeader('Cache-Control', skipCache ? 'no-store' : 's-maxage=15, stale-while-revalidate=60');
     return res.status(200).json(result.body);
   }
 
