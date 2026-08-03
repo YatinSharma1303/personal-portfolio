@@ -1122,7 +1122,7 @@
       var lastUts = parseInt(todayTracks[todayTracks.length - 1].date.uts);
       var lastScrobbleWasRecent = (nowUts - lastUts) < 600;
       if (isLive && lastScrobbleWasRecent) {
-        return '<div class="lfm-streak"><span class="lfm-streak-dot"></span>🔥 Listening now</div>';
+        return '<div class="lfm-streak"><span class="lfm-streak-dot"></span>Listening now</div>';
       }
       // Not listening now — show longest continuous listening streak today
       var bestStart = 0, bestLen = 1, curStart = 0, curLen = 1;
@@ -1135,7 +1135,7 @@
       if (bestLen < 2 && !lastScrobbleWasRecent) {
         // Only scattered plays today, not a streak — show last play time instead
         var agoStr = timeAgo(lastUts);
-        return '<div class="lfm-streak"><span class="lfm-streak-dot"></span>🎵 Last played ' + agoStr + '</div>';
+        return '<div class="lfm-streak"><span class="lfm-streak-dot idle"></span>Last played ' + agoStr + '</div>';
       }
       var streakFirstUts = parseInt(todayTracks[bestStart].date.uts);
       var streakLastUts = parseInt(todayTracks[bestStart + bestLen - 1].date.uts);
@@ -1144,7 +1144,7 @@
       var sh = Math.floor(durationMin / 60);
       var sm = durationMin % 60;
       var sTimeStr = sh > 0 ? sh + 'h ' + sm + 'm' : sm + 'm';
-      return '<div class="lfm-streak"><span class="lfm-streak-dot"></span>🔥 ' + sTimeStr + ' listening today</div>';
+      return '<div class="lfm-streak"><span class="lfm-streak-dot idle"></span>' + sTimeStr + ' listening today</div>';
     }
 
     // Re-render only the streak part when live state changes (called by renderRecent)

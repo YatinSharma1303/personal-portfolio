@@ -1442,8 +1442,8 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .lfm-stat-pill b { color: var(--white); font-weight: 700; }
 
 .lfm-nowplaying { display: flex; gap: 18px; align-items: center; padding: 18px; border-radius: 18px; border: 1px solid var(--border); background: linear-gradient(135deg, color-mix(in srgb, var(--accent-solid) 6%, transparent), rgba(120,80,255,0.04)); margin-bottom: 22px; transition: border-color 0.4s ease, box-shadow 0.4s ease; }
-.lfm-nowplaying.live { border-color: rgba(52, 211, 153, 0.35); box-shadow: 0 0 20px rgba(52, 211, 153, 0.08), inset 0 0 30px rgba(52, 211, 153, 0.03); animation: npPulse 3s ease-in-out infinite; }
-@keyframes npPulse { 0%, 100% { box-shadow: 0 0 20px rgba(52, 211, 153, 0.08), inset 0 0 30px rgba(52, 211, 153, 0.03); } 50% { box-shadow: 0 0 30px rgba(52, 211, 153, 0.14), inset 0 0 40px rgba(52, 211, 153, 0.06); } }
+.lfm-nowplaying.live { border-color: color-mix(in srgb, var(--accent-solid) 35%, transparent); box-shadow: 0 0 20px color-mix(in srgb, var(--accent-solid) 10%, transparent), inset 0 0 30px color-mix(in srgb, var(--accent-solid) 4%, transparent); animation: npPulse 3s ease-in-out infinite; }
+@keyframes npPulse { 0%, 100% { box-shadow: 0 0 20px color-mix(in srgb, var(--accent-solid) 10%, transparent), inset 0 0 30px color-mix(in srgb, var(--accent-solid) 4%, transparent); } 50% { box-shadow: 0 0 30px color-mix(in srgb, var(--accent-solid) 16%, transparent), inset 0 0 40px color-mix(in srgb, var(--accent-solid) 7%, transparent); } }
 .lfm-np-art-wrap { position: relative; flex-shrink: 0; }
 .lfm-np-art { width: 96px; height: 96px; border-radius: 14px; background-size: cover; background-position: center; background-color: #141414; box-shadow: 0 6px 20px rgba(0,0,0,0.3); flex-shrink: 0; transition: transform 0.3s ease; }
 .lfm-nowplaying.live .lfm-np-art { transform: scale(1); }
@@ -1451,14 +1451,14 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .lfm-np-art.lfm-noart { display: flex; align-items: center; justify-content: center; color: #52525b; font-size: 32px; }
 .lfm-np-eq { position: absolute; bottom: 8px; right: 8px; display: none; gap: 2px; align-items: flex-end; height: 16px; }
 .lfm-nowplaying.live .lfm-np-eq { display: flex; }
-.lfm-np-eq i { width: 3px; background: #34d399; border-radius: 1px; animation: eq 0.7s ease-in-out infinite; }
+.lfm-np-eq i { width: 3px; background: var(--accent-solid); border-radius: 1px; animation: eq 0.7s ease-in-out infinite; }
 .lfm-np-eq i:nth-child(1) { height: 60%; animation-delay: 0s; }
 .lfm-np-eq i:nth-child(2) { height: 100%; animation-delay: 0.15s; }
 .lfm-np-eq i:nth-child(3) { height: 40%; animation-delay: 0.3s; }
 .lfm-np-eq i:nth-child(4) { height: 80%; animation-delay: 0.45s; }
 .lfm-np-info { flex: 1; min-width: 0; }
 .lfm-np-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; color: var(--accent); margin-bottom: 6px; }
-.lfm-nowplaying.live .lfm-np-label { color: #34d399; }
+.lfm-nowplaying.live .lfm-np-label { color: var(--accent-solid); }
 .lfm-np-track { font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lfm-np-artist { font-size: 13px; color: var(--gray); font-family: var(--mono); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lfm-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 22px; }
@@ -1575,8 +1575,9 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 .lfm-track-plays-bar-fill { height: 100%; border-radius: 2px; background: color-mix(in srgb, var(--accent-solid) 60%, transparent); transition: width 0.4s ease; }
 
 /* -- Listening streak -- */
-.lfm-streak { display: flex; align-items: center; gap: 6px; margin-top: 0; font-family: var(--mono); font-size: 10px; color: var(--gray-dim); }
-.lfm-streak-dot { width: 6px; height: 6px; border-radius: 50%; background: #34d399; animation: npPulse 2s ease-in-out infinite; }
+.lfm-streak { display: inline-flex; align-items: center; gap: 6px; margin-top: 0; font-family: var(--mono); font-size: 10px; color: var(--gray-dim); padding: 3px 10px; border-radius: 6px; border: 1px solid var(--border); background: color-mix(in srgb, var(--accent-solid) 4%, transparent); }
+.lfm-streak-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-solid); animation: npPulse 2s ease-in-out infinite; }
+.lfm-streak-dot.idle { background: var(--gray-dim); animation: none; }
 
 /* -- Track tooltip -- */
 .lfm-track { position: relative; }
