@@ -242,7 +242,7 @@ module.exports = async function handler(req, res) {
     'user.getinfo', 'user.gettoptracks', 'user.gettopartists',
     'user.getrecenttracks', 'user.getlovedtracks',
     'track.getInfo', 'track.getSimilar', 'track.getTopTags',
-    'artist.getInfo', 'artist.getSimilar', 'artist.getTopTracks', 'artist.getTopAlbums',
+    'artist.getInfo', 'artist.getSimilar', 'artist.getTopTracks', 'artist.getTopAlbums', 'artist.getTopTags',
     'album.getInfo', 'chart.getTopTracks', 'chart.getTopArtists'
   ];
   if (allowedMethods.indexOf(method) === -1) {
