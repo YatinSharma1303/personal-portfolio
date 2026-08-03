@@ -1290,10 +1290,12 @@
           if (controlsBar) controlsBar.style.display = '';
           if (pagerEl) pagerEl.style.display = '';
           if (activeMedia === type) { allEntries = datasets[type]; refreshAll(); }
+          stopRefreshSpinner();
         }).catch((err) => {
           loading[type] = false;
           loaded[type] = false; // allow retry
           console.warn('AniList ' + type + ' load failed:', err);
+          stopRefreshSpinner();
           showApiDown(type);
         });
     }
@@ -1353,9 +1355,18 @@
       if (btn) btn.classList.add('ama-refresh-spin');
       const type = activeMedia;
       loaded[type] = false; loading[type] = false;
+      /* Show loading skeleton in list area */
+      list.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;width:100%"><div><div class="skeleton" style="width:100%;aspect-ratio:3/4;border-radius:14px"></div><div class="skeleton" style="width:80%;height:12px;margin-top:8px"></div></div><div><div class="skeleton" style="width:100%;aspect-ratio:3/4;border-radius:14px"></div><div class="skeleton" style="width:70%;height:12px;margin-top:8px"></div></div><div><div class="skeleton" style="width:100%;aspect-ratio:3/4;border-radius:14px"></div><div class="skeleton" style="width:90%;height:12px;margin-top:8px"></div></div><div><div class="skeleton" style="width:100%;aspect-ratio:3/4;border-radius:14px"></div><div class="skeleton" style="width:60%;height:12px;margin-top:8px"></div></div></div>';
+      if (statsPanel) statsPanel.innerHTML = '';
+      if (genreBar) genreBar.innerHTML = '';
       loadMedia(type, true);   // nocache=true — bypass server cache
       loadUserMeta(true);      // nocache=true — bypass server cache
-      setTimeout(() => { if (btn) btn.classList.remove('ama-refresh-spin'); refreshing = false; }, 700);
+    }
+    /* Stop refresh spinner when data loads (called from loadMedia success/fail) */
+    function stopRefreshSpinner() {
+      refreshing = false;
+      const btn = $('al-refresh');
+      if (btn) btn.classList.remove('ama-refresh-spin');
     }
     const alRefreshBtn = $('al-refresh');
     if (alRefreshBtn) alRefreshBtn.addEventListener('click', refresh);
