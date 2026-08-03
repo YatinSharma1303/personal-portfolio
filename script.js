@@ -1348,18 +1348,34 @@
 
     // Manual refresh — re-fetch the active media list + user meta without a full page reload.
     let refreshing = false;
+    function showRefreshOverlay() {
+      /* Add a loading overlay on top of existing content — no layout jump */
+      var overlay = document.getElementById('al-refresh-overlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'al-refresh-overlay';
+        overlay.className = 'al-refresh-overlay';
+        card.appendChild(overlay);
+      }
+      overlay.offsetHeight; // force reflow
+      overlay.classList.add('visible');
+    }
+    function hideRefreshOverlay() {
+      var overlay = document.getElementById('al-refresh-overlay');
+      if (overlay) {
+        overlay.classList.remove('visible');
+        setTimeout(function() { overlay.remove(); }, 300);
+      }
+    }
     function refresh() {
       if (refreshing) return;
       refreshing = true;
       const btn = $('al-refresh');
       if (btn) btn.classList.add('ama-refresh-spin');
       refreshStart = Date.now();
+      showRefreshOverlay();
       const type = activeMedia;
       loaded[type] = false; loading[type] = false;
-      /* Show loading skeleton in list area */
-      list.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;width:100%"><div><div class="skeleton" style="width:100%;aspect-ratio:3/4;border-radius:14px"></div><div class="skeleton" style="width:80%;height:12px;margin-top:8px"></div></div><div><div class="skeleton" style="width:100%;aspect-ratio:3/4;border-radius:14px"></div><div class="skeleton" style="width:70%;height:12px;margin-top:8px"></div></div><div><div class="skeleton" style="width:100%;aspect-ratio:3/4;border-radius:14px"></div><div class="skeleton" style="width:90%;height:12px;margin-top:8px"></div></div><div><div class="skeleton" style="width:100%;aspect-ratio:3/4;border-radius:14px"></div><div class="skeleton" style="width:60%;height:12px;margin-top:8px"></div></div></div>';
-      if (statsPanel) statsPanel.innerHTML = '';
-      if (genreBar) genreBar.innerHTML = '';
       loadMedia(type, true);   // nocache=true — bypass server cache
       loadUserMeta(true);      // nocache=true — bypass server cache
     }
@@ -1372,6 +1388,7 @@
         refreshing = false;
         const btn = $('al-refresh');
         if (btn) btn.classList.remove('ama-refresh-spin');
+        hideRefreshOverlay();
       }, delay);
     }
     const alRefreshBtn = $('al-refresh');
