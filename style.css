@@ -1723,6 +1723,7 @@ html.light .lastfm-card .skeleton { background: linear-gradient(90deg, rgba(0,0,
   opacity: 0;
   transition: opacity 0.3s ease;
 }
+.al-item:hover .al-item-cover::after, .al-item:focus-within .al-item-cover::after { opacity: 0; }
 .al-item[data-status] .al-item-cover::after { opacity: 1; }
 .al-item[data-status="CURRENT"] .al-item-cover::after { background: #34d399; box-shadow: 0 0 6px #34d399, 0 0 12px rgba(52,211,153,0.3); }
 .al-item[data-status="REPEATING"] .al-item-cover::after { background: #a78bfa; box-shadow: 0 0 6px #a78bfa, 0 0 12px rgba(167,139,250,0.3); }
