@@ -1536,9 +1536,9 @@ html.light .glass-card { background: rgba(255,255,255,0.6); }
 
 /* Light theme: match dark mode richness */
 html.light .lfm-np-bg { filter: blur(50px) saturate(1.8) brightness(1.05); }
-html.light .lfm-nowplaying.live .lfm-np-bg { opacity: 0.45; }
+html.light .lfm-nowplaying.live .lfm-np-bg { opacity: 0.4; }
 html.light .lfm-np-bg-ghost { filter: blur(4px) saturate(0.8) brightness(0.95); }
-html.light .lfm-nowplaying.live .lfm-np-bg-ghost { opacity: 0.55; }
+html.light .lfm-nowplaying.live .lfm-np-bg-ghost { opacity: 0.6; }
 
 .lfm-np-art-wrap, .lfm-np-info { position: relative; z-index: 1; }
 
