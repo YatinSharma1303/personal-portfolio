@@ -1289,13 +1289,14 @@
           if (genreBar) genreBar.style.display = '';
           if (controlsBar) controlsBar.style.display = '';
           if (pagerEl) pagerEl.style.display = '';
-          if (activeMedia === type) { allEntries = datasets[type]; refreshAll(); }
-          stopRefreshSpinner();
+          if (activeMedia === type) { allEntries = datasets[type]; }
+          /* Don't render yet — stopRefreshSpinner will render + hide overlay together */
+          stopRefreshSpinner(true);
         }).catch((err) => {
           loading[type] = false;
           loaded[type] = false; // allow retry
           console.warn('AniList ' + type + ' load failed:', err);
-          stopRefreshSpinner();
+          stopRefreshSpinner(false);
           showApiDown(type);
         });
     }
@@ -1379,15 +1380,17 @@
       loadMedia(type, true);   // nocache=true — bypass server cache
       loadUserMeta(true);      // nocache=true — bypass server cache
     }
-    /* Stop refresh spinner — ensures at least 1 full rotation before stopping */
+    /* Stop refresh spinner — ensures at least 1 full rotation before stopping.
+       On success: renders new data AND fades overlay simultaneously so no visible shift. */
     var refreshStart = 0;
-    function stopRefreshSpinner() {
+    function stopRefreshSpinner(success) {
       var elapsed = Date.now() - refreshStart;
       var delay = Math.max(0, 600 - elapsed); // ensure at least 600ms of spin
       setTimeout(function() {
         refreshing = false;
         const btn = $('al-refresh');
         if (btn) btn.classList.remove('ama-refresh-spin');
+        if (success) refreshAll(); // render new data exactly when overlay fades
         hideRefreshOverlay();
       }, delay);
     }
