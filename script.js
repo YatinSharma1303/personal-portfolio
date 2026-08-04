@@ -1122,12 +1122,19 @@
       var isLive = window.__lfmIsLiveNow === true;
       var nowUts = Math.floor(Date.now() / 1000);
       var lastUts = parseInt(todayTracks[todayTracks.length - 1].date.uts);
-      if (isLive) {
-        return '<div class="lfm-streak"><span class="lfm-streak-dot"></span>Listening now</div>';
+      // Calculate total listening time today (tracks × 3.5 min avg)
+      var todayMin = Math.round(todayTracks.length * 3.5);
+      var tStr;
+      if (todayMin >= 60) {
+        tStr = Math.floor(todayMin / 60) + 'h ' + (todayMin % 60) + 'm today';
+      } else {
+        tStr = todayMin + 'm today';
       }
-      // Not listening now — show how long since last scrobble
+      if (isLive) {
+        return '<div class="lfm-streak"><span class="lfm-streak-dot"></span>Listening now · ' + tStr + '</div>';
+      }
       var agoStr = timeAgo(lastUts);
-      return '<div class="lfm-streak"><span class="lfm-streak-dot idle"></span>Last played ' + agoStr + '</div>';
+      return '<div class="lfm-streak"><span class="lfm-streak-dot idle"></span>Last played ' + agoStr + ' · ' + tStr + '</div>';
     }
 
     // Re-render only the streak part when live state changes (called by renderRecent)
@@ -1207,14 +1214,33 @@
     function loadWeeklyTracks() {
       const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7); weekAgo.setHours(0,0,0,0);
       const from = Math.floor(weekAgo.getTime() / 1000);
-      return fetchWithTimeout(`${lfmAPI}?method=user.getrecenttracks&user=${encodeURIComponent(u)}&limit=1000&from=${from}&extended=0`, 8000)
-        .then(r => r.json())
-        .then(d => {
-          const tracks = (d.recenttracks && d.recenttracks.track) || [];
-          renderActivityChart(tracks);
-          return tracks;
-        })
-        .catch(() => {});
+      var allTracks = [];
+      var page = 1;
+      var totalPages = 1;
+      function fetchPage() {
+        if (page > totalPages) {
+          renderActivityChart(allTracks);
+          return;
+        }
+        return fetchWithTimeout(`${lfmAPI}?method=user.getrecenttracks&user=${encodeURIComponent(u)}&limit=200&from=${from}&extended=0&page=${page}`, 8000)
+          .then(r => r.json())
+          .then(d => {
+            var tracks = (d.recenttracks && d.recenttracks.track) || [];
+            var attrs = d.recenttracks && d.recenttracks['@attr'];
+            if (attrs && attrs.totalPages) totalPages = parseInt(attrs.totalPages, 10);
+            // Stop if no tracks with timestamps on this page (hit a nowplaying-only page)
+            var hasTimestamp = tracks.some(function(tr) { return tr.date && tr.date.uts; });
+            if (!hasTimestamp || tracks.length === 0) {
+              renderActivityChart(allTracks);
+              return;
+            }
+            allTracks = allTracks.concat(tracks);
+            page++;
+            return fetchPage();
+          })
+          .catch(() => { renderActivityChart(allTracks); });
+      }
+      return fetchPage();
     }
 
     function renderRecent(recenttracks) {
