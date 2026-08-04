@@ -1435,7 +1435,7 @@ html.light .glass-card { background: rgba(255,255,255,0.35); backdrop-filter: bl
   display: inline-flex; align-items: center; gap: 4px;
   font-family: var(--mono); font-size: 10px; letter-spacing: 0.02em;
   padding: 3px 10px; border-radius: 999px;
-  background: color-mix(in srgb, var(--accent-solid) 6%, transparent);
+  background: color-mix(in srgb, var(--accent-solid) 8%, rgba(18,18,18,0.85));
   border: 1px solid color-mix(in srgb, var(--accent-solid) 12%, transparent);
   color: var(--gray);
 }
@@ -1468,7 +1468,7 @@ html.light .glass-card { background: rgba(255,255,255,0.35); backdrop-filter: bl
   display: inline-flex; align-items: center; gap: 5px;
   font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em;
   padding: 4px 11px; border-radius: 999px;
-  background: color-mix(in srgb, var(--accent-solid) 6%, transparent);
+  background: color-mix(in srgb, var(--accent-solid) 8%, rgba(18,18,18,0.85));
   border: 1px solid color-mix(in srgb, var(--accent-solid) 12%, transparent);
   color: var(--gray); margin-bottom: 12px;
 }
@@ -1515,10 +1515,10 @@ html.light .glass-card { background: rgba(255,255,255,0.35); backdrop-filter: bl
   font-family: var(--mono); font-size: 10px; letter-spacing: 0.02em;
   padding: 4px 12px; border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--accent-solid) 12%, transparent);
-  background: color-mix(in srgb, var(--accent-solid) 6%, transparent);
+  background: color-mix(in srgb, var(--accent-solid) 8%, rgba(18,18,18,0.85));
   color: var(--gray); cursor: pointer; transition: all 0.2s ease;
 }
-.lfm-period-tab:hover { background: color-mix(in srgb, var(--accent-solid) 12%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 20%, transparent); color: var(--white); }
+.lfm-period-tab:hover { background: color-mix(in srgb, var(--accent-solid) 12%, rgba(18,18,18,0.85)); border-color: color-mix(in srgb, var(--accent-solid) 20%, transparent); color: var(--white); }
 .lfm-period-tab.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
 
 /* -- Loved tracks heart -- */
@@ -1536,7 +1536,7 @@ html.light .glass-card { background: rgba(255,255,255,0.35); backdrop-filter: bl
   display: inline-flex; align-items: center; gap: 4px;
   font-family: var(--mono); font-size: 10px; letter-spacing: 0.02em;
   padding: 3px 10px; border-radius: 999px;
-  background: color-mix(in srgb, var(--accent-solid) 6%, transparent);
+  background: color-mix(in srgb, var(--accent-solid) 8%, rgba(18,18,18,0.85));
   border: 1px solid color-mix(in srgb, var(--accent-solid) 12%, transparent);
   color: var(--gray); margin-bottom: 8px;
 }
