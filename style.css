@@ -1442,9 +1442,9 @@ html.light .glass-card { background: rgba(255,255,255,0.35); backdrop-filter: bl
 .lfm-stat-pill .material-symbols-outlined { font-size: 13px; color: var(--accent); }
 .lfm-stat-pill b { color: var(--white); font-weight: 700; }
 
-.lfm-nowplaying { display: flex; gap: 18px; align-items: center; padding: 18px; border-radius: 18px; border: 1px solid var(--border); background: rgba(12,12,16,0.92); margin-bottom: 22px; transition: border-color 0.4s ease, box-shadow 0.4s ease; }
-.lfm-nowplaying.live { border-color: rgba(52, 211, 153, 0.35); box-shadow: 0 0 20px rgba(52, 211, 153, 0.08), inset 0 0 30px rgba(52, 211, 153, 0.03); animation: npPulse 3s ease-in-out infinite; }
-@keyframes npPulse { 0%, 100% { box-shadow: 0 0 20px rgba(52, 211, 153, 0.08), inset 0 0 30px rgba(52, 211, 153, 0.03); } 50% { box-shadow: 0 0 30px rgba(52, 211, 153, 0.14), inset 0 0 40px rgba(52, 211, 153, 0.06); } }
+.lfm-nowplaying { display: flex; gap: 18px; align-items: center; padding: 18px; border-radius: 18px; border: 1px solid var(--border); background: linear-gradient(135deg, color-mix(in srgb, var(--accent-solid) 6%, transparent), rgba(120,80,255,0.04)); margin-bottom: 22px; transition: border-color 0.4s ease, box-shadow 0.4s ease; }
+.lfm-nowplaying.live { border-color: color-mix(in srgb, var(--accent-solid) 35%, transparent); box-shadow: 0 0 20px color-mix(in srgb, var(--accent-solid) 10%, transparent), inset 0 0 30px color-mix(in srgb, var(--accent-solid) 4%, transparent); }
+.lfm-nowplaying.live::before { content: ''; position: absolute; inset: -3px; border-radius: inherit; pointer-events: none; z-index: 0; box-shadow: 0 0 30px color-mix(in srgb, var(--accent-solid) 16%, transparent), inset 0 0 40px color-mix(in srgb, var(--accent-solid) 7%, transparent); animation: npGlow 3s ease-in-out infinite; }
 .lfm-np-art-wrap { position: relative; flex-shrink: 0; }
 .lfm-np-art { width: 96px; height: 96px; border-radius: 14px; background-size: cover; background-position: center; background-color: #141414; box-shadow: 0 6px 20px rgba(0,0,0,0.3); flex-shrink: 0; transition: transform 0.3s ease; }
 .lfm-nowplaying.live .lfm-np-art { transform: scale(1); }
@@ -1526,9 +1526,12 @@ html.light .glass-card { background: rgba(255,255,255,0.35); backdrop-filter: bl
 
 /* -- Now Playing background blur -- */
 .lfm-nowplaying { position: relative; overflow: hidden; }
-.lfm-np-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: blur(40px); opacity: 0; transition: opacity 0.6s ease; border-radius: inherit; z-index: 0; pointer-events: none; }
-.lfm-nowplaying.live .lfm-np-bg { opacity: 0.55; }
+.lfm-np-bg { position: absolute; inset: -20px; background-size: cover; background-position: center; filter: blur(50px) saturate(1.6) brightness(0.9); opacity: 0; transition: opacity 0.8s ease; border-radius: inherit; z-index: 0; pointer-events: none; }
+.lfm-nowplaying.live .lfm-np-bg { opacity: 0.4; }
+.lfm-np-bg-ghost { position: absolute; inset: 0; background-size: cover; background-position: center; filter: blur(4px) saturate(0.7) brightness(0.55); opacity: 0; transition: opacity 0.8s ease 0.15s; border-radius: inherit; z-index: 0; pointer-events: none; }
+.lfm-nowplaying.live .lfm-np-bg-ghost { opacity: 0.8; }
 .lfm-np-art-wrap, .lfm-np-info { position: relative; z-index: 1; }
+@keyframes npGlow { 0%, 100% { box-shadow: 0 0 30px color-mix(in srgb, var(--accent-solid) 16%, transparent), inset 0 0 40px color-mix(in srgb, var(--accent-solid) 7%, transparent); } 50% { box-shadow: 0 0 45px color-mix(in srgb, var(--accent-solid) 22%, transparent), inset 0 0 50px color-mix(in srgb, var(--accent-solid) 10%, transparent); } }
 
 /* -- 7-day activity chart -- */
 .lfm-activity { display: flex; align-items: flex-end; gap: 6px; margin-bottom: 22px; padding: 14px 0 0; }
@@ -3169,6 +3172,10 @@ html.light .lfm-stat-pill { background: color-mix(in srgb, var(--accent-solid) 8
 html.light .lfm-stat-pill b { color: var(--gray); }
 html.light .lfm-nowplaying { background: linear-gradient(135deg, color-mix(in srgb, var(--accent-solid) 5%, transparent), color-mix(in srgb, var(--accent-solid) 3%, transparent)); border-color: rgba(0,0,0,0.08); }
 html.light .lfm-nowplaying.live { border-color: rgba(16, 185, 129, 0.4); box-shadow: 0 0 16px rgba(16, 185, 129, 0.1); }
+html.light .lfm-np-bg { filter: blur(50px) saturate(1.8) brightness(1.05); }
+html.light .lfm-nowplaying.live .lfm-np-bg { opacity: 0.4; }
+html.light .lfm-np-bg-ghost { filter: blur(4px) saturate(0.8) brightness(0.95); }
+html.light .lfm-nowplaying.live .lfm-np-bg-ghost { opacity: 0.8; }
 html.light .lfm-track:hover, html.light .lfm-artist:hover { background: rgba(0,0,0,0.03); }
 html.light .lfm-np-progress { background: rgba(0,0,0,0.05); }
 html.light .lfm-activity-bar { background: color-mix(in srgb, var(--accent-solid) 40%, transparent); }
