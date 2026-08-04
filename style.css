@@ -1435,9 +1435,10 @@ html.light .glass-card { background: rgba(255,255,255,0.35); backdrop-filter: bl
   display: inline-flex; align-items: center; gap: 4px;
   font-family: var(--mono); font-size: 10px; letter-spacing: 0.02em;
   padding: 3px 10px; border-radius: 999px;
-  background: rgba(18,18,18,0.9);
+  background: color-mix(in srgb, var(--accent-solid) 6%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent-solid) 12%, transparent);
   color: var(--gray);
+  isolation: isolate;
 }
 .lfm-stat-pill .material-symbols-outlined { font-size: 13px; color: var(--accent); }
 .lfm-stat-pill b { color: var(--white); font-weight: 700; }
@@ -1468,9 +1469,10 @@ html.light .glass-card { background: rgba(255,255,255,0.35); backdrop-filter: bl
   display: inline-flex; align-items: center; gap: 5px;
   font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em;
   padding: 4px 11px; border-radius: 999px;
-  background: rgba(18,18,18,0.9);
+  background: color-mix(in srgb, var(--accent-solid) 6%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent-solid) 12%, transparent);
   color: var(--gray); margin-bottom: 12px;
+  isolation: isolate;
 }
 .lfm-col-title .material-symbols-outlined { font-size: 13px; color: var(--accent); }
 .lfm-tracks { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
@@ -1515,10 +1517,11 @@ html.light .glass-card { background: rgba(255,255,255,0.35); backdrop-filter: bl
   font-family: var(--mono); font-size: 10px; letter-spacing: 0.02em;
   padding: 4px 12px; border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--accent-solid) 12%, transparent);
-  background: rgba(18,18,18,0.9);
+  background: color-mix(in srgb, var(--accent-solid) 6%, transparent);
   color: var(--gray); cursor: pointer; transition: all 0.2s ease;
+  isolation: isolate;
 }
-.lfm-period-tab:hover { background: rgba(18,18,18,0.95); border-color: color-mix(in srgb, var(--accent-solid) 20%, transparent); color: var(--white); }
+.lfm-period-tab:hover { background: color-mix(in srgb, var(--accent-solid) 12%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 20%, transparent); color: var(--white); }
 .lfm-period-tab.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
 
 /* -- Loved tracks heart -- */
@@ -1539,9 +1542,10 @@ html.light .glass-card { background: rgba(255,255,255,0.35); backdrop-filter: bl
   display: inline-flex; align-items: center; gap: 4px;
   font-family: var(--mono); font-size: 10px; letter-spacing: 0.02em;
   padding: 3px 10px; border-radius: 999px;
-  background: rgba(18,18,18,0.9);
+  background: color-mix(in srgb, var(--accent-solid) 6%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent-solid) 12%, transparent);
   color: var(--gray); margin-bottom: 8px;
+  isolation: isolate;
 }
 .lfm-activity-label b { color: var(--white); font-weight: 700; }
 .lfm-activity-bars { display: flex; align-items: flex-end; gap: 4px; flex: 1; }
@@ -3168,7 +3172,7 @@ html.light .tb-cd-cover { box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 
 /* Last.fm card */
 html.light .lastfm-card { background: rgba(255,255,255,0.6); }
-html.light .lfm-stat-pill { background: rgba(0,0,0,0.06); border-color: color-mix(in srgb, var(--accent-solid) 18%, transparent); }
+html.light .lfm-stat-pill { background: color-mix(in srgb, var(--accent-solid) 8%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 18%, transparent); }
 html.light .lfm-stat-pill b { color: var(--gray); }
 html.light .lfm-nowplaying { background: rgba(255,255,255,0.95); border-color: rgba(0,0,0,0.08); }
 html.light .lfm-nowplaying.live { border-color: rgba(16, 185, 129, 0.4); box-shadow: 0 0 16px rgba(16, 185, 129, 0.1); }
@@ -3179,10 +3183,10 @@ html.light .lfm-nowplaying.live .lfm-np-bg-ghost { opacity: 0.8; }
 html.light .lfm-track:hover, html.light .lfm-artist:hover { background: rgba(0,0,0,0.03); }
 html.light .lfm-np-progress { background: rgba(0,0,0,0.05); }
 html.light .lfm-activity-bar { background: color-mix(in srgb, var(--accent-solid) 40%, transparent); }
-html.light .lfm-activity-label { background: rgba(0,0,0,0.06); border-color: color-mix(in srgb, var(--accent-solid) 18%, transparent); }
+html.light .lfm-activity-label { background: color-mix(in srgb, var(--accent-solid) 8%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 18%, transparent); }
 html.light .lfm-activity-label b { color: var(--gray); }
-html.light .lfm-col-title { background: rgba(0,0,0,0.06); border-color: color-mix(in srgb, var(--accent-solid) 18%, transparent); }
-html.light .lfm-period-tab { color: var(--gray); border-color: color-mix(in srgb, var(--accent-solid) 18%, transparent); background: rgba(0,0,0,0.06); }
+html.light .lfm-col-title { background: color-mix(in srgb, var(--accent-solid) 8%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 18%, transparent); }
+html.light .lfm-period-tab { color: var(--gray); border-color: color-mix(in srgb, var(--accent-solid) 18%, transparent); background: color-mix(in srgb, var(--accent-solid) 8%, transparent); }
 html.light .lfm-period-tab.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
 
 /* Contributions card */
