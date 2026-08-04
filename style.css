@@ -1548,7 +1548,7 @@ html.light .glass-card { background: rgba(255,255,255,0.35); backdrop-filter: bl
 @keyframes npGlow { 0%, 100% { box-shadow: 0 0 30px color-mix(in srgb, var(--accent-solid) 16%, transparent), inset 0 0 40px color-mix(in srgb, var(--accent-solid) 7%, transparent); } 50% { box-shadow: 0 0 45px color-mix(in srgb, var(--accent-solid) 22%, transparent), inset 0 0 50px color-mix(in srgb, var(--accent-solid) 10%, transparent); } }
 
 /* -- 7-day activity chart -- */
-.lfm-activity { display: flex; align-items: flex-end; gap: 6px; margin-bottom: 22px; padding: 4px 0 0; }
+.lfm-activity { display: flex; align-items: flex-end; gap: 6px; margin-bottom: 22px; padding: 0; }
 .lfm-activity-label {
   display: inline-flex; align-items: center; gap: 4px;
   font-family: var(--mono); font-size: 10px; letter-spacing: 0.02em;
@@ -1563,9 +1563,9 @@ html.light .glass-card { background: rgba(255,255,255,0.35); backdrop-filter: bl
 .lfm-streak-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-solid); box-shadow: 0 0 6px var(--accent-solid); animation: npPulse 2s ease-in-out infinite; }
 .lfm-streak-dot.idle { background: var(--gray-dim); box-shadow: none; animation: none; }
 @keyframes npPulse { 0%,100%{opacity:1} 50%{opacity:.35} }
-.lfm-activity-bars { display: flex; align-items: flex-end; gap: 4px; flex: 1; }
+.lfm-activity-bars { display: flex; align-items: flex-end; gap: 5px; flex: 1; }
 .lfm-activity-day { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
-.lfm-activity-bar { width: 100%; max-width: 48px; min-height: 3px; border-radius: 4px; background: color-mix(in srgb, var(--accent-solid) 60%, transparent); transition: height 0.4s ease; }
+.lfm-activity-bar { width: 100%; max-width: 56px; min-height: 3px; border-radius: 5px; background: color-mix(in srgb, var(--accent-solid) 60%, transparent); transition: height 0.4s ease; }
 .lfm-activity-day-label { font-family: var(--mono); font-size: 8px; color: var(--gray-dim); opacity: 0.6; }
 
 /* -- Now Playing progress bar -- */
@@ -2465,7 +2465,7 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
   .lfm-period-tabs { gap: 4px; margin-bottom: 14px; }
   .lfm-period-tab { padding: 4px 10px; font-size: 9px; }
   .lfm-activity { margin-bottom: 16px; }
-  .lfm-activity-bar { max-width: 20px; }
+  .lfm-activity-bar { max-width: 28px; }
 
   /* AniList */
   .al-head { gap: 10px; margin-bottom: 18px; }

@@ -1221,7 +1221,7 @@
       var listeningTimeHtml = '<div class="lfm-activity-label">' + ltStr + ' this week</div>';
 
       wrap.innerHTML = '<div class="lfm-activity-meta"><div class="lfm-activity-label"><b>' + total + '</b> tracks this week</div>' + listeningTimeHtml + streakHtml + '</div><div class="lfm-activity-bars">' + days.map(d => {
-        const h = Math.max(3, (d.count / maxCount) * 48);
+        const h = Math.max(3, (d.count / maxCount) * 80);
         const opacity = d.count > 0 ? (0.3 + (d.count / maxCount) * 0.7) : 0.15;
         return '<div class="lfm-activity-day"><div class="lfm-activity-bar" style="height:' + h + 'px;opacity:' + opacity.toFixed(2) + '"></div><div class="lfm-activity-day-label">' + d.label + '</div></div>';
       }).join('') + '</div>';
