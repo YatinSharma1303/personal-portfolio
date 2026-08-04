@@ -1344,9 +1344,12 @@
     }
 
     if (nowPlayingTimer) clearInterval(nowPlayingTimer);
+    if (window.__weeklyTimer) clearInterval(window.__weeklyTimer);
     return loadBundle().then(() => {
       updateNowPlaying();
       window.__lastfmTimer = setInterval(updateNowPlaying, 12000);
+      // Refresh weekly activity chart every 60s to keep tracks count & listening time live
+      window.__weeklyTimer = setInterval(loadWeeklyTracks, 60000);
     }).finally(() => { window.__lastfmLoading = false; });
   }
 
