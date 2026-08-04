@@ -1155,17 +1155,20 @@
 
     // Re-render only the streak part when live state changes (called by renderRecent)
     function refreshStreak() {
-      if (!window.__lfmTodayTracks) return;
-      var newStreak = buildStreakHtml(window.__lfmTodayTracks);
       var meta = document.querySelector('.lfm-activity-meta');
-      if (meta) {
-        var streakEl = meta.querySelector('.lfm-streak');
-        if (streakEl) {
-          var temp = document.createElement('div');
-          temp.innerHTML = newStreak;
-          streakEl.replaceWith(temp.firstElementChild);
-        }
+      if (!meta) return;
+      var streakEl = meta.querySelector('.lfm-streak');
+      if (!streakEl) return;
+      // If todayTracks not yet loaded, toggle class on existing element
+      if (!window.__lfmTodayTracks) {
+        var dot = streakEl.querySelector('.lfm-streak-dot');
+        if (dot) dot.classList.toggle('idle', !window.__lfmIsLiveNow);
+        return;
       }
+      var newStreak = buildStreakHtml(window.__lfmTodayTracks);
+      var temp = document.createElement('div');
+      temp.innerHTML = newStreak;
+      streakEl.replaceWith(temp.firstElementChild);
     }
 
     function renderActivityChart(tracks) {
@@ -1205,6 +1208,9 @@
       }).sort(function(a, b) { return parseInt(a.date.uts) - parseInt(b.date.uts); });
       // Store today tracks so streak can be re-rendered on live state change
       window.__lfmTodayTracks = todayTracks;
+      // Ensure live state is current before building streak HTML
+      var npCard = document.querySelector('.lfm-nowplaying');
+      if (npCard) window.__lfmIsLiveNow = npCard.classList.contains('live');
       var streakHtml = buildStreakHtml(todayTracks);
 
       // Feature 7: Listening time this week (tracks × 3.5 min)
@@ -1215,7 +1221,7 @@
       var listeningTimeHtml = '<div class="lfm-activity-label">' + ltStr + ' this week</div>';
 
       wrap.innerHTML = '<div class="lfm-activity-meta"><div class="lfm-activity-label"><b>' + total + '</b> tracks this week</div>' + listeningTimeHtml + streakHtml + '</div><div class="lfm-activity-bars">' + days.map(d => {
-        const h = Math.max(3, (d.count / maxCount) * 32);
+        const h = Math.max(3, (d.count / maxCount) * 48);
         const opacity = d.count > 0 ? (0.3 + (d.count / maxCount) * 0.7) : 0.15;
         return '<div class="lfm-activity-day"><div class="lfm-activity-bar" style="height:' + h + 'px;opacity:' + opacity.toFixed(2) + '"></div><div class="lfm-activity-day-label">' + d.label + '</div></div>';
       }).join('') + '</div>';
