@@ -2064,7 +2064,11 @@
   (function particles() {
     const canvas = $('hero-particles'); if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    let dots = [], w, h;
+    let dots = [], w, h, heroVisible = true;
+    // Pause animation when hero is not visible
+    const heroObs = new IntersectionObserver(([e]) => { heroVisible = e.isIntersecting; }, { threshold: 0 });
+    const heroEl = canvas.closest('.hero') || canvas.parentElement;
+    if (heroEl) heroObs.observe(heroEl);
     function init() {
       w = canvas.width = window.innerWidth;
       h = canvas.height = window.innerHeight;
@@ -2101,6 +2105,7 @@
       return pAccent.rgb;
     }
     function draw() {
+      if (!heroVisible) { requestAnimationFrame(draw); return; }
       ctx.clearRect(0, 0, w, h);
       dots.forEach(d => { d.x += d.vx; d.y += d.vy; if (d.x<0||d.x>w) d.vx*=-1; if (d.y<0||d.y>h) d.vy*=-1; });
       // Light mode keeps a higher opacity so the accent particles stay visible on the light bg.
@@ -2111,8 +2116,8 @@
       for (let i = 0; i < dots.length; i++) {
         for (let j = i+1; j < dots.length; j++) {
           const dx = dots[i].x - dots[j].x, dy = dots[i].y - dots[j].y;
-          const dist = Math.sqrt(dx*dx + dy*dy);
-          if (dist < 120) { ctx.strokeStyle = 'rgba(' + rgb + ',' + (lineOpacity * (1 - dist/120)) + ')'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(dots[i].x, dots[i].y); ctx.lineTo(dots[j].x, dots[j].y); ctx.stroke(); }
+          const distSq = dx*dx + dy*dy;
+          if (distSq < 14400) { const dist = Math.sqrt(distSq); ctx.strokeStyle = 'rgba(' + rgb + ',' + (lineOpacity * (1 - dist/120)) + ')'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(dots[i].x, dots[i].y); ctx.lineTo(dots[j].x, dots[j].y); ctx.stroke(); }
         }
       }
       ctx.fillStyle = dotColor;
@@ -3259,7 +3264,7 @@
     resize(); window.addEventListener('resize', resize);
     window.addEventListener('mousemove', (e) => {
       mx = e.clientX; my = e.clientY;
-      if (glow) { glow.style.left = mx + 'px'; glow.style.top = my + 'px'; }
+      if (glow) { glow.style.transform = 'translate(' + mx + 'px,' + my + 'px) translate(-50%,-50%)'; }
       dots.push({ x: mx, y: my, life: 1 });
       if (dots.length > 25) dots.shift();
     });
