@@ -1568,13 +1568,6 @@ html.light .glass-card { background: rgba(255,255,255,0.35); backdrop-filter: bl
 .lfm-activity-bar { width: 100%; min-height: 3px; border-radius: 5px; background: color-mix(in srgb, var(--accent-solid) 60%, transparent); transition: height 0.4s ease; }
 .lfm-activity-day-label { font-family: var(--mono); font-size: 8px; color: var(--gray-dim); opacity: 0.6; }
 
-/* -- Now Playing progress bar -- */
-.lfm-np-progress { position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: rgba(255,255,255,0.05); border-radius: 0 0 18px 18px; z-index: 2; overflow: hidden; opacity: 0; transition: opacity 0.3s ease; }
-.lfm-nowplaying.live .lfm-np-progress { opacity: 1; }
-.lfm-np-progress-bar { height: 100%; background: var(--accent); border-radius: 0 0 18px 18px; width: 0; }
-.lfm-nowplaying.live .lfm-np-progress-bar { animation: npProgress 12s linear infinite; }
-@keyframes npProgress { 0% { width: 0; } 85% { width: 92%; } 100% { width: 95%; } }
-
 /* -- Album name in now playing -- */
 .lfm-np-album { font-size: 11px; color: var(--gray-dim); font-family: var(--mono); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.7; }
 
@@ -3196,7 +3189,7 @@ html.light .lfm-nowplaying.live .lfm-np-bg { opacity: 0.4; }
 html.light .lfm-np-bg-ghost { filter: blur(4px) saturate(0.8) brightness(0.95); }
 html.light .lfm-nowplaying.live .lfm-np-bg-ghost { opacity: 0.8; }
 html.light .lfm-track:hover, html.light .lfm-artist:hover { background: rgba(0,0,0,0.03); }
-html.light .lfm-np-progress { background: rgba(0,0,0,0.05); }
+
 html.light .lfm-activity-bar { background: color-mix(in srgb, var(--accent-solid) 40%, transparent); }
 html.light .lfm-activity-label { background: color-mix(in srgb, var(--accent-solid) 8%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 18%, transparent); }
 html.light .lfm-activity-label b { color: var(--gray); }

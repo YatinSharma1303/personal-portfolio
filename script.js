@@ -975,13 +975,11 @@
       return '<div class="lfm-track" data-album="' + esc(albumName) + '" data-plays="' + pc + '" data-loved="' + (loved ? '1' : '0') + '">' + tipHtml + '<span class="lfm-track-rank">' + (idx+1) + '</span>' + art + '<div class="lfm-track-info"><div class="lfm-track-name">' + esc(tr.name) + lovedHtml + '</div><div class="lfm-track-artist">' + esc(artistName) + '</div><div class="lfm-track-tags" data-artist="' + esc(artistName) + '" data-track="' + esc(tr.name) + '"></div></div><span class="lfm-track-plays">' + formatPlays(tr.playcount) + playsBarHtml + '</span></div>';
     }
 
-    // Feature 1 & 5: NP progress bar timer + album art carousel
+    // Feature 5: NP album art carousel (no progress bar)
     function updateNpProgress(isLive, track) {
       if (npProgressTimer) { clearInterval(npProgressTimer); npProgressTimer = null; }
-      const bar = $('lfm-np-progress-bar');
-      if (!bar) return;
       npArtCrossfaded = false;
-      if (!isLive) { bar.style.width = '0'; return; }
+      if (!isLive) return;
       // Determine start time
       var uts = (track && track.date && parseInt(track.date.uts, 10)) || 0;
       var key = ((track && track.artist && (track.artist['#text'] || track.artist.name)) || '') + '::' + (track.name || '');
@@ -993,7 +991,6 @@
         var now = Math.floor(Date.now() / 1000);
         var elapsed = now - npStartUts;
         var progress = Math.min(Math.max(elapsed / 210, 0), 1);
-        bar.style.width = (progress * 100) + '%';
         // Feature 5: crossfade NP background art at ~90%
         if (progress >= 0.9 && !npArtCrossfaded && npArtUrls.length > 1) {
           npArtCrossfaded = true;
