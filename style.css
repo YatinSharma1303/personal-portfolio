@@ -1632,8 +1632,8 @@ html.light .lastfm-card .skeleton { background: linear-gradient(90deg, rgba(0,0,
   color: var(--gray); cursor: pointer; transition: all 0.2s ease;
 }
 .al-tab.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
-.al-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
-.al-item { border-radius: 14px; overflow: hidden; border: 1px solid var(--border); transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.2s ease; }
+.al-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; contain: layout style; }
+.al-item { border-radius: 14px; overflow: hidden; border: 1px solid var(--border); transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.2s ease; will-change: transform; }
 .al-item:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.4), 0 0 20px color-mix(in srgb, var(--accent-solid) 12%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 30%, transparent); }
 .al-item img { width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block; }
 .al-item-cover { position: relative; overflow: hidden; }
@@ -1666,7 +1666,7 @@ html.light .lastfm-card .skeleton { background: linear-gradient(90deg, rgba(0,0,
 .al-item-bar { position: relative; height: 3px; border-radius: 999px; background: rgba(255,255,255,0.07); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04); }
 .al-item-bar i { position: relative; display: block; height: 100%; min-width: 3px; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent2)); box-shadow: 0 0 8px color-mix(in srgb, var(--accent-solid) 45%, transparent); transition: width 0.5s cubic-bezier(.22,1,.36,1); }
 .al-item-bar i::after { content: ''; position: absolute; right: 0; top: 50%; width: 6px; height: 6px; border-radius: 50%; background: #fff; box-shadow: 0 0 7px var(--accent-solid), 0 0 2px #fff; transform: translate(50%, -50%); animation: al-dot-pulse 1.8s ease-in-out infinite; will-change: transform; }
-@keyframes al-dot-pulse { 0%, 100% { transform: translate(50%, -50%) scale(1); } 50% { transform: translate(50%, -50%) scale(1.32); } }
+@keyframes al-dot-pulse { 0%, 100% { transform: translate(50%, -50%) scale(1); } 50% { transform: translate(50%, -50%) scale(1.25); } }
 .al-tab-count { margin-left: 6px; opacity: 0.6; font-size: 10px; }
 .al-tab.active .al-tab-count { opacity: 0.85; }
 .al-empty { grid-column: 1/-1; text-align: center; color: var(--gray-dim); font-family: var(--mono); font-size: 13px; padding: 20px; }
@@ -1726,17 +1726,17 @@ html.light .lastfm-card .skeleton { background: linear-gradient(90deg, rgba(0,0,
 .al-item[data-status] .al-item-cover::after { opacity: 1; }
 .al-item[data-status]:hover .al-item-cover::after,
 .al-item[data-status]:focus-within .al-item-cover::after { opacity: 0 !important; animation: none !important; }
-.al-item[data-status="CURRENT"] .al-item-cover::after { background: #34d399; box-shadow: 0 0 6px #34d399, 0 0 12px rgba(52,211,153,0.3); animation: al-statusPulse 2s ease-in-out infinite; }
+.al-item[data-status="CURRENT"] .al-item-cover::after { background: #34d399; box-shadow: 0 0 6px #34d399, 0 0 12px rgba(52,211,153,0.3); animation: al-statusPulse 2s ease-in-out infinite; will-change: transform; }
 .al-item[data-status="REPEATING"] .al-item-cover::after { background: #a78bfa; box-shadow: 0 0 6px #a78bfa, 0 0 12px rgba(167,139,250,0.3); }
 .al-item[data-status="COMPLETED"] .al-item-cover::after { background: #3b82f6; box-shadow: 0 0 6px #3b82f6, 0 0 12px rgba(59,130,246,0.3); }
 .al-item[data-status="PLANNING"] .al-item-cover::after { background: #f59e0b; box-shadow: 0 0 6px #f59e0b, 0 0 12px rgba(245,158,11,0.3); }
 .al-item[data-status="PAUSED"] .al-item-cover::after { background: #fb923c; box-shadow: 0 0 6px #fb923c, 0 0 12px rgba(251,146,60,0.3); }
 .al-item[data-status="DROPPED"] .al-item-cover::after { background: #f87171; box-shadow: 0 0 6px #f87171, 0 0 12px rgba(248,113,113,0.3); }
 
-/* CURRENT gets a subtle breathe animation */
+/* CURRENT gets a subtle breathe animation (transform only — GPU composited) */
 @keyframes al-statusPulse {
-  0%, 100% { box-shadow: 0 0 4px #34d399, 0 0 10px rgba(52,211,153,0.2); transform: scale(1); }
-  50% { box-shadow: 0 0 6px #34d399, 0 0 16px rgba(52,211,153,0.45); transform: scale(1.15); }
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.2); opacity: 1; }
 }
 
 /* #5 Skeleton shimmer (reuse Last.fm pattern) */
