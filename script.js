@@ -608,13 +608,14 @@
       if (!miniPlayer.classList.contains('open')) return;
       if (e.target.closest('button, input, a, .mp-seek-bar')) return;
       var r = miniPlayer.getBoundingClientRect();
-      drag = { dx: e.clientX - r.left, dy: e.clientY - r.top, w: miniPlayer.offsetWidth, h: miniPlayer.offsetHeight };
+      drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
       miniPlayer.classList.add('dragging');
     });
     window.addEventListener('pointermove', function (e) {
       if (!drag) return;
-      var x = Math.max(8, Math.min(window.innerWidth - drag.w - 8, e.clientX - drag.dx));
-      var y = Math.max(8, Math.min(window.innerHeight - drag.h - 8, e.clientY - drag.dy));
+      var w = miniPlayer.offsetWidth, h = miniPlayer.offsetHeight;
+      var x = Math.max(8, Math.min(window.innerWidth - w - 8, e.clientX - drag.dx));
+      var y = Math.max(8, Math.min(window.innerHeight - h - 8, e.clientY - drag.dy));
       miniPlayer.style.left = x + 'px'; miniPlayer.style.top = y + 'px';
       miniPlayer.style.right = 'auto'; miniPlayer.style.bottom = 'auto';
     });
@@ -2094,16 +2095,12 @@
     });
     // Particle colour follows the palette accent (--accent-solid), parsed + cached.
     let pAccent = { hex: '', rgb: '0,200,255' };
-    let accentFrame = 0;
     function accentRGB() {
-      accentFrame++;
-      if (accentFrame % 60 === 0 || !pAccent.hex) {
-        const hex = (getComputedStyle(document.documentElement).getPropertyValue('--accent-solid') || '').trim();
-        if (hex && hex !== pAccent.hex) {
-          const m = hex.replace('#', '');
-          if (m.length === 6) pAccent = { hex: hex, rgb: parseInt(m.slice(0,2),16) + ',' + parseInt(m.slice(2,4),16) + ',' + parseInt(m.slice(4,6),16) };
-          else if (m.length === 3) pAccent = { hex: hex, rgb: parseInt(m[0]+m[0],16) + ',' + parseInt(m[1]+m[1],16) + ',' + parseInt(m[2]+m[2],16) };
-        }
+      const hex = (getComputedStyle(document.documentElement).getPropertyValue('--accent-solid') || '').trim();
+      if (hex && hex !== pAccent.hex) {
+        const m = hex.replace('#', '');
+        if (m.length === 6) pAccent = { hex: hex, rgb: parseInt(m.slice(0,2),16) + ',' + parseInt(m.slice(2,4),16) + ',' + parseInt(m.slice(4,6),16) };
+        else if (m.length === 3) pAccent = { hex: hex, rgb: parseInt(m[0]+m[0],16) + ',' + parseInt(m[1]+m[1],16) + ',' + parseInt(m[2]+m[2],16) };
       }
       return pAccent.rgb;
     }
@@ -3003,15 +3000,11 @@
     updateCharCount();
 
     /* --- Scroll-to-bottom button --- */
-    let chatTicking = false;
     function checkScroll() {
       var atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 60;
       scrollBtn.hidden = atBottom;
-      chatTicking = false;
     }
-    log.addEventListener('scroll', function () {
-      if (!chatTicking) { requestAnimationFrame(checkScroll); chatTicking = true; }
-    }, { passive: true });
+    log.addEventListener('scroll', checkScroll);
     scrollBtn.addEventListener('click', function () { log.scrollTop = log.scrollHeight; });
 
     /* --- User message --- */
@@ -3258,16 +3251,12 @@
     let dots = [], mx = 0, my = 0;
     // Trail colour follows the palette accent (--accent-solid), parsed + cached.
     let accentCache = { hex: '', rgb: '0,200,255' };
-    let accentFrame2 = 0;
     function accentRGB() {
-      accentFrame2++;
-      if (accentFrame2 % 60 === 0 || !accentCache.hex) {
-        const hex = (getComputedStyle(document.documentElement).getPropertyValue('--accent-solid') || '').trim();
-        if (hex && hex !== accentCache.hex) {
-          const m = hex.replace('#', '');
-          if (m.length === 6) accentCache = { hex: hex, rgb: parseInt(m.slice(0, 2), 16) + ',' + parseInt(m.slice(2, 4), 16) + ',' + parseInt(m.slice(4, 6), 16) };
-          else if (m.length === 3) accentCache = { hex: hex, rgb: parseInt(m[0] + m[0], 16) + ',' + parseInt(m[1] + m[1], 16) + ',' + parseInt(m[2] + m[2], 16) };
-        }
+      const hex = (getComputedStyle(document.documentElement).getPropertyValue('--accent-solid') || '').trim();
+      if (hex && hex !== accentCache.hex) {
+        const m = hex.replace('#', '');
+        if (m.length === 6) accentCache = { hex: hex, rgb: parseInt(m.slice(0, 2), 16) + ',' + parseInt(m.slice(2, 4), 16) + ',' + parseInt(m.slice(4, 6), 16) };
+        else if (m.length === 3) accentCache = { hex: hex, rgb: parseInt(m[0] + m[0], 16) + ',' + parseInt(m[1] + m[1], 16) + ',' + parseInt(m[2] + m[2], 16) };
       }
       return accentCache.rgb;
     }
@@ -3278,12 +3267,8 @@
       if (glow) { glow.style.transform = 'translate(' + mx + 'px,' + my + 'px) translate(-50%,-50%)'; }
       dots.push({ x: mx, y: my, life: 1 });
       if (dots.length > 25) dots.shift();
-      idleFrames = 0;
     });
-    let idleFrames = 0;
     function draw() {
-      idleFrames++;
-      if (idleFrames > 120 && dots.length === 0) { requestAnimationFrame(draw); return; }
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const rgb = accentRGB();
       for (let i = 0; i < dots.length; i++) {
