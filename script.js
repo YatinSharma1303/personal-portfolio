@@ -917,6 +917,36 @@
         updateGenreCloud();
       });
     }
+    // Fetch genre tags from top artists directly (faster than per-track)
+    function fetchTopArtistTags(artists) {
+      if (!artists || !artists.length) return;
+      var promises = artists.slice(0, 5).map(function(ar) {
+        var name = ar.name || '';
+        if (!name) return Promise.resolve([]);
+        var cacheKey = 'lfm_atags_' + name.toLowerCase();
+        try {
+          var cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+          if (cached && Date.now() - cached.ts < 24 * 60 * 60 * 1000) return Promise.resolve(cached.tags);
+        } catch (e) {}
+        return fetchWithTimeout(lfmAPI + '?method=artist.getTopTags&artist=' + encodeURIComponent(name) + '&autocorrect=1', 3000)
+          .then(function(r) { return r.json(); })
+          .then(function(d) {
+            var tags = ((d.toptags && d.toptags.tag) || []).slice(0, 3).map(function(t) { return t.name; });
+            if (tags.length) try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), tags: tags })); } catch (e) {}
+            return tags;
+          })
+          .catch(function() { return []; });
+      });
+      Promise.all(promises).then(function(allTags) {
+        allTags.forEach(function(tags) {
+          tags.forEach(function(t) {
+            var key = t.toLowerCase();
+            genreCounts.set(key, (genreCounts.get(key) || 0) + 1);
+          });
+        });
+        updateGenreCloud();
+      });
+    }
     function renderTrackTags(idx, tags) {
       const allTagEls = document.querySelectorAll('.lfm-track-tags');
       if (allTagEls[idx]) {
@@ -1016,8 +1046,7 @@
     // Filter out overly generic tags that aren't useful as genre indicators
     var BAD_GENRE_TAGS = ['seen live','favorites','favorite','love','loved','amazing','awesome','beautiful','chill','cool','good','great','best','amazing','perfect','epic','nice','guilty pleasure','overplayed','songs','music','default','unknown','other','to listen','check out'];
     function updateGenreCloud() {
-      const cloudEl = $('lfm-genre-cloud');
-      if (!cloudEl) return;
+      const pillsWrap = $('lfm-vibe-pills');
       // Filter bad tags
       var filtered = new Map();
       genreCounts.forEach(function(count, tag) {
@@ -1026,11 +1055,11 @@
         }
       });
       const sorted = [...filtered.entries()].sort((a, b) => b[1] - a[1]);
-      const top5 = sorted.slice(0, 5);
-      if (top5.length === 0) { cloudEl.style.display = 'none'; return; }
-      cloudEl.style.display = 'flex';
-      cloudEl.innerHTML = '<span class="lfm-genre-cloud-label">YOUR VIBE</span>' + top5.map(function(entry) {
-        return '<span class="lfm-genre-pill">' + esc(entry[0]) + '</span>';
+      const topTags = sorted.slice(0, 15);
+      if (!topTags.length || !pillsWrap) return;
+      pillsWrap.innerHTML = topTags.map(function(entry, i) {
+        var c = getGenreColor(entry[0], i);
+        return '<span class="lfm-vibe-pill" style="background:' + c.bg + ';border-color:' + c.border + ';color:' + c.text + ';box-shadow:0 0 8px ' + c.glow + '">' + esc(entry[0]) + '</span>';
       }).join('');
     }
 
@@ -1117,6 +1146,8 @@
           return '<div class="lfm-artist"><span class="lfm-artist-rank">' + (idx+1) + '</span>' + art + '<span class="lfm-artist-name">' + esc(ar.name) + '</span><span class="lfm-artist-plays">' + formatPlays(ar.playcount) + '</span></div>';
         }).join('');
       }
+      // Fetch artist tags for vibe pills
+      if (artists.length) fetchTopArtistTags(artists);
     }
     function setupPeriodTabs() {
       const tabsWrap = $('lfm-period-tabs');
@@ -1177,8 +1208,11 @@
       }
 
       renderRecent(d.recenttracks);
-      // Render vibe pills from user.toptags
+      // Render vibe pills from user.toptags (if available) or artist tags
       if (d.toptags) renderVibePills(d.toptags);
+      // Always fetch artist tags for vibe pills from top artists
+      var artists = (d.topartists && d.topartists.artist) || [];
+      if (artists.length) { genreCounts = new Map(); fetchTopArtistTags(artists); }
     }
 
 
