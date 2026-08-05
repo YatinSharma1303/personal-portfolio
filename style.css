@@ -1461,7 +1461,7 @@ html.light .glass-card { background: rgba(255,255,255,0.35); backdrop-filter: bl
 .lfm-np-info { flex: 1; min-width: 0; }
 .lfm-np-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; color: var(--accent); margin-bottom: 6px; background: rgba(255,255,255,0.06); padding: 2px 8px; border-radius: 5px; display: inline-block; border: 1px solid rgba(255,255,255,0.06); }
 .lfm-nowplaying.live .lfm-np-label { color: var(--accent-solid); background: rgba(6,8,14,0.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border-color: rgba(255,255,255,0.1); }
-.lfm-np-track { font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; background: rgba(255,255,255,0.06); padding: 2px 8px; border-radius: 6px; display: inline-block; border: 1px solid rgba(255,255,255,0.06); }
+.lfm-np-track { font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: rgba(255,255,255,0.06); padding: 2px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06); }
 .lfm-nowplaying.live .lfm-np-track { background: rgba(6,8,14,0.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border-color: rgba(255,255,255,0.1); }
 .lfm-np-artist { font-size: 13px; color: var(--gray); font-family: var(--mono); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; background: rgba(255,255,255,0.06); padding: 2px 8px; border-radius: 6px; display: inline-block; border: 1px solid rgba(255,255,255,0.06); }
 .lfm-nowplaying.live .lfm-np-artist { background: rgba(6,8,14,0.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border-color: rgba(255,255,255,0.1); }
@@ -3212,9 +3212,15 @@ html.light .lfm-np-bg { filter: blur(50px) saturate(1.8) brightness(1.05); }
 html.light .lfm-nowplaying.live .lfm-np-bg { opacity: 0.4; }
 html.light .lfm-np-bg-ghost { filter: blur(4px) saturate(0.8) brightness(0.95); }
 html.light .lfm-nowplaying.live .lfm-np-bg-ghost { opacity: 0.8; }
+html.light .lfm-np-label { color: var(--accent); }
+html.light .lfm-np-track { color: #18181b; }
+html.light .lfm-np-artist { color: #52525b; }
+html.light .lfm-np-album { color: #71717a; background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.08); }
 html.light .lfm-np-label, html.light .lfm-np-track, html.light .lfm-np-artist { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.08); }
 html.light .lfm-nowplaying.live .lfm-np-label, html.light .lfm-nowplaying.live .lfm-np-track, html.light .lfm-nowplaying.live .lfm-np-artist, html.light .lfm-nowplaying.live .lfm-np-album { background: rgba(255,255,255,0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-color: rgba(255,255,255,0.3); }
-html.light .lfm-np-album { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.08); }
+html.light .lfm-nowplaying.live .lfm-np-track { color: #18181b; }
+html.light .lfm-nowplaying.live .lfm-np-artist { color: #52525b; }
+html.light .lfm-nowplaying.live .lfm-np-album { color: #71717a; }
 html.light .lfm-track:hover, html.light .lfm-artist:hover { background: rgba(0,0,0,0.03); }
 
 html.light .lfm-activity-bar { background: color-mix(in srgb, var(--accent-solid) 40%, transparent); }
