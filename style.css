@@ -1537,6 +1537,14 @@ html.light .glass-card { background: rgba(255,255,255,0.35); backdrop-filter: bl
 .lfm-period-tab:hover { background: color-mix(in srgb, var(--accent-solid) 12%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 20%, transparent); color: var(--white); }
 .lfm-period-tab.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
 
+/* -- Your Vibe genre pills -- */
+.lfm-vibe { margin-bottom: 18px; }
+.lfm-vibe-label { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; color: var(--gray); margin-bottom: 10px; }
+.lfm-vibe-label .material-symbols-outlined { font-size: 13px; color: var(--accent); }
+.lfm-vibe-pills { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.lfm-vibe-pill { font-family: var(--mono); font-size: 9px; letter-spacing: 0.02em; padding: 3px 10px; border-radius: 999px; border: 1px solid; font-weight: 600; transition: transform 0.15s ease, box-shadow 0.15s ease; cursor: default; isolation: isolate; }
+.lfm-vibe-pill:hover { transform: scale(1.06); }
+
 /* -- Loved tracks heart -- */
 .lfm-loved { color: #ef4444; font-size: 10px; margin-left: 4px; font-style: normal; }
 
@@ -3229,6 +3237,8 @@ html.light .lfm-activity-label b { color: var(--gray); }
 html.light .lfm-col-title { background: color-mix(in srgb, var(--accent-solid) 8%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 18%, transparent); }
 html.light .lfm-period-tab { color: var(--gray); border-color: color-mix(in srgb, var(--accent-solid) 18%, transparent); background: color-mix(in srgb, var(--accent-solid) 8%, transparent); }
 html.light .lfm-period-tab.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+html.light .lfm-vibe-label { color: var(--gray); }
+html.light .lfm-vibe-pill { font-weight: 500; }
 
 /* Contributions card */
 html.light .contrib-card { background: rgba(255,255,255,0.6); }

@@ -197,11 +197,13 @@ module.exports = async function handler(req, res) {
         fetchLastfmJson(baseParams('user.getinfo'), 3200),
         fetchLastfmJson(baseParams('user.gettoptracks', { period: period, limit: '5' }), 3200),
         fetchLastfmJson(baseParams('user.gettopartists', { period: period, limit: '5' }), 3200),
-        fetchLastfmJson(baseParams('user.getrecenttracks', { limit: '10' }), 3200)
+        fetchLastfmJson(baseParams('user.getrecenttracks', { limit: '10' }), 3200),
+        fetchLastfmJson(baseParams('user.gettoptags', { period: period, limit: '20' }), 3200)
       ]);
       var results = settled.map(function(x) { return x.status === 'fulfilled' ? (x.value || {}) : {}; });
       var toptracks = results[1].toptracks || (cachedBundle && cachedBundle.body && cachedBundle.body.toptracks) || null;
       var topartists = results[2].topartists || (cachedBundle && cachedBundle.body && cachedBundle.body.topartists) || null;
+      var toptags = results[4].toptags || (cachedBundle && cachedBundle.body && cachedBundle.body.toptags) || null;
       // Resolve cover art for top tracks/artists (their Last.fm endpoints ship no art).
       // Wrapped so a slow/failing iTunes call never breaks the bundle.
       var recenttracks = results[3].recenttracks || (cachedBundle && cachedBundle.body && cachedBundle.body.recenttracks) || null;
@@ -210,6 +212,7 @@ module.exports = async function handler(req, res) {
         user: results[0].user || (cachedBundle && cachedBundle.body && cachedBundle.body.user) || null,
         toptracks: toptracks,
         topartists: topartists,
+        toptags: toptags,
         recenttracks: recenttracks,
         bundledAt: Date.now(),
         partial: settled.some(function(x) { return x.status !== 'fulfilled' || (x.value && x.value.ok === false); })
@@ -239,7 +242,7 @@ module.exports = async function handler(req, res) {
 
   /* Only allow safe read-only methods */
   var allowedMethods = [
-    'user.getinfo', 'user.gettoptracks', 'user.gettopartists',
+    'user.getinfo', 'user.gettoptracks', 'user.gettopartists', 'user.gettoptags',
     'user.getrecenttracks', 'user.getlovedtracks',
     'track.getInfo', 'track.getSimilar', 'track.getTopTags',
     'artist.getInfo', 'artist.getSimilar', 'artist.getTopTracks', 'artist.getTopAlbums', 'artist.getTopTags',

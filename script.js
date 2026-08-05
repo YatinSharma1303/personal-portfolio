@@ -930,7 +930,89 @@
       updateGenreCloud();
     }
 
-    // Feature 4: Genre cloud rendering
+    // -- Genre color map for vibe pills --
+    var GENRE_COLORS = {
+      'rock':             { bg: 'rgba(239,68,68,0.15)',  border: 'rgba(239,68,68,0.35)',  text: '#f87171', glow: 'rgba(239,68,68,0.2)' },
+      'pop':              { bg: 'rgba(236,72,153,0.15)', border: 'rgba(236,72,153,0.35)', text: '#f472b6', glow: 'rgba(236,72,153,0.2)' },
+      'indie':            { bg: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.35)', text: '#c084fc', glow: 'rgba(168,85,247,0.2)' },
+      'electronic':       { bg: 'rgba(6,182,212,0.15)',  border: 'rgba(6,182,212,0.35)',  text: '#22d3ee', glow: 'rgba(6,182,212,0.2)' },
+      'electronica':      { bg: 'rgba(6,182,212,0.15)',  border: 'rgba(6,182,212,0.35)',  text: '#22d3ee', glow: 'rgba(6,182,212,0.2)' },
+      'dance':            { bg: 'rgba(6,182,212,0.15)',  border: 'rgba(6,182,212,0.35)',  text: '#22d3ee', glow: 'rgba(6,182,212,0.2)' },
+      'hip-hop':          { bg: 'rgba(249,115,22,0.15)', border: 'rgba(249,115,22,0.35)', text: '#fb923c', glow: 'rgba(249,115,22,0.2)' },
+      'hip hop':          { bg: 'rgba(249,115,22,0.15)', border: 'rgba(249,115,22,0.35)', text: '#fb923c', glow: 'rgba(249,115,22,0.2)' },
+      'rap':              { bg: 'rgba(249,115,22,0.15)', border: 'rgba(249,115,22,0.35)', text: '#fb923c', glow: 'rgba(249,115,22,0.2)' },
+      'r&b':              { bg: 'rgba(244,114,182,0.15)',border: 'rgba(244,114,182,0.35)',text: '#f472b6', glow: 'rgba(244,114,182,0.2)' },
+      'soul':             { bg: 'rgba(244,114,182,0.15)',border: 'rgba(244,114,182,0.35)',text: '#f472b6', glow: 'rgba(244,114,182,0.2)' },
+      'jazz':             { bg: 'rgba(234,179,8,0.15)',  border: 'rgba(234,179,8,0.35)',  text: '#facc15', glow: 'rgba(234,179,8,0.2)' },
+      'classical':        { bg: 'rgba(234,179,8,0.15)',  border: 'rgba(234,179,8,0.35)',  text: '#facc15', glow: 'rgba(234,179,8,0.2)' },
+      'metal':            { bg: 'rgba(163,163,163,0.15)',border: 'rgba(163,163,163,0.35)',text: '#a3a3a3', glow: 'rgba(163,163,163,0.2)' },
+      'alternative':      { bg: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.35)', text: '#c084fc', glow: 'rgba(168,85,247,0.2)' },
+      'punk':             { bg: 'rgba(239,68,68,0.15)',  border: 'rgba(239,68,68,0.35)',  text: '#f87171', glow: 'rgba(239,68,68,0.2)' },
+      'folk':             { bg: 'rgba(34,197,94,0.15)',  border: 'rgba(34,197,94,0.35)',  text: '#4ade80', glow: 'rgba(34,197,94,0.2)' },
+      'country':          { bg: 'rgba(34,197,94,0.15)',  border: 'rgba(34,197,94,0.35)',  text: '#4ade80', glow: 'rgba(34,197,94,0.2)' },
+      'blues':            { bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.35)', text: '#60a5fa', glow: 'rgba(59,130,246,0.2)' },
+      'reggae':           { bg: 'rgba(34,197,94,0.15)',  border: 'rgba(34,197,94,0.35)',  text: '#4ade80', glow: 'rgba(34,197,94,0.2)' },
+      'latin':            { bg: 'rgba(249,115,22,0.15)', border: 'rgba(249,115,22,0.35)', text: '#fb923c', glow: 'rgba(249,115,22,0.2)' },
+      'k-pop':            { bg: 'rgba(236,72,153,0.15)', border: 'rgba(236,72,153,0.35)', text: '#f472b6', glow: 'rgba(236,72,153,0.2)' },
+      'kpop':             { bg: 'rgba(236,72,153,0.15)', border: 'rgba(236,72,153,0.35)', text: '#f472b6', glow: 'rgba(236,72,153,0.2)' },
+      'anime':            { bg: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.35)', text: '#c084fc', glow: 'rgba(168,85,247,0.2)' },
+      'ambient':          { bg: 'rgba(6,182,212,0.15)',  border: 'rgba(6,182,212,0.35)',  text: '#22d3ee', glow: 'rgba(6,182,212,0.2)' },
+      'lo-fi':            { bg: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.35)', text: '#c084fc', glow: 'rgba(168,85,247,0.2)' },
+      'lofi':             { bg: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.35)', text: '#c084fc', glow: 'rgba(168,85,247,0.2)' },
+      'techno':           { bg: 'rgba(6,182,212,0.15)',  border: 'rgba(6,182,212,0.35)',  text: '#22d3ee', glow: 'rgba(6,182,212,0.2)' },
+      'house':            { bg: 'rgba(6,182,212,0.15)',  border: 'rgba(6,182,212,0.35)',  text: '#22d3ee', glow: 'rgba(6,182,212,0.2)' },
+      'trap':             { bg: 'rgba(249,115,22,0.15)', border: 'rgba(249,115,22,0.35)', text: '#fb923c', glow: 'rgba(249,115,22,0.2)' },
+      'drill':            { bg: 'rgba(249,115,22,0.15)', border: 'rgba(249,115,22,0.35)', text: '#fb923c', glow: 'rgba(249,115,22,0.2)' },
+      'synth-pop':        { bg: 'rgba(236,72,153,0.15)', border: 'rgba(236,72,153,0.35)', text: '#f472b6', glow: 'rgba(236,72,153,0.2)' },
+      'synthpop':         { bg: 'rgba(236,72,153,0.15)', border: 'rgba(236,72,153,0.35)', text: '#f472b6', glow: 'rgba(236,72,153,0.2)' },
+      'dream pop':        { bg: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.35)', text: '#c084fc', glow: 'rgba(168,85,247,0.2)' },
+      'shoegaze':         { bg: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.35)', text: '#c084fc', glow: 'rgba(168,85,247,0.2)' },
+      'indie pop':        { bg: 'rgba(236,72,153,0.15)', border: 'rgba(236,72,153,0.35)', text: '#f472b6', glow: 'rgba(236,72,153,0.2)' },
+      'indie rock':       { bg: 'rgba(239,68,68,0.15)',  border: 'rgba(239,68,68,0.35)',  text: '#f87171', glow: 'rgba(239,68,68,0.2)' },
+      'post-punk':        { bg: 'rgba(163,163,163,0.15)',border: 'rgba(163,163,163,0.35)',text: '#a3a3a3', glow: 'rgba(163,163,163,0.2)' },
+      'experimental':     { bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.35)', text: '#60a5fa', glow: 'rgba(59,130,246,0.2)' },
+      'bollywood':        { bg: 'rgba(249,115,22,0.15)', border: 'rgba(249,115,22,0.35)', text: '#fb923c', glow: 'rgba(249,115,22,0.2)' },
+      'hindi':            { bg: 'rgba(249,115,22,0.15)', border: 'rgba(249,115,22,0.35)', text: '#fb923c', glow: 'rgba(249,115,22,0.2)' },
+    };
+    // Default color for unknown genres
+    var DEFAULT_GENRE_COLOR = { bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.12)', text: 'var(--gray)', glow: 'transparent' };
+    // Fallback palette rotation for unmatched genres
+    var FALLBACK_PALETTE = [
+      { bg: 'rgba(239,68,68,0.12)',  border: 'rgba(239,68,68,0.3)',  text: '#f87171' },
+      { bg: 'rgba(236,72,153,0.12)', border: 'rgba(236,72,153,0.3)', text: '#f472b6' },
+      { bg: 'rgba(168,85,247,0.12)', border: 'rgba(168,85,247,0.3)', text: '#c084fc' },
+      { bg: 'rgba(6,182,212,0.12)',  border: 'rgba(6,182,212,0.3)',  text: '#22d3ee' },
+      { bg: 'rgba(249,115,22,0.12)', border: 'rgba(249,115,22,0.3)', text: '#fb923c' },
+      { bg: 'rgba(34,197,94,0.12)',  border: 'rgba(34,197,94,0.3)',  text: '#4ade80' },
+      { bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.3)', text: '#60a5fa' },
+      { bg: 'rgba(234,179,8,0.12)',  border: 'rgba(234,179,8,0.3)',  text: '#facc15' },
+    ];
+
+    function getGenreColor(name, index) {
+      var key = name.toLowerCase().trim();
+      if (GENRE_COLORS[key]) return GENRE_COLORS[key];
+      // Check partial match (e.g. "progressive metal" → "metal")
+      var keys = Object.keys(GENRE_COLORS);
+      for (var i = 0; i < keys.length; i++) {
+        if (key.indexOf(keys[i]) !== -1 || keys[i].indexOf(key) !== -1) return GENRE_COLORS[keys[i]];
+      }
+      return FALLBACK_PALETTE[index % FALLBACK_PALETTE.length];
+    }
+
+    function renderVibePills(toptags) {
+      var pillsWrap = $('lfm-vibe-pills');
+      if (!pillsWrap) return;
+      var tags = (toptags && toptags.tag) || [];
+      if (!tags.length) { pillsWrap.innerHTML = ''; return; }
+      var BAD = ['seen live','favorites','favorite','love','loved','amazing','awesome','beautiful','chill','cool','good','great','best','perfect','epic','nice','guilty pleasure','overplayed','songs','music','default','unknown','other','to listen','check out','the','all'];
+      var filtered = tags.filter(function(t) { return BAD.indexOf(t.name.toLowerCase()) === -1; });
+      pillsWrap.innerHTML = filtered.map(function(t, i) {
+        var c = getGenreColor(t.name, i);
+        return '<span class="lfm-vibe-pill" style="background:' + c.bg + ';border-color:' + c.border + ';color:' + c.text + ';box-shadow:0 0 8px ' + c.glow + '">' + esc(t.name) + '</span>';
+      }).join('');
+    }
+
+    // Feature 4: Genre cloud rendering (fallback from track tags)
     // Filter out overly generic tags that aren't useful as genre indicators
     var BAD_GENRE_TAGS = ['seen live','favorites','favorite','love','loved','amazing','awesome','beautiful','chill','cool','good','great','best','amazing','perfect','epic','nice','guilty pleasure','overplayed','songs','music','default','unknown','other','to listen','check out'];
     function updateGenreCloud() {
@@ -1050,12 +1132,14 @@
         // Show skeletons
         const tracksWrap = $('lfm-tracks');
         const artistsWrap = $('lfm-artists');
+        const vibePills = $('lfm-vibe-pills');
         if (tracksWrap) tracksWrap.innerHTML = '<div class="lfm-track"><div class="skeleton" style="width:40px;height:40px;border-radius:8px;flex-shrink:0"></div><div style="flex:1"><div class="skeleton" style="width:80%;height:12px;margin-bottom:4px"></div><div class="skeleton" style="width:50%;height:10px"></div></div></div>'.repeat(3);
         if (artistsWrap) artistsWrap.innerHTML = '<div class="lfm-artist"><div class="skeleton" style="width:40px;height:40px;border-radius:50%;flex-shrink:0"></div><div class="skeleton" style="flex:1;height:12px"></div></div>'.repeat(3);
-        // Fetch via bundle endpoint (includes server-side art enrichment)
+        if (vibePills) vibePills.innerHTML = '<div class="skeleton" style="width:60px;height:22px;border-radius:999px;display:inline-block"></div><div class="skeleton" style="width:50px;height:22px;border-radius:999px;display:inline-block"></div><div class="skeleton" style="width:70px;height:22px;border-radius:999px;display:inline-block"></div><div class="skeleton" style="width:55px;height:22px;border-radius:999px;display:inline-block"></div>';
+        // Fetch via bundle endpoint (includes server-side art enrichment + toptags)
         fetchWithTimeout(lfmAPI + '?bundle=1&user=' + encodeURIComponent(u) + '&period=' + period, 6000)
           .then(r => r.json())
-          .then(d => { renderTopSection({ toptracks: d.toptracks, topartists: d.topartists }); })
+          .then(d => { renderTopSection({ toptracks: d.toptracks, topartists: d.topartists }); if (d.toptags) renderVibePills(d.toptags); })
           .catch(() => {});
       });
     }
@@ -1093,6 +1177,8 @@
       }
 
       renderRecent(d.recenttracks);
+      // Render vibe pills from user.toptags
+      if (d.toptags) renderVibePills(d.toptags);
     }
 
 
