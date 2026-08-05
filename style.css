@@ -1774,6 +1774,12 @@ html.light .anilist-card .skeleton { background: linear-gradient(90deg, rgba(0,0
   display: flex; gap: 12px; padding: 8px 12px; border-radius: 12px;
   border-left: 3px solid transparent;
 }
+.al-list.list-view .al-item[data-status="CURRENT"] { border-left-color: #34d399; }
+.al-list.list-view .al-item[data-status="REPEATING"] { border-left-color: #a78bfa; }
+.al-list.list-view .al-item[data-status="COMPLETED"] { border-left-color: #3b82f6; }
+.al-list.list-view .al-item[data-status="PLANNING"] { border-left-color: #f59e0b; }
+.al-list.list-view .al-item[data-status="PAUSED"] { border-left-color: #fb923c; }
+.al-list.list-view .al-item[data-status="DROPPED"] { border-left-color: #f87171; }
 .al-list.list-view .al-item-cover { width: 40px; height: 54px; border-radius: 6px; flex-shrink: 0; }
 .al-list.list-view .al-item-cover img { aspect-ratio: auto; height: 100%; width: 100%; object-fit: cover; }
 .al-list.list-view .al-item-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
@@ -1781,7 +1787,8 @@ html.light .anilist-card .skeleton { background: linear-gradient(90deg, rgba(0,0
 .al-list.list-view .al-item-overlay,
 .al-list.list-view .al-fav,
 .al-list.list-view .al-cover-score,
-.al-list.list-view .al-cover-fmt { display: none !important; }
+.al-list.list-view .al-cover-fmt,
+.al-list.list-view .al-cover-status { display: none !important; }
 
 /* #14 Per-page control */
 .al-perpage {
