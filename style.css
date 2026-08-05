@@ -1691,23 +1691,27 @@ html.light .lastfm-card .skeleton { background: linear-gradient(90deg, rgba(0,0,
 }
 .al-item-date .material-symbols-outlined { font-size: 10px; }
 
-/* #4 Status dot badge on cover */
+/* #4 Status badge on cover — dark base + colored accent for universal visibility */
 .al-cover-status {
   position: absolute; bottom: 6px; left: 6px; z-index: 3;
-  padding: 1px 6px; border-radius: 999px;
+  padding: 2px 7px; border-radius: 6px;
   font-family: var(--mono); font-size: 8px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.06em;
-  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(6,8,14,0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-left: 2px solid var(--status-color, #fff);
+  color: var(--status-color, #fff);
+  text-shadow: 0 0 6px var(--status-color, transparent);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
   transition: opacity 0.2s ease;
 }
 .al-item:hover .al-cover-status { opacity: 0; }
-.al-item[data-status="CURRENT"] .al-cover-status { background: rgba(52,211,153,0.2); color: #34d399; }
-.al-item[data-status="REPEATING"] .al-cover-status { background: rgba(167,139,250,0.2); color: #a78bfa; }
-.al-item[data-status="COMPLETED"] .al-cover-status { background: rgba(59,130,246,0.2); color: #3b82f6; }
-.al-item[data-status="PLANNING"] .al-cover-status { background: rgba(245,158,11,0.2); color: #f59e0b; }
-.al-item[data-status="PAUSED"] .al-cover-status { background: rgba(251,146,60,0.2); color: #fb923c; }
-.al-item[data-status="DROPPED"] .al-cover-status { background: rgba(248,113,113,0.2); color: #f87171; }
+.al-item[data-status="CURRENT"] .al-cover-status { --status-color: #34d399; }
+.al-item[data-status="REPEATING"] .al-cover-status { --status-color: #a78bfa; }
+.al-item[data-status="COMPLETED"] .al-cover-status { --status-color: #3b82f6; }
+.al-item[data-status="PLANNING"] .al-cover-status { --status-color: #f59e0b; }
+.al-item[data-status="PAUSED"] .al-cover-status { --status-color: #fb923c; }
+.al-item[data-status="DROPPED"] .al-cover-status { --status-color: #f87171; }
 
 /* #5 Skeleton shimmer (reuse Last.fm pattern) */
 .anilist-card .skeleton { background: linear-gradient(90deg, var(--border) 25%, rgba(255,255,255,0.06) 50%, var(--border) 75%) !important; background-size: 200px 100% !important; animation: lfmShimmer 1.5s ease-in-out infinite !important; }
