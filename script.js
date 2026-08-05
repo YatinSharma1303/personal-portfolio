@@ -1849,13 +1849,16 @@
         if (mean) { var sc = mean >= 75 ? 'high' : mean >= 60 ? 'mid' : 'low'; var sv = showMeanScore ? (mean / 10).toFixed(1) : (e.score || (mean / 10).toFixed(1)); scoreBadge = '<span class="al-cover-score ' + sc + '">★ ' + sv + '</span>'; }
         var fmtChip = fmt ? '<span class="al-cover-fmt">' + esc(fmt) + '</span>' : '';
         var stAttr = ' data-status="' + st + '"';
+        // Status badge on cover art
+        var stLabels = { CURRENT: 'Watching', REPEATING: 'Rewatch', COMPLETED: 'Done', PLANNING: 'Plan', PAUSED: 'Paused', DROPPED: 'Dropped' };
+        var stBadge = st && stLabels[st] ? '<span class="al-cover-status">' + stLabels[st] + '</span>' : '';
         var nameHtml = activeSearch ? highlightMatch(esc(t), activeSearch) : esc(t);
         var delay = Math.min(idx * 0.03, 0.36); // cap stagger at ~360ms total
         var anim = isFirstRender ? ' style=\"animation-delay:' + delay + 's\"' : ' style=\"animation:none\"';
         return '<div class="al-item"' + stAttr + anim + '>' +
           '<div class="al-item-cover">' +
             (img ? '<img src="' + img + '" alt="' + esc(t) + '" loading="lazy" decoding="async">' : '') +
-            scoreBadge + fmtChip +
+            scoreBadge + stBadge + fmtChip +
             (isFav ? '<span class="al-fav" title="Favourite">♥</span>' : '') +
             overlay +
           '</div>' +
