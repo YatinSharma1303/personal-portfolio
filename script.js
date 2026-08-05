@@ -1211,7 +1211,6 @@
       // Render vibe pills from user.toptags (if available) or artist tags
       if (d.toptags) renderVibePills(d.toptags);
       // Always fetch artist tags for vibe pills from top artists
-      var artists = (d.topartists && d.topartists.artist) || [];
       if (artists.length) { genreCounts = new Map(); fetchTopArtistTags(artists); }
     }
 
