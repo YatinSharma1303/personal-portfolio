@@ -81,3 +81,23 @@ Implemented 10 improvements to the Last.fm section of the personal portfolio web
 - Verify light mode rendering for all new elements
 - Check that genre tags populate correctly from `track.getTopTags` API
 - Confirm background blur effect on now-playing when live
+---
+Task ID: 1
+Agent: main
+Task: Fix album name visibility and apply dark bg treatment to all NP card text elements
+
+Work Log:
+- Read style.css to identify all NP card text element classes: .lfm-np-label, .lfm-np-track, .lfm-np-artist, .lfm-np-album
+- Found .lfm-np-album had inline-block display causing background box to be text-width only (cut-off on long names)
+- Found .lfm-np-label, .lfm-np-track, .lfm-np-artist had no dark background treatment at all
+- Applied uniform dark base treatment to all 4 text elements: background rgba(6,8,14,0.6), backdrop-filter blur(6px), subtle border
+- Changed .lfm-np-album from display:inline-block to display:block so background spans full width and truncates with ellipsis instead of cutting off
+- Changed .lfm-np-track and .lfm-np-artist to display:block with same dark bg
+- Bumped CSS version to v=25 in index.html
+- Pushed commit 3684eb6 to main
+
+Stage Summary:
+- All text elements in NP card now have dark semi-transparent background + blur for universal visibility on any cover art color
+- Album name no longer gets cut-off on long names (block display with ellipsis)
+- Consistent treatment across label, track, artist, and album text elements
+
