@@ -20,6 +20,7 @@ var PRECACHE_ASSETS = [
 /* Routes that must NEVER be cached (API calls, real-time data) */
 var NO_CACHE_PATTERNS = [
   '/api/lastfm',
+  '/api/anilist',
   '/api/telegram',
   '/api/telegram-webhook',
   '/api/chat',

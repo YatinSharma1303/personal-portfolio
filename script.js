@@ -1792,17 +1792,17 @@
       let count, mean, genres, numbers;
       if (isManga()) {
         let chapters, volumes;
-        if (statsData && (statsData.count || statsData.chaptersRead)) {
-          count = statsData.count || 0; chapters = statsData.chaptersRead || 0;
-          volumes = statsData.volumesRead || 0; mean = statsData.meanScore || 0;
-          genres = (statsData.genres || []).slice();
-        } else {
-          count = allEntries.length;
-          chapters = allEntries.reduce((s, e) => s + (Number(e.progress) || 0), 0);
-          volumes = 0; mean = 0;
-          const gc = {}; allEntries.forEach(e => ((e.media && e.media.genres) || []).forEach(g => gc[g] = (gc[g] || 0) + 1));
-          genres = Object.keys(gc).map(g => ({ genre: g, count: gc[g] }));
-        }
+        /* Always compute count/chapters/volumes from real-time list entries.
+           AniList User.statistics is cached server-side and can be hours stale.
+           Only use statsData for meanScore and genres (not easily computable). */
+        count = allEntries.length;
+        chapters = allEntries.reduce((s, e) => s + (Number(e.progress) || 0), 0);
+        volumes = 0;
+        mean = (statsData && statsData.meanScore) || 0;
+        const gc = {}; allEntries.forEach(e => ((e.media && e.media.genres) || []).forEach(g => gc[g] = (gc[g] || 0) + 1));
+        genres = (statsData && statsData.genres && statsData.genres.length)
+          ? statsData.genres.slice()
+          : Object.keys(gc).map(g => ({ genre: g, count: gc[g] }));
         if (!count && !allEntries.length) { statsPanel.innerHTML = ''; return; }
         numbers = '<div class="al-stat-cards">' +
           '<div class="al-stat-card"><span class="al-sc-val">' + count.toLocaleString() + '</span><span class="al-sc-label">Manga</span></div>' +
@@ -1812,18 +1812,17 @@
         '</div>';
       } else {
         let eps, mins;
-        if (statsData && (statsData.count || statsData.episodesWatched)) {
-          count = statsData.count || 0; eps = statsData.episodesWatched || 0;
-          mins = statsData.minutesWatched || 0; mean = statsData.meanScore || 0;
-          genres = (statsData.genres || []).slice();
-        } else {
-          count = allEntries.length;
-          eps = allEntries.reduce((s, e) => s + (Number(e.progress) || 0), 0);
-          mins = allEntries.reduce((s, e) => s + (Number(e.progress) || 0) * ((e.media && e.media.duration) || 24), 0);
-          mean = 0;
-          const gc = {}; allEntries.forEach(e => ((e.media && e.media.genres) || []).forEach(g => gc[g] = (gc[g] || 0) + 1));
-          genres = Object.keys(gc).map(g => ({ genre: g, count: gc[g] }));
-        }
+        /* Always compute count/eps/days from real-time list entries.
+           AniList User.statistics is cached server-side and can be hours stale.
+           Only use statsData for meanScore and genres (not easily computable). */
+        count = allEntries.length;
+        eps = allEntries.reduce((s, e) => s + (Number(e.progress) || 0), 0);
+        mins = allEntries.reduce((s, e) => s + (Number(e.progress) || 0) * ((e.media && e.media.duration) || 24), 0);
+        mean = (statsData && statsData.meanScore) || 0;
+        const gc = {}; allEntries.forEach(e => ((e.media && e.media.genres) || []).forEach(g => gc[g] = (gc[g] || 0) + 1));
+        genres = (statsData && statsData.genres && statsData.genres.length)
+          ? statsData.genres.slice()
+          : Object.keys(gc).map(g => ({ genre: g, count: gc[g] }));
         if (!count && !allEntries.length) { statsPanel.innerHTML = ''; return; }
         const days = (mins / 1440).toFixed(1);
         numbers = '<div class="al-stat-cards">' +
