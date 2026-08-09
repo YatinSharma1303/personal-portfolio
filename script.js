@@ -866,15 +866,42 @@
             if (tags.length) {
               try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), tags: tags })); } catch (e) {}
               renderTrackTags(idx, tags);
+            } else {
+              // No track-level tags — fallback to artist tags for this track
+              fetchArtistTagForTrack(idx, artistName);
             }
           })
-          .catch(() => {});
+          .catch(() => {
+            // Track fetch failed — fallback to artist tags
+            fetchArtistTagForTrack(idx, artistName);
+          });
       });
       // After a delay, check if genre cloud is still empty — if so, fallback to artist tags
       setTimeout(function() {
         if (genreCounts.size > 0 || artistTagFetchDone) return;
         fetchArtistTagsForCloud(tracks);
       }, 4000);
+    }
+    // Per-track fallback: fetch artist.getTopTags for a single track's artist
+    function fetchArtistTagForTrack(idx, artistName) {
+      var cacheKey = 'lfm_atags_' + artistName.toLowerCase();
+      try {
+        var cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+        if (cached && Date.now() - cached.ts < 24 * 60 * 60 * 1000) {
+          if (cached.tags && cached.tags.length) renderTrackTags(idx, cached.tags.slice(0, 2));
+          return;
+        }
+      } catch (e) {}
+      fetchWithTimeout(lfmAPI + '?method=artist.getTopTags&artist=' + encodeURIComponent(artistName) + '&autocorrect=1', 3000)
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          var tags = ((d.toptags && d.toptags.tag) || []).slice(0, 2).map(function(t) { return t.name; });
+          if (tags.length) {
+            try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), tags: tags })); } catch (e) {}
+            renderTrackTags(idx, tags);
+          }
+        })
+        .catch(function() {});
     }
     // Fallback: pull genre tags from the artists of the top tracks
     function fetchArtistTagsForCloud(tracks) {
