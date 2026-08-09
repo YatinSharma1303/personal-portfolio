@@ -1063,9 +1063,8 @@
       if (!tags.length) { pillsWrap.innerHTML = ''; return; }
       var BAD = ['seen live','favorites','favorite','love','loved','amazing','awesome','beautiful','chill','cool','good','great','best','perfect','epic','nice','guilty pleasure','overplayed','songs','music','default','unknown','other','to listen','check out','the','all'];
       var filtered = tags.filter(function(t) { return BAD.indexOf(t.name.toLowerCase()) === -1; });
-      pillsWrap.innerHTML = filtered.map(function(t, i) {
-        var c = getGenreColor(t.name, i);
-        return '<span class="lfm-vibe-pill" style="background:' + c.bg + ';border-color:' + c.border + ';color:' + c.text + ';box-shadow:0 0 8px ' + c.glow + '">' + esc(t.name) + '</span>';
+      pillsWrap.innerHTML = filtered.map(function(t) {
+        return '<span class="lfm-vibe-pill">' + esc(t.name) + '</span>';
       }).join('');
     }
 
@@ -1084,9 +1083,8 @@
       const sorted = [...filtered.entries()].sort((a, b) => b[1] - a[1]);
       const topTags = sorted.slice(0, 15);
       if (!topTags.length || !pillsWrap) return;
-      pillsWrap.innerHTML = topTags.map(function(entry, i) {
-        var c = getGenreColor(entry[0], i);
-        return '<span class="lfm-vibe-pill" style="background:' + c.bg + ';border-color:' + c.border + ';color:' + c.text + ';box-shadow:0 0 8px ' + c.glow + '">' + esc(entry[0]) + '</span>';
+      pillsWrap.innerHTML = topTags.map(function(entry) {
+        return '<span class="lfm-vibe-pill">' + esc(entry[0]) + '</span>';
       }).join('');
     }
 
