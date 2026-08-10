@@ -791,6 +791,24 @@
     let npArtUrls = [];
     let npArtIdx = 0;
     let npArtCrossfaded = false;
+    const NP_FALLBACK_DURATION = 210; // 3.5 min fallback
+    const trackDurationCache = {}; // key → duration in seconds
+
+    /** Fetch real track duration from Last.fm track.getInfo (via proxy) */
+    function fetchTrackDuration(artist, track, cb) {
+      var key = artist + '::' + track;
+      if (trackDurationCache[key]) { cb(trackDurationCache[key]); return; }
+      fetch('/api/lastfm?method=track.getInfo&artist=' + encodeURIComponent(artist) + '&track=' + encodeURIComponent(track) + '&_=' + Date.now())
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          var dur = (d && d.track && d.track.duration && parseInt(d.track.duration, 10)) || 0;
+          dur = dur > 0 ? Math.round(dur / 1000) : 0; // ms → seconds
+          if (dur >= 10 && dur <= 7200) { trackDurationCache[key] = dur; }
+          else { dur = 0; }
+          cb(dur || NP_FALLBACK_DURATION);
+        })
+        .catch(function() { cb(NP_FALLBACK_DURATION); });
+    }
 
     // -- Feature 3: Genre cloud state --
     let genreCounts = new Map();
@@ -1118,15 +1136,23 @@
       if (!isLive) return;
       // Determine start time
       var uts = (track && track.date && parseInt(track.date.uts, 10)) || 0;
-      var key = ((track && track.artist && (track.artist['#text'] || track.artist.name)) || '') + '::' + (track.name || '');
+      var artist = (track && track.artist && (track.artist['#text'] || track.artist.name)) || '';
+      var trackName = track.name || '';
+      var key = artist + '::' + trackName;
       if (key !== npTrackKey) {
         npTrackKey = key;
         npStartUts = uts || Math.floor(Date.now() / 1000);
       }
+      var npDuration = trackDurationCache[key] || NP_FALLBACK_DURATION;
+      // Fetch real duration in background; tick() will pick it up on next interval
+      fetchTrackDuration(artist, trackName, function(realDur) {
+        if (realDur !== NP_FALLBACK_DURATION) npDuration = realDur;
+      });
       function tick() {
         var now = Math.floor(Date.now() / 1000);
         var elapsed = now - npStartUts;
-        var progress = Math.min(Math.max(elapsed / 210, 0), 1);
+        var dur = trackDurationCache[key] || npDuration;
+        var progress = Math.min(Math.max(elapsed / dur, 0), 1);
         // Feature 5: crossfade NP background art at ~90%
         if (progress >= 0.9 && !npArtCrossfaded && npArtUrls.length > 1) {
           npArtCrossfaded = true;
