@@ -429,7 +429,7 @@
   /* ============================================================
      4. MUSIC PLAYER (YouTube IFrame API — bulletproof edition)
      ============================================================ */
-  let ytPlayer = null, ytReady = false, ytError = false, wantPlay = false, isPlaying = false;
+  let ytPlayer = null, ytReady = false, ytError = false, wantPlay = false, isPlaying = false, suppressAutoPlay = true;
   const miniPlayer = $('mini-player');
   const musicWidget = $('topbar-music-icon');
   const YT_PLAYLIST_ID = CONFIG.ytPlaylistId || '';
@@ -464,6 +464,9 @@
         events: {
           onReady: function () {
             ytReady = true;
+            // Force-stop: YouTube ignores autoplay:0 for playlists
+            try { ytPlayer.pauseVideo(); } catch (e) {}
+            setVisuals(false);
             const vol = $('mp-vol');
             try { ytPlayer.setVolume(vol ? Number(vol.value) : 70); } catch (e) {}
             applyRepeat();     // apply the current repeat mode (default: repeat all)
@@ -471,6 +474,12 @@
             if (wantPlay) { try { ytPlayer.playVideo(); } catch (e) {} }
           },
           onStateChange: function (e) {
+            // During startup, suppress any auto-play and only allow meta sync
+            if (suppressAutoPlay) {
+              if (e.data === 1) { try { ytPlayer.pauseVideo(); } catch (ex) {} }
+              if (e.data === 3 || e.data === 5) { syncMeta(); }
+              return;
+            }
             if (e.data === 1) { setVisuals(true); progressLoop(); syncMeta(); }        // playing
             else if (e.data === 2) { setVisuals(false); }                              // paused
             else if (e.data === 3 || e.data === 5) { syncMeta(); }                     // buffering / cued -> refresh meta
@@ -487,7 +496,7 @@
   const tag = document.createElement('script'); tag.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(tag);
   setTimeout(function () { if (!ytReady && !ytError) { ytError = true; } }, 8000);
 
-  function doPlay() { if (ytError) return; wantPlay = true; if (!ytReady) { setVisuals(true); return; } try { ytPlayer.playVideo(); } catch (e) {} }
+  function doPlay() { if (ytError) return; suppressAutoPlay = false; wantPlay = true; if (!ytReady) { setVisuals(true); return; } try { ytPlayer.playVideo(); } catch (e) {} }
   function doPause() { wantPlay = false; if (!ytReady) { setVisuals(false); return; } try { ytPlayer.pauseVideo(); } catch (e) {} }
   function togglePlay() { if (isPlaying) doPause(); else doPlay(); }
   function setVolume(v) { if (ytReady) { try { ytPlayer.setVolume(v); } catch (e) {} } }
