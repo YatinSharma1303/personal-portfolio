@@ -1590,7 +1590,7 @@ html.light .glass-card { background: rgba(255,255,255,0.35); backdrop-filter: bl
 @keyframes npPulse { 0%,100%{opacity:1} 50%{opacity:.35} }
 .lfm-activity-bars { display: flex; align-items: flex-end; gap: 6px; flex: 1; }
 .lfm-activity-day { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
-.lfm-activity-bar { width: 100%; min-height: 3px; border-radius: 5px; background: color-mix(in srgb, var(--accent-solid) 60%, transparent); transition: height 0.4s ease; }
+.lfm-activity-bar { width: 100%; min-height: 3px; border-radius: 5px; background: color-mix(in srgb, var(--accent-solid) 60%, transparent); transition: height 0.6s ease, opacity 0.6s ease; }
 .lfm-activity-day-label { font-family: var(--mono); font-size: 8px; color: var(--gray-dim); opacity: 0.6; }
 
 /* -- Day-of-week listening heatmap -- */

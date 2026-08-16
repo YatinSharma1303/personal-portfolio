@@ -1421,7 +1421,7 @@
       streakEl.replaceWith(temp.firstElementChild);
     }
 
-    function renderActivityChart(tracks) {
+    function renderActivityChart(tracks, durationUpdateOnly) {
       const wrap = $('lfm-activity');
       if (!wrap) return;
       const days = [];
@@ -1446,7 +1446,24 @@
       const total = days.reduce((s, d) => s + d.count, 0);
       if (total === 0) { wrap.innerHTML = ''; return; }
 
-      // Feature 3: Listening streak — uses actual live now-playing state, not guesswork
+      // If this is a duration-only update, just refresh the listening time label
+      if (durationUpdateOnly) {
+        var weekInfo = computeListeningMinutes(tracks);
+        var ltMinutes = weekInfo.minutes;
+        var ltH = Math.floor(ltMinutes / 60);
+        var ltM = ltMinutes % 60;
+        var ltPrefix = weekInfo.unresolved.size > 0 ? '≈ ' : '';
+        var ltStr = ltH > 0 ? ltPrefix + ltH + 'h ' + ltM + 'm' : ltPrefix + ltM + 'm';
+        var metaEl = wrap.querySelector('.lfm-activity-meta');
+        if (metaEl) {
+          var labels = metaEl.querySelectorAll('.lfm-activity-label');
+          // Second label is the listening time one
+          if (labels.length >= 2) labels[1].innerHTML = ltStr + ' this week';
+        }
+        return;
+      }
+
+      // Feature 3: Listening streak
       var today = new Date();
       var todayKey = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
       var todayTracks = tracks.filter(function(tr) {
@@ -1456,14 +1473,12 @@
         var k = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
         return k === todayKey;
       }).sort(function(a, b) { return parseInt(a.date.uts) - parseInt(b.date.uts); });
-      // Store today tracks so streak can be re-rendered on live state change
       window.__lfmTodayTracks = todayTracks;
-      // Ensure live state is current before building streak HTML
       var npCard = document.querySelector('.lfm-nowplaying');
       if (npCard) window.__lfmIsLiveNow = npCard.classList.contains('live');
       var streakHtml = buildStreakHtml(todayTracks);
 
-      // Listening time this week using real track durations
+      // Listening time this week
       var weekInfo = computeListeningMinutes(tracks);
       var ltMinutes = weekInfo.minutes;
       var ltH = Math.floor(ltMinutes / 60);
@@ -1472,17 +1487,47 @@
       var ltStr = ltH > 0 ? ltPrefix + ltH + 'h ' + ltM + 'm' : ltPrefix + ltM + 'm';
       var listeningTimeHtml = '<div class="lfm-activity-label">' + ltStr + ' this week</div>';
 
-      wrap.innerHTML = '<div class="lfm-activity-meta"><div class="lfm-activity-label"><b>' + total + '</b> tracks this week</div>' + listeningTimeHtml + streakHtml + '</div><div class="lfm-activity-bars">' + days.map(d => {
-        const h = Math.max(3, (d.count / maxCount) * 80);
-        const opacity = d.count > 0 ? (0.3 + (d.count / maxCount) * 0.7) : 0.15;
-        return '<div class="lfm-activity-day"><div class="lfm-activity-bar" style="height:' + h + 'px;opacity:' + opacity.toFixed(2) + '"></div><div class="lfm-activity-day-label">' + d.label + '</div></div>';
-      }).join('') + '</div>';
+      // Check if we already have a chart — update in-place to avoid flicker
+      var existingBars = wrap.querySelectorAll('.lfm-activity-day');
+      if (existingBars.length === 7) {
+        // Update bars in-place (CSS transitions handle the animation)
+        days.forEach(function(d, i) {
+          var bar = existingBars[i].querySelector('.lfm-activity-bar');
+          if (bar) {
+            var h = Math.max(3, (d.count / maxCount) * 80);
+            var opacity = d.count > 0 ? (0.3 + (d.count / maxCount) * 0.7) : 0.15;
+            bar.style.height = h + 'px';
+            bar.style.opacity = opacity.toFixed(2);
+          }
+        });
+        // Update meta labels
+        var metaEl = wrap.querySelector('.lfm-activity-meta');
+        if (metaEl) {
+          var labels = metaEl.querySelectorAll('.lfm-activity-label');
+          if (labels[0]) labels[0].innerHTML = '<b>' + total + '</b> tracks this week';
+          if (labels[1]) labels[1].innerHTML = ltStr + ' this week';
+          // Update streak in-place
+          var streakEl = metaEl.querySelector('.lfm-streak');
+          if (streakEl) {
+            var newStreak = buildStreakHtml(todayTracks);
+            var temp = document.createElement('div');
+            temp.innerHTML = newStreak;
+            if (temp.firstElementChild) streakEl.replaceWith(temp.firstElementChild);
+          }
+        }
+      } else {
+        // First render — build full DOM
+        wrap.innerHTML = '<div class="lfm-activity-meta"><div class="lfm-activity-label"><b>' + total + '</b> tracks this week</div>' + listeningTimeHtml + streakHtml + '</div><div class="lfm-activity-bars">' + days.map(d => {
+          const h = Math.max(3, (d.count / maxCount) * 80);
+          const opacity = d.count > 0 ? (0.3 + (d.count / maxCount) * 0.7) : 0.15;
+          return '<div class="lfm-activity-day"><div class="lfm-activity-bar" style="height:' + h + 'px;opacity:' + opacity.toFixed(2) + '"></div><div class="lfm-activity-day-label">' + d.label + '</div></div>';
+        }).join('') + '</div>';
+      }
 
-      // Batch-fetch missing durations in background; re-render when ready for precise numbers
+      // Batch-fetch missing durations; only update the time label (no bar rebuild)
       if (weekInfo.unresolved.size > 0) {
         batchFetchDurations(tracks, weekInfo.unresolved, function() {
-          // Re-render activity chart with now-complete durations
-          renderActivityChart(tracks);
+          renderActivityChart(tracks, true);
         });
       }
     }
