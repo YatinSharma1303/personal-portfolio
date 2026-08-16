@@ -1506,13 +1506,37 @@
           var labels = metaEl.querySelectorAll('.lfm-activity-label');
           if (labels[0]) labels[0].innerHTML = '<b>' + total + '</b> tracks this week';
           if (labels[1]) labels[1].innerHTML = ltStr + ' this week';
-          // Update streak in-place
+          // Update streak in-place only if live state or time changed
           var streakEl = metaEl.querySelector('.lfm-streak');
           if (streakEl) {
-            var newStreak = buildStreakHtml(todayTracks);
-            var temp = document.createElement('div');
-            temp.innerHTML = newStreak;
-            if (temp.firstElementChild) streakEl.replaceWith(temp.firstElementChild);
+            var isLive = window.__lfmIsLiveNow === true;
+            var wasLive = streakEl.classList.contains('live-streak');
+            // Rebuild only if live state flipped or text content differs
+            var newText = buildStreakHtml(todayTracks);
+            if (isLive !== wasLive) {
+              var temp = document.createElement('div');
+              temp.innerHTML = newText;
+              if (temp.firstElementChild) {
+                temp.firstElementChild.classList.add('live-streak');
+                streakEl.replaceWith(temp.firstElementChild);
+              }
+            } else {
+              // Just update the text nodes, keep the dot untouched
+              var dot = streakEl.querySelector('.lfm-streak-dot');
+              var newTemp = document.createElement('div');
+              newTemp.innerHTML = newText;
+              var newStreak = newTemp.firstElementChild;
+              if (newStreak) {
+                // Clone current dot to preserve animation state
+                streakEl.textContent = '';
+                if (dot) streakEl.appendChild(dot.cloneNode(true));
+                // Append text after dot
+                var textContent = newStreak.childNodes;
+                for (var n = 1; n < textContent.length; n++) {
+                  streakEl.appendChild(textContent[n].cloneNode(true));
+                }
+              }
+            }
           }
         }
       } else {
@@ -1522,6 +1546,9 @@
           const opacity = d.count > 0 ? (0.3 + (d.count / maxCount) * 0.7) : 0.15;
           return '<div class="lfm-activity-day"><div class="lfm-activity-bar" style="height:' + h + 'px;opacity:' + opacity.toFixed(2) + '"></div><div class="lfm-activity-day-label">' + d.label + '</div></div>';
         }).join('') + '</div>';
+        // Mark live state on first render for future diffing
+        var firstStreak = wrap.querySelector('.lfm-streak');
+        if (firstStreak && window.__lfmIsLiveNow) firstStreak.classList.add('live-streak');
       }
 
       // Batch-fetch missing durations; only update the time label (no bar rebuild)
