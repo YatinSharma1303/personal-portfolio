@@ -1090,7 +1090,6 @@
     // Filter out overly generic tags that aren't useful as genre indicators
     var BAD_GENRE_TAGS = ['seen live','favorites','favorite','love','loved','amazing','awesome','beautiful','chill','cool','good','great','best','amazing','perfect','epic','nice','guilty pleasure','overplayed','songs','music','default','unknown','other','to listen','check out'];
     function updateGenreCloud() {
-      const pillsWrap = $('lfm-vibe-pills');
       // Filter bad tags
       var filtered = new Map();
       genreCounts.forEach(function(count, tag) {
@@ -1100,9 +1099,29 @@
       });
       const sorted = [...filtered.entries()].sort((a, b) => b[1] - a[1]);
       const topTags = sorted.slice(0, 15);
-      if (!topTags.length || !pillsWrap) return;
-      pillsWrap.innerHTML = topTags.map(function(entry) {
-        return '<span class="lfm-vibe-pill">' + esc(entry[0]) + '</span>';
+
+      // Vibe pills
+      const pillsWrap = $('lfm-vibe-pills');
+      if (topTags.length && pillsWrap) {
+        pillsWrap.innerHTML = topTags.map(function(entry) {
+          return '<span class="lfm-vibe-pill">' + esc(entry[0]) + '</span>';
+        }).join('');
+      }
+
+      // Top Genres bar chart (top 8)
+      const chartWrap = $('lfm-genre-chart');
+      if (!chartWrap) return;
+      const topGenres = sorted.slice(0, 8);
+      if (!topGenres.length) { chartWrap.innerHTML = ''; return; }
+      var totalTagCount = topGenres.reduce(function(s, e) { return s + e[1]; }, 0);
+      chartWrap.innerHTML = topGenres.map(function(entry, i) {
+        var pct = Math.round((entry[1] / totalTagCount) * 100);
+        var color = getGenreColor(entry[0], i);
+        return '<div class="lfm-genre-bar-row">' +
+          '<span class="lfm-genre-bar-label">' + esc(entry[0]) + '</span>' +
+          '<div class="lfm-genre-bar-track"><div class="lfm-genre-bar-fill" style="width:' + pct + '%;background:' + color.bg + ';border:1px solid ' + color.border + '"></div></div>' +
+          '<span class="lfm-genre-bar-pct">' + pct + '%</span>' +
+        '</div>';
       }).join('');
     }
 

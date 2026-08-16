@@ -1545,6 +1545,14 @@ html.light .glass-card { background: rgba(255,255,255,0.35); backdrop-filter: bl
 .lfm-vibe-pill { font-family: var(--mono); font-size: 9px; letter-spacing: 0.02em; padding: 3px 10px; border-radius: 999px; background: color-mix(in srgb, var(--accent-solid) 6%, transparent); border: 1px solid color-mix(in srgb, var(--accent-solid) 12%, transparent); color: var(--gray); font-weight: 500; transition: all 0.15s ease; cursor: default; isolation: isolate; }
 .lfm-vibe-pill:hover { background: color-mix(in srgb, var(--accent-solid) 12%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 20%, transparent); color: var(--white); transform: scale(1.04); }
 
+/* -- Top Genres bar chart -- */
+.lfm-genre-chart { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+.lfm-genre-bar-row { display: flex; align-items: center; gap: 8px; }
+.lfm-genre-bar-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.02em; color: var(--gray); width: 90px; flex-shrink: 0; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+.lfm-genre-bar-track { flex: 1; height: 16px; background: rgba(255,255,255,0.04); border-radius: 4px; overflow: hidden; }
+.lfm-genre-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); min-width: 2px; }
+.lfm-genre-bar-pct { font-family: var(--mono); font-size: 10px; color: var(--gray); width: 32px; text-align: right; flex-shrink: 0; }
+
 /* -- Loved tracks heart -- */
 .lfm-loved { color: #ef4444; font-size: 10px; margin-left: 4px; font-style: normal; }
 
@@ -3239,6 +3247,8 @@ html.light .lfm-period-tab { color: var(--gray); border-color: color-mix(in srgb
 html.light .lfm-period-tab.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
 html.light .lfm-vibe-label { color: var(--gray); }
 html.light .lfm-vibe-pill { font-weight: 500; }
+html.light .lfm-genre-bar-track { background: rgba(0,0,0,0.05); }
+html.light .lfm-genre-bar-label, html.light .lfm-genre-bar-pct { color: var(--dark-gray, #555); }
 
 /* Contributions card */
 html.light .contrib-card { background: rgba(255,255,255,0.6); }
