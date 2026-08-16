@@ -1282,8 +1282,26 @@
       if (!tr) return '';
       const a = (tr.artist && (tr.artist['#text'] || tr.artist.name)) || '';
       const n = tr.name || '';
-      if (tr.artUrl) { try { localStorage.setItem('lfm_track_art_' + a + '::' + n, tr.artUrl); } catch (e) {} return tr.artUrl; }
-      try { const c = localStorage.getItem('lfm_track_art_' + a + '::' + n); if (c) return c; } catch (e) {}
+      var lsKey = 'lfm_track_art_' + a + '::' + n;
+      if (tr.artUrl) {
+        try { localStorage.setItem(lsKey, tr.artUrl); }
+        catch (e) { /* localStorage full — evict oldest entries then retry */
+          if (e && (e.name === 'QuotaExceededError' || e.code === 22)) {
+            try {
+              var keysToRemove = [];
+              for (var i = 0; i < localStorage.length; i++) {
+                var k = localStorage.key(i);
+                if (k && k.indexOf('lfm_track_art_') === 0) keysToRemove.push(k);
+              }
+              // Remove oldest half of cached art entries
+              keysToRemove.slice(0, Math.ceil(keysToRemove.length / 2)).forEach(function(k) { localStorage.removeItem(k); });
+              localStorage.setItem(lsKey, tr.artUrl);
+            } catch (e2) { /* still full, give up silently */ }
+          }
+        }
+        return tr.artUrl;
+      }
+      try { const c = localStorage.getItem(lsKey); if (c) return c; } catch (e) {}
       return lfmImg(tr.image);
     }
 
