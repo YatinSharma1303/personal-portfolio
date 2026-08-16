@@ -793,6 +793,7 @@
     let npArtCrossfaded = false;
     const NP_FALLBACK_DURATION = 210; // 3.5 min fallback
     const trackDurationCache = {}; // key → duration in seconds
+    const trackPlayCountCache = {}; // key → user play count (number)
 
     /** Fetch real track duration from Last.fm track.getInfo (via proxy) */
     function fetchTrackDuration(artist, track, cb) {
@@ -805,6 +806,9 @@
           dur = dur > 0 ? Math.round(dur / 1000) : 0; // ms → seconds
           if (dur >= 10 && dur <= 7200) { trackDurationCache[key] = dur; }
           else { dur = 0; }
+          // Also cache userplaycount from the same response
+          var pc = (d && d.track && d.track.userplaycount && parseInt(d.track.userplaycount, 10)) || 0;
+          if (pc > 0) trackPlayCountCache[key] = pc;
           cb(dur || NP_FALLBACK_DURATION);
         })
         .catch(function() { cb(NP_FALLBACK_DURATION); });
@@ -1593,6 +1597,76 @@
         '<div class="lfm-heatmap-grid">' + cellsHtml + '</div>';
     }
 
+    /** Format a play count for display: 1.2k, 345, etc. */
+    function formatPlayCount(n) {
+      if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+      return String(n);
+    }
+
+    /** Build badge HTML for a track with 50+ scrobbles */
+    function playCountBadgeHtml(count) {
+      if (!count || count < 50) return '';
+      return ' <span class="lfm-playcount-badge" title="' + count.toLocaleString() + ' scrobbles">' + formatPlayCount(count) + '</span>';
+    }
+
+    /** Fetch play counts for recent tracks in the background and inject badges */
+    function fetchRecentPlayCounts(tracks) {
+      var toFetch = [];
+      tracks.forEach(function(tr) {
+        var artist = (tr.artist && (tr.artist['#text'] || tr.artist.name)) || '';
+        var key = artist + '::' + (tr.name || '');
+        if (!trackPlayCountCache[key] && toFetch.length < 5) {
+          toFetch.push({ key: key, artist: artist, track: tr.name || '' });
+        }
+      });
+      if (!toFetch.length) {
+        // All cached — just inject badges
+        injectPlayCountBadges(tracks);
+        return;
+      }
+      var pending = toFetch.length;
+      toFetch.forEach(function(item) {
+        fetch('/api/lastfm?method=track.getInfo&artist=' + encodeURIComponent(item.artist) + '&track=' + encodeURIComponent(item.track) + '&_=' + Date.now())
+          .then(function(r) { return r.json(); })
+          .then(function(d) {
+            var pc = (d && d.track && d.track.userplaycount && parseInt(d.track.userplaycount, 10)) || 0;
+            if (pc > 0) trackPlayCountCache[item.key] = pc;
+          })
+          .catch(function() {})
+          .finally(function() {
+            pending--;
+            if (pending === 0) injectPlayCountBadges(tracks);
+          });
+      });
+      // Also inject any already-cached badges immediately
+      injectPlayCountBadges(tracks);
+    }
+
+    /** Inject play count badges into existing recent items in the DOM */
+    function injectPlayCountBadges(tracks) {
+      var recentWrap = $('lfm-recent');
+      if (!recentWrap) return;
+      var items = recentWrap.querySelectorAll('.lfm-recent-item');
+      tracks.forEach(function(tr, i) {
+        if (i >= items.length) return;
+        var artist = (tr.artist && (tr.artist['#text'] || tr.artist.name)) || '';
+        var key = artist + '::' + (tr.name || '');
+        var count = trackPlayCountCache[key];
+        var nameEl = items[i].querySelector('.lfm-recent-name');
+        if (!nameEl) return;
+        // Remove existing badge if any
+        var oldBadge = nameEl.querySelector('.lfm-playcount-badge');
+        if (oldBadge) oldBadge.remove();
+        if (count && count >= 50) {
+          var badge = document.createElement('span');
+          badge.className = 'lfm-playcount-badge';
+          badge.title = count.toLocaleString() + ' scrobbles';
+          badge.textContent = formatPlayCount(count);
+          nameEl.appendChild(badge);
+        }
+      });
+    }
+
     function renderRecent(recenttracks) {
       const tracks = (recenttracks && recenttracks.track) || [];
       if (!tracks.length) return;
@@ -1654,6 +1728,8 @@
           const timeHtml = ago ? '<div class="lfm-recent-time">' + ago + '</div>' : '';
           return '<div class="lfm-recent-item">' + artDiv('lfm-recent-img', recentTrackArt(tr), '♪') + '<div class="lfm-recent-info"><div class="lfm-recent-name">' + nameHtml + '</div><div class="lfm-recent-artist">' + esc(artistName) + '</div>' + timeHtml + '</div></div>';
         }).join('');
+        // Fetch & inject play count badges for 50+ scrobbles
+        fetchRecentPlayCounts(tickerTracks);
       }
     }
 

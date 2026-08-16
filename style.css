@@ -1562,6 +1562,7 @@ html.light .glass-card { background: rgba(255,255,255,0.35); backdrop-filter: bl
 
 /* -- Loved tracks heart -- */
 .lfm-loved { color: #ef4444; font-size: 10px; margin-left: 4px; font-style: normal; }
+.lfm-playcount-badge { display: inline-flex; align-items: center; margin-left: 5px; padding: 1px 5px; border-radius: 4px; font-family: var(--mono); font-size: 8px; font-weight: 700; letter-spacing: 0.02em; color: var(--accent); background: color-mix(in srgb, var(--accent-solid) 12%, transparent); border: 1px solid color-mix(in srgb, var(--accent-solid) 20%, transparent); vertical-align: middle; line-height: 1.4; flex-shrink: 0; }
 
 /* -- Now Playing background blur -- */
 .lfm-nowplaying { position: relative; overflow: hidden; }
@@ -3281,6 +3282,7 @@ html.light .lfm-heatmap-count { color: #222; }
 html.light .lfm-heatmap-day { color: #777; }
 html.light .lfm-heatmap-cell-peak .lfm-heatmap-day { color: var(--accent); }
 html.light .lfm-heatmap-title { color: #333; }
+html.light .lfm-playcount-badge { background: color-mix(in srgb, var(--accent-solid) 10%, transparent); border-color: color-mix(in srgb, var(--accent-solid) 18%, transparent); }
 
 /* Contributions card */
 html.light .contrib-card { background: rgba(255,255,255,0.6); }
