@@ -1088,7 +1088,7 @@
 
     // Feature 4: Genre cloud rendering (fallback from track tags)
     // Filter out overly generic tags that aren't useful as genre indicators
-    var BAD_GENRE_TAGS = ['seen live','favorites','favorite','love','loved','amazing','awesome','beautiful','chill','cool','good','great','best','amazing','perfect','epic','nice','guilty pleasure','overplayed','songs','music','default','unknown','other','to listen','check out'];
+    var BAD_GENRE_TAGS = ['seen live','favorites','favorite','love','loved','amazing','awesome','beautiful','cool','good','great','best','perfect','epic','nice','guilty pleasure','overplayed','songs','music','default','unknown','other','to listen','check out'];
     function updateGenreCloud() {
       // Filter bad tags
       var filtered = new Map();
@@ -1108,14 +1108,14 @@
         }).join('');
       }
 
-      // Top Genres pie chart (top 8)
+      // Top Genres pie chart (top 10)
       const chartWrap = $('lfm-genre-chart');
       if (!chartWrap) return;
-      const topGenres = sorted.slice(0, 8);
+      const topGenres = sorted.slice(0, 10);
       if (!topGenres.length) { chartWrap.innerHTML = ''; return; }
       var totalTagCount = topGenres.reduce(function(s, e) { return s + e[1]; }, 0);
       // Build conic-gradient + legend
-      var PIE_COLORS = ['#8b5cf6','#06b6d4','#f43f5e','#f59e0b','#22c55e','#3b82f6','#ec4899','#f97316'];
+      var PIE_COLORS = ['#8b5cf6','#06b6d4','#f43f5e','#f59e0b','#22c55e','#3b82f6','#ec4899','#f97316','#14b8a6','#a78bfa'];
       var gradientParts = [];
       var legendHtml = '';
       var cumPct = 0;
