@@ -1517,7 +1517,9 @@ html.light .glass-card { background: rgba(255,255,255,0.35); backdrop-filter: bl
 .lfm-recent-img.lfm-noart { display: flex; align-items: center; justify-content: center; color: #52525b; font-size: 14px; }
 
 .lfm-recent-info { min-width: 0; }
-.lfm-recent-name { font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
+.lfm-recent-name { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; white-space: nowrap; max-width: 150px; }
+.lfm-recent-name-text { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.lfm-playcount-badge { flex-shrink: 0; }
 .lfm-recent-artist { font-size: 9px; color: var(--gray-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
 .lfm-recent-time { font-size: 8px; color: var(--accent); font-family: var(--mono); opacity: 0.7; white-space: nowrap; }
 /* -- Genre tags on tracks -- */
@@ -2518,7 +2520,7 @@ html.light .pg-card { background: rgba(255,255,255,0.5); }
   .lfm-columns { gap: 16px; }
   .lfm-col-title { font-size: 9px; }
   .lfm-recent-item { padding: 5px 10px 5px 5px; }
-  .lfm-recent-name { max-width: 90px; }
+  .lfm-recent-name { max-width: 120px; }
   .lfm-recent-artist { max-width: 90px; }
   .lfm-period-tabs { gap: 4px; margin-bottom: 14px; }
   .lfm-period-tab { padding: 4px 10px; font-size: 9px; }

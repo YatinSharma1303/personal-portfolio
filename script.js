@@ -1721,8 +1721,8 @@
         const tickerTracks = isLive ? tracks.slice(1, 9) : tracks.slice(0, 9);
         recentWrap.innerHTML = tickerTracks.map(tr => {
           const artistName = (tr.artist && (tr.artist['#text'] || tr.artist.name)) || '';
-          const lovedHtml = isLovedTrack(tr.name, artistName) ? ' <span class="lfm-loved">♥</span>' : '';
-          const nameHtml = esc(tr.name || '—') + lovedHtml;
+          const lovedHtml = isLovedTrack(tr.name, artistName) ? '<span class="lfm-loved">♥</span>' : '';
+          const nameHtml = '<span class="lfm-recent-name-text">' + esc(tr.name || '—') + lovedHtml + '</span>';
           const uts = (tr.date && tr.date.uts) || '';
           const ago = timeAgo(uts);
           const timeHtml = ago ? '<div class="lfm-recent-time">' + ago + '</div>' : '';
