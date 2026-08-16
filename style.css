@@ -1582,6 +1582,8 @@ html.light .glass-card { background: rgba(255,255,255,0.35); backdrop-filter: bl
   border: 1px solid color-mix(in srgb, var(--accent-solid) 12%, transparent);
   color: var(--gray); margin-bottom: 8px;
   isolation: isolate;
+  min-width: 110px; justify-content: center;
+  transition: opacity 0.3s ease;
 }
 .lfm-activity-label b { color: var(--white); font-weight: 700; }
 .lfm-streak { display: inline-flex; align-items: center; gap: 6px; margin-top: 0; font-family: var(--mono); font-size: 10px; color: var(--gray-dim); padding: 3px 10px; border-radius: 6px; border: 1px solid var(--border); background: color-mix(in srgb, var(--accent-solid) 4%, transparent); isolation: isolate; }

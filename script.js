@@ -512,7 +512,8 @@
 
   function openPlayer() {
     if (miniPlayer) { miniPlayer.classList.add('open'); miniPlayer.setAttribute('aria-hidden', 'false'); }
-    // No auto-play on open (prevents incidental external scrobbles) — play starts on explicit press.
+    // Auto-play when opening via topbar icon
+    if (!isPlaying) doPlay();
   }
   function closePlayer() { if (miniPlayer) { miniPlayer.classList.remove('open', 'expanded'); miniPlayer.setAttribute('aria-hidden', 'true'); } }
   if (musicWidget) musicWidget.addEventListener('click', openPlayer);
@@ -1514,8 +1515,8 @@
           var newTotalHtml = '<b>' + total + '</b> tracks this week';
           var newLtHtml = ltStr + ' this week';
           var labels = metaEl.querySelectorAll('.lfm-activity-label');
-          if (labels[0] && labels[0].innerHTML !== newTotalHtml) labels[0].innerHTML = newTotalHtml;
-          if (labels[1] && labels[1].innerHTML !== newLtHtml) labels[1].innerHTML = newLtHtml;
+          if (labels[0] && labels[0].textContent !== total + ' tracks this week') labels[0].innerHTML = '<b>' + total + '</b> tracks this week';
+          if (labels[1] && labels[1].textContent !== ltStr + ' this week') labels[1].innerHTML = newLtHtml;
           // Update streak in-place only if live state or time changed
           var streakEl = metaEl.querySelector('.lfm-streak');
           if (streakEl) {
