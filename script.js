@@ -1161,10 +1161,16 @@
     }
 
     // Feature 5: NP album art carousel (no progress bar)
+    var npRingCirc = 97.39; // 2 * PI * 15.5
     function updateNpProgress(isLive, track) {
       if (npProgressTimer) { clearInterval(npProgressTimer); npProgressTimer = null; }
       npArtCrossfaded = false;
-      if (!isLive) return;
+      var ringFg = $('lfm-np-ring-fg');
+      if (!isLive) {
+        if (ringFg) ringFg.style.strokeDashoffset = npRingCirc;
+        return;
+      }
+      if (ringFg) ringFg.style.strokeDashoffset = npRingCirc;
       // Determine start time
       var uts = (track && track.date && parseInt(track.date.uts, 10)) || 0;
       var artist = (track && track.artist && (track.artist['#text'] || track.artist.name)) || '';
@@ -1184,6 +1190,8 @@
         var elapsed = now - npStartUts;
         var dur = trackDurationCache[key] || npDuration;
         var progress = Math.min(Math.max(elapsed / dur, 0), 1);
+        // Update progress ring
+        if (ringFg) ringFg.style.strokeDashoffset = (npRingCirc * (1 - progress)).toFixed(2);
         // Feature 5: crossfade NP background art at ~90%
         if (progress >= 0.9 && !npArtCrossfaded && npArtUrls.length > 1) {
           npArtCrossfaded = true;
