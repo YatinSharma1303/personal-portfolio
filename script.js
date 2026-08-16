@@ -1108,21 +1108,29 @@
         }).join('');
       }
 
-      // Top Genres bar chart (top 8)
+      // Top Genres pie chart (top 8)
       const chartWrap = $('lfm-genre-chart');
       if (!chartWrap) return;
       const topGenres = sorted.slice(0, 8);
       if (!topGenres.length) { chartWrap.innerHTML = ''; return; }
       var totalTagCount = topGenres.reduce(function(s, e) { return s + e[1]; }, 0);
-      chartWrap.innerHTML = topGenres.map(function(entry, i) {
-        var pct = Math.round((entry[1] / totalTagCount) * 100);
+      // Build conic-gradient + legend
+      var PIE_COLORS = ['#8b5cf6','#06b6d4','#f43f5e','#f59e0b','#22c55e','#3b82f6','#ec4899','#f97316'];
+      var gradientParts = [];
+      var legendHtml = '';
+      var cumPct = 0;
+      topGenres.forEach(function(entry, i) {
+        var pct = entry[1] / totalTagCount * 100;
         var color = getGenreColor(entry[0], i);
-        return '<div class="lfm-genre-bar-row">' +
-          '<span class="lfm-genre-bar-label">' + esc(entry[0]) + '</span>' +
-          '<div class="lfm-genre-bar-track"><div class="lfm-genre-bar-fill" style="width:' + pct + '%;background:' + color.bg + ';border:1px solid ' + color.border + '"></div></div>' +
-          '<span class="lfm-genre-bar-pct">' + pct + '%</span>' +
-        '</div>';
-      }).join('');
+        var sliceColor = PIE_COLORS[i % PIE_COLORS.length];
+        gradientParts.push(sliceColor + ' ' + cumPct.toFixed(2) + '% ' + (cumPct + pct).toFixed(2) + '%');
+        cumPct += pct;
+        var labelPct = Math.round(pct);
+        legendHtml += '<div class="lfm-genre-legend-item"><span class="lfm-genre-legend-dot" style="background:' + sliceColor + '"></span><span class="lfm-genre-legend-name">' + esc(entry[0]) + '</span><span class="lfm-genre-legend-pct">' + labelPct + '%</span></div>';
+      });
+      chartWrap.innerHTML =
+        '<div class="lfm-genre-pie-wrap"><div class="lfm-genre-pie" style="background:conic-gradient(' + gradientParts.join(',') + ')"></div><div class="lfm-genre-pie-center"><span class="lfm-genre-pie-icon material-symbols-outlined">donut_large</span><span class="lfm-genre-pie-count">' + topGenres.length + '</span><span class="lfm-genre-pie-label">genres</span></div></div>' +
+        '<div class="lfm-genre-legend">' + legendHtml + '</div>';
     }
 
     // Feature 4 & 7: Build track HTML with play count bar and tooltip
