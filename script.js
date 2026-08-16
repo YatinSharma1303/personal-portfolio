@@ -1404,21 +1404,29 @@
     }
 
     // Re-render only the streak part when live state changes (called by renderRecent)
+    // Updates in-place to avoid killing the dot's pulse animation.
     function refreshStreak() {
       var meta = document.querySelector('.lfm-activity-meta');
       if (!meta) return;
       var streakEl = meta.querySelector('.lfm-streak');
       if (!streakEl) return;
-      // If todayTracks not yet loaded, toggle class on existing element
       if (!window.__lfmTodayTracks) {
         var dot = streakEl.querySelector('.lfm-streak-dot');
         if (dot) dot.classList.toggle('idle', !window.__lfmIsLiveNow);
         return;
       }
-      var newStreak = buildStreakHtml(window.__lfmTodayTracks);
-      var temp = document.createElement('div');
-      temp.innerHTML = newStreak;
-      streakEl.replaceWith(temp.firstElementChild);
+      var isLive = window.__lfmIsLiveNow === true;
+      var wasLive = streakEl.classList.contains('live-streak');
+      // Only rebuild if live state actually flipped (idle ↔ live)
+      if (isLive !== wasLive) {
+        var newHtml = buildStreakHtml(window.__lfmTodayTracks);
+        var temp = document.createElement('div');
+        temp.innerHTML = newHtml;
+        if (temp.firstElementChild) {
+          temp.firstElementChild.classList.add('live-streak');
+          streakEl.replaceWith(temp.firstElementChild);
+        }
+      }
     }
 
     function renderActivityChart(tracks, durationUpdateOnly) {
@@ -1500,12 +1508,14 @@
             bar.style.opacity = opacity.toFixed(2);
           }
         });
-        // Update meta labels
+        // Update meta labels only if content changed
         var metaEl = wrap.querySelector('.lfm-activity-meta');
         if (metaEl) {
+          var newTotalHtml = '<b>' + total + '</b> tracks this week';
+          var newLtHtml = ltStr + ' this week';
           var labels = metaEl.querySelectorAll('.lfm-activity-label');
-          if (labels[0]) labels[0].innerHTML = '<b>' + total + '</b> tracks this week';
-          if (labels[1]) labels[1].innerHTML = ltStr + ' this week';
+          if (labels[0] && labels[0].innerHTML !== newTotalHtml) labels[0].innerHTML = newTotalHtml;
+          if (labels[1] && labels[1].innerHTML !== newLtHtml) labels[1].innerHTML = newLtHtml;
           // Update streak in-place only if live state or time changed
           var streakEl = metaEl.querySelector('.lfm-streak');
           if (streakEl) {
