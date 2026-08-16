@@ -1287,13 +1287,53 @@
       return lfmImg(tr.image);
     }
 
+    /** Compute total listening minutes for an array of tracks using real durations.
+     *  Sums cached durations; falls back to NP_FALLBACK_DURATION for uncached.
+     *  Returns { minutes: Number, unresolved: Number }.
+     *  Then optionally batch-fetches missing durations and re-renders. */
+    function computeListeningMinutes(tracks) {
+      var totalSec = 0;
+      var unresolved = new Set();
+      tracks.forEach(function(tr) {
+        var a = (tr.artist && (tr.artist['#text'] || tr.artist.name)) || '';
+        var key = a + '::' + (tr.name || '');
+        var dur = trackDurationCache[key];
+        if (dur) { totalSec += dur; }
+        else { totalSec += NP_FALLBACK_DURATION; unresolved.add(key); }
+      });
+      return { minutes: Math.round(totalSec / 60), unresolved: unresolved };
+    }
+
+    /** Batch-fetch missing track durations in background (capped to avoid API flooding).
+     *  Once done, re-renders activity chart if it exists. */
+    function batchFetchDurations(tracks, unresolved, onDone) {
+      if (!unresolved.size) { if (onDone) onDone(); return; }
+      // Extract unique artist+track for unresolved keys
+      var toFetch = [];
+      tracks.forEach(function(tr) {
+        var a = (tr.artist && (tr.artist['#text'] || tr.artist.name)) || '';
+        var key = a + '::' + (tr.name || '');
+        if (unresolved.has(key) && toFetch.indexOf(key) === -1) toFetch.push(key);
+      });
+      // Cap at 25 unique fetches to avoid flooding
+      toFetch = toFetch.slice(0, 25);
+      if (!toFetch.length) { if (onDone) onDone(); return; }
+      var pending = toFetch.length;
+      toFetch.forEach(function(key) {
+        var parts = key.split('::');
+        fetchTrackDuration(parts[0], parts[1], function() {
+          pending--;
+          if (pending === 0 && onDone) onDone();
+        });
+      });
+    }
+
     function buildStreakHtml(todayTracks) {
       if (!todayTracks || todayTracks.length === 0) return '';
       var isLive = window.__lfmIsLiveNow === true;
-      var nowUts = Math.floor(Date.now() / 1000);
       var lastUts = parseInt(todayTracks[todayTracks.length - 1].date.uts);
-      // Calculate total listening time today (tracks × 3.5 min avg)
-      var todayMin = Math.round(todayTracks.length * 3.5);
+      var info = computeListeningMinutes(todayTracks);
+      var todayMin = info.minutes;
       var tStr;
       if (todayMin >= 60) {
         tStr = Math.floor(todayMin / 60) + 'h ' + (todayMin % 60) + 'm today';
@@ -1367,11 +1407,13 @@
       if (npCard) window.__lfmIsLiveNow = npCard.classList.contains('live');
       var streakHtml = buildStreakHtml(todayTracks);
 
-      // Feature 7: Listening time this week (tracks × 3.5 min)
-      var ltMinutes = Math.round(total * 3.5);
+      // Listening time this week using real track durations
+      var weekInfo = computeListeningMinutes(tracks);
+      var ltMinutes = weekInfo.minutes;
       var ltH = Math.floor(ltMinutes / 60);
       var ltM = ltMinutes % 60;
-      var ltStr = ltH > 0 ? '≈ ' + ltH + 'h ' + ltM + 'm' : '≈ ' + ltM + 'm';
+      var ltPrefix = weekInfo.unresolved.size > 0 ? '≈ ' : '';
+      var ltStr = ltH > 0 ? ltPrefix + ltH + 'h ' + ltM + 'm' : ltPrefix + ltM + 'm';
       var listeningTimeHtml = '<div class="lfm-activity-label">' + ltStr + ' this week</div>';
 
       wrap.innerHTML = '<div class="lfm-activity-meta"><div class="lfm-activity-label"><b>' + total + '</b> tracks this week</div>' + listeningTimeHtml + streakHtml + '</div><div class="lfm-activity-bars">' + days.map(d => {
@@ -1379,6 +1421,14 @@
         const opacity = d.count > 0 ? (0.3 + (d.count / maxCount) * 0.7) : 0.15;
         return '<div class="lfm-activity-day"><div class="lfm-activity-bar" style="height:' + h + 'px;opacity:' + opacity.toFixed(2) + '"></div><div class="lfm-activity-day-label">' + d.label + '</div></div>';
       }).join('') + '</div>';
+
+      // Batch-fetch missing durations in background; re-render when ready for precise numbers
+      if (weekInfo.unresolved.size > 0) {
+        batchFetchDurations(tracks, weekInfo.unresolved, function() {
+          // Re-render activity chart with now-complete durations
+          renderActivityChart(tracks);
+        });
+      }
     }
 
     function loadWeeklyTracks() {
