@@ -1593,6 +1593,22 @@ html.light .glass-card { background: rgba(255,255,255,0.35); backdrop-filter: bl
 .lfm-activity-bar { width: 100%; min-height: 3px; border-radius: 5px; background: color-mix(in srgb, var(--accent-solid) 60%, transparent); transition: height 0.4s ease; }
 .lfm-activity-day-label { font-family: var(--mono); font-size: 8px; color: var(--gray-dim); opacity: 0.6; }
 
+/* -- Day-of-week listening heatmap -- */
+.lfm-heatmap { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; padding: 14px 16px; border-radius: 14px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); }
+.lfm-heatmap-head { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; min-width: 80px; }
+.lfm-heatmap-icon { font-size: 16px; color: var(--accent); opacity: 0.7; }
+.lfm-heatmap-title { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.04em; color: var(--white); text-transform: uppercase; }
+.lfm-heatmap-sub { font-family: var(--mono); font-size: 8px; color: var(--gray-dim); letter-spacing: 0.02em; }
+.lfm-heatmap-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; flex: 1; }
+.lfm-heatmap-cell { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px 4px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.04); transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease; cursor: default; }
+.lfm-heatmap-cell:hover { transform: scale(1.06); border-color: rgba(255,255,255,0.1); }
+.lfm-heatmap-cell-peak { border-color: color-mix(in srgb, var(--accent-solid) 35%, transparent); box-shadow: 0 0 12px color-mix(in srgb, var(--accent-solid) 15%, transparent); }
+.lfm-heatmap-cell-peak:hover { box-shadow: 0 0 18px color-mix(in srgb, var(--accent-solid) 25%, transparent); }
+.lfm-heatmap-day { font-family: var(--mono); font-size: 9px; font-weight: 600; letter-spacing: 0.04em; color: var(--gray); }
+.lfm-heatmap-cell-peak .lfm-heatmap-day { color: var(--accent); }
+.lfm-heatmap-count { font-family: var(--mono); font-size: 14px; font-weight: 800; color: var(--white); line-height: 1; }
+.lfm-heatmap-cell .lfm-heatmap-count[data-count="0"] { color: var(--gray-dim); }
+
 /* -- Album name in now playing -- */
 .lfm-np-album { font-size: 10px; color: rgba(255,255,255,0.75); font-family: var(--mono); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; background: rgba(255,255,255,0.06); padding: 1px 7px; border-radius: 6px; width: fit-content; border: 1px solid rgba(255,255,255,0.06); }
 .lfm-nowplaying.live .lfm-np-album { background: rgba(6,8,14,0.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border-color: rgba(255,255,255,0.1); }
@@ -1615,6 +1631,7 @@ html.light .glass-card { background: rgba(255,255,255,0.35); backdrop-filter: bl
 html.light .lastfm-card .skeleton { background: linear-gradient(90deg, rgba(0,0,0,0.06) 25%, rgba(0,0,0,0.02) 50%, rgba(0,0,0,0.06) 75%) !important; background-size: 200px 100% !important; animation: lfmShimmer 1.5s ease-in-out infinite !important; }
 
 @media (max-width: 820px) { .lfm-columns { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .lfm-heatmap { flex-direction: column; align-items: stretch; gap: 10px; } .lfm-heatmap-head { flex-direction: row; align-items: center; gap: 8px; min-width: 0; } }
 
 /* ============ ANILIST ============ */
 .anilist-card { padding: 32px; }
@@ -3257,6 +3274,13 @@ html.light .lfm-vibe-pill { font-weight: 500; }
 html.light .lfm-genre-chart { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.06); }
 html.light .lfm-genre-pie-center { background: var(--card-bg, #fff); }
 html.light .lfm-genre-legend-name { color: #333; }
+html.light .lfm-heatmap { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.06); }
+html.light .lfm-heatmap-cell { border-color: rgba(0,0,0,0.06); }
+html.light .lfm-heatmap-cell:hover { border-color: rgba(0,0,0,0.12); }
+html.light .lfm-heatmap-count { color: #222; }
+html.light .lfm-heatmap-day { color: #777; }
+html.light .lfm-heatmap-cell-peak .lfm-heatmap-day { color: var(--accent); }
+html.light .lfm-heatmap-title { color: #333; }
 
 /* Contributions card */
 html.light .contrib-card { background: rgba(255,255,255,0.6); }

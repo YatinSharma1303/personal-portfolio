@@ -101,3 +101,26 @@ Stage Summary:
 - Album name no longer gets cut-off on long names (block display with ellipsis)
 - Consistent treatment across label, track, artist, and album text elements
 
+---
+Task ID: 9
+Agent: Main
+Task: Add day-of-week listening heatmap (#9 from suggestion list)
+
+Work Log:
+- Added `#lfm-heatmap` div in index.html after `#lfm-activity`
+- Added `loadHeatmapData()` function — fetches last 28 days of scrobbles via paginated Last.fm API
+- Added `renderDayHeatmap(tracks)` — groups scrobbles by Mon–Sun, renders 7-cell heatmap grid with 5-level color intensity
+- Peak day gets special glow border + accent-colored label
+- Called `loadHeatmapData()` alongside `loadWeeklyTracks()` in `loadBundle()` chain
+- Added full CSS: `.lfm-heatmap` container, `.lfm-heatmap-grid` (7-col grid), `.lfm-heatmap-cell` with hover/peak states
+- Added light theme overrides for all heatmap elements
+- Added responsive breakpoint at 560px for mobile (stacks vertically)
+- Verified JS syntax with `node -c`
+
+Stage Summary:
+- Day-of-week heatmap shows Mon–Sun listening pattern aggregated over last 4 weeks
+- 5-level color scale using accent color via `color-mix()`
+- Peak day highlighted with glow border
+- Hover scales cells up, tooltips show exact scrobble counts
+- Fully responsive + light theme supported
+

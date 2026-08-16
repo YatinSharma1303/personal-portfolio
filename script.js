@@ -1508,6 +1508,91 @@
       return fetchPage();
     }
 
+    /* ── Day-of-week listening heatmap (last 28 days) ── */
+    function loadHeatmapData() {
+      var fourWeeksAgo = new Date(); fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28); fourWeeksAgo.setHours(0,0,0,0);
+      var from = Math.floor(fourWeeksAgo.getTime() / 1000);
+      var allTracks = [];
+      var page = 1;
+      var totalPages = 1;
+      function fetchPage() {
+        if (page > totalPages) {
+          renderDayHeatmap(allTracks);
+          return;
+        }
+        return fetchWithTimeout(lfmAPI + '?method=user.getrecenttracks&user=' + encodeURIComponent(u) + '&limit=200&from=' + from + '&extended=0&page=' + page, 8000)
+          .then(function(r) { return r.json(); })
+          .then(function(d) {
+            var tracks = (d.recenttracks && d.recenttracks.track) || [];
+            var attrs = d.recenttracks && d.recenttracks['@attr'];
+            if (attrs && attrs.totalPages) totalPages = parseInt(attrs.totalPages, 10);
+            var hasTimestamp = tracks.some(function(tr) { return tr.date && tr.date.uts; });
+            if (!hasTimestamp || tracks.length === 0) {
+              renderDayHeatmap(allTracks);
+              return;
+            }
+            allTracks = allTracks.concat(tracks);
+            page++;
+            return fetchPage();
+          })
+          .catch(function() { renderDayHeatmap(allTracks); });
+      }
+      return fetchPage();
+    }
+
+    function renderDayHeatmap(tracks) {
+      var wrap = $('lfm-heatmap');
+      if (!wrap) return;
+      // Group scrobbles by day of week — Monday-first order
+      var dayLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+      // JS getDay: 0=Sun,1=Mon,...,6=Sat → convert to Mon-first: Mon=0,Tue=1,...,Sun=6
+      var buckets = [0,0,0,0,0,0,0];
+      tracks.forEach(function(tr) {
+        var uts = (tr.date && tr.date.uts) || '';
+        if (!uts) return;
+        var d = new Date(parseInt(uts, 10) * 1000);
+        var jsDay = d.getDay();
+        var idx = jsDay === 0 ? 6 : jsDay - 1;
+        buckets[idx]++;
+      });
+      var total = buckets.reduce(function(s,v){ return s+v; }, 0);
+      if (total === 0) { wrap.innerHTML = ''; return; }
+      var maxCount = Math.max.apply(null, buckets);
+      var maxIdx = buckets.indexOf(maxCount);
+
+      // 5-level color scale
+      var HEAT_COLORS = [
+        'rgba(255,255,255,0.03)',
+        'color-mix(in srgb, var(--accent-solid) 15%, transparent)',
+        'color-mix(in srgb, var(--accent-solid) 30%, transparent)',
+        'color-mix(in srgb, var(--accent-solid) 50%, transparent)',
+        'color-mix(in srgb, var(--accent-solid) 75%, transparent)'
+      ];
+
+      function heatLevel(count) {
+        if (count === 0) return 0;
+        var ratio = count / maxCount;
+        if (ratio < 0.25) return 1;
+        if (ratio < 0.5) return 2;
+        if (ratio < 0.75) return 3;
+        return 4;
+      }
+
+      var cellsHtml = buckets.map(function(count, i) {
+        var level = heatLevel(count);
+        var isMax = i === maxIdx;
+        var cls = 'lfm-heatmap-cell';
+        if (isMax && count > 0) cls += ' lfm-heatmap-cell-peak';
+        return '<div class="' + cls + '" style="background:' + HEAT_COLORS[level] + '" title="' + dayLabels[i] + ': ' + count + ' scrobbles">' +
+          '<span class="lfm-heatmap-day">' + dayLabels[i] + '</span>' +
+          '<span class="lfm-heatmap-count">' + count + '</span>' +
+          '</div>';
+      }).join('');
+
+      wrap.innerHTML = '<div class="lfm-heatmap-head"><span class="lfm-heatmap-icon material-symbols-outlined">calendar_view_month</span><span class="lfm-heatmap-title">Listening by Day</span><span class="lfm-heatmap-sub">last 4 weeks</span></div>' +
+        '<div class="lfm-heatmap-grid">' + cellsHtml + '</div>';
+    }
+
     function renderRecent(recenttracks) {
       const tracks = (recenttracks && recenttracks.track) || [];
       if (!tracks.length) return;
@@ -1598,7 +1683,7 @@
       return fetchWithTimeout(`${lfmAPI}?bundle=1&user=${encodeURIComponent(u)}`, 5000)
         .then(r => r.json())
         .then(d => { saveBundleCache(d); renderBundle(d); })
-        .then(() => { fetchLovedTracks(); setupPeriodTabs(); loadWeeklyTracks(); })
+        .then(() => { fetchLovedTracks(); setupPeriodTabs(); loadWeeklyTracks(); loadHeatmapData(); })
         .catch(err => {
           console.warn('Last.fm bundle failed:', err);
           if (!cached) {
