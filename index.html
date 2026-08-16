@@ -604,19 +604,7 @@
         <div class="lfm-np-bg-ghost" id="lfm-np-bg-ghost"></div>
         <div class="lfm-np-art-wrap">
           <div class="lfm-np-art" id="lfm-np-art"></div>
-          <svg class="lfm-np-ring" id="lfm-np-ring" viewBox="0 0 100 100">
-            <defs>
-              <filter id="np-glow">
-                <feGaussianBlur stdDeviation="1.5" result="blur"/>
-                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-              </filter>
-            </defs>
-            <circle class="lfm-np-ring-bg" cx="50" cy="50" r="46" fill="none" stroke-width="2"/>
-            <circle class="lfm-np-ring-fg" id="lfm-np-ring-fg" cx="50" cy="50" r="46" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="289.03" stroke-dashoffset="289.03" transform="rotate(-90 50 50)" filter="url(#np-glow)"/>
-            <g class="lfm-np-ring-dot-g" id="lfm-np-ring-dot-g" transform="rotate(-90 50 50)">
-              <circle class="lfm-np-ring-dot" cx="96" cy="50" r="3" fill="var(--accent)" filter="url(#np-glow)" opacity="0"/>
-            </g>
-          </svg>
+          <div class="lfm-np-progress" id="lfm-np-progress"><div class="lfm-np-progress-bar" id="lfm-np-progress-bar"></div></div>
         </div>
         <div class="lfm-np-info">
           <div class="lfm-np-label" id="lfm-np-label">NOW PLAYING</div>

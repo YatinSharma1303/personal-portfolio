@@ -1161,20 +1161,15 @@
     }
 
     // Feature 5: NP album art carousel (no progress bar)
-    var npRingCirc = 289.03; // 2 * PI * 46
     function updateNpProgress(isLive, track) {
       if (npProgressTimer) { clearInterval(npProgressTimer); npProgressTimer = null; }
       npArtCrossfaded = false;
-      var ringFg = $('lfm-np-ring-fg');
-      var ringDotG = $('lfm-np-ring-dot-g');
-      var ringDot = ringDotG ? ringDotG.querySelector('.lfm-np-ring-dot') : null;
+      var bar = $('lfm-np-progress-bar');
       if (!isLive) {
-        if (ringFg) ringFg.style.strokeDashoffset = npRingCirc;
-        if (ringDot) ringDot.setAttribute('opacity', '0');
+        if (bar) bar.style.width = '0%';
         return;
       }
-      if (ringFg) ringFg.style.strokeDashoffset = npRingCirc;
-      if (ringDot) ringDot.setAttribute('opacity', '0');
+      if (bar) bar.style.width = '0%';
       // Determine start time
       var uts = (track && track.date && parseInt(track.date.uts, 10)) || 0;
       var artist = (track && track.artist && (track.artist['#text'] || track.artist.name)) || '';
@@ -1194,14 +1189,8 @@
         var elapsed = now - npStartUts;
         var dur = trackDurationCache[key] || npDuration;
         var progress = Math.min(Math.max(elapsed / dur, 0), 1);
-        // Update progress ring
-        if (ringFg) ringFg.style.strokeDashoffset = (npRingCirc * (1 - progress)).toFixed(2);
-        // Move dot along the ring via <g> rotation (start at top = -90deg)
-        if (ringDotG) {
-          var deg = (-90 + progress * 360).toFixed(2);
-          ringDotG.setAttribute('transform', 'rotate(' + deg + ' 50 50)');
-        }
-        if (ringDot) ringDot.setAttribute('opacity', progress > 0.01 ? '1' : '0');
+        // Update progress bar
+        if (bar) bar.style.width = (progress * 100).toFixed(2) + '%';
         // Feature 5: crossfade NP background art at ~90%
         if (progress >= 0.9 && !npArtCrossfaded && npArtUrls.length > 1) {
           npArtCrossfaded = true;
